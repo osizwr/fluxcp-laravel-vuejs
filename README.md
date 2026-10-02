@@ -195,7 +195,7 @@ php artisan reverb:start
 composer test
 ```
 
-100 tests, 233 assertions.
+140 tests, 342 assertions.
 
 The tests against rAthena's schema are **integration tests against a real
 MySQL/MariaDB database**, not SQLite. They exercise an 80-column

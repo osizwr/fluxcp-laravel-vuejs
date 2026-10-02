@@ -41,6 +41,22 @@ final class RathenaTestSchema
     ];
 
     /**
+     * Tables whose AUTO_INCREMENT must be restored after a truncate.
+     *
+     * rAthena does not start these at 1: accounts begin at 2,000,000 and
+     * characters at 150,000. TRUNCATE resets the counter regardless of the
+     * declared starting value, so without this the fixture reproduces the real
+     * id range only until the first test clears it -- and a test asserting
+     * anything about id ranges would then be asserting the wrong thing.
+     *
+     * @var array<string, int>
+     */
+    public const STARTING_IDS = [
+        'login' => 2000000,
+        'char' => 150000,
+    ];
+
+    /**
      * Create every table across the three connections.
      *
      * The connections may point at the same database -- that is rAthena's
@@ -195,6 +211,18 @@ final class RathenaTestSchema
             $table->string('ip', 39);
             $table->integer('error_code')->nullable();
             $table->dateTime('login_date');
+
+            $table->index('account_id');
+        });
+
+        $schema->create('cp_pwchange', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->integer('account_id');
+            // Retained for compatibility, never written. See D2.
+            $table->string('old_password', 32)->default('');
+            $table->string('new_password', 32)->nullable();
+            $table->dateTime('change_date');
+            $table->string('change_ip', 39)->default('');
 
             $table->index('account_id');
         });

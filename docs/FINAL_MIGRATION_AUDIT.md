@@ -88,20 +88,28 @@ The resolution is D1 and D2: the panel keeps a properly hashed credential of its
 own and stops writing passwords to the audit tables, while leaving rAthena's
 column exactly as the emulator needs it.
 
+This was later confirmed against **rAthena's own source** rather than inferred
+from FluxCP: `PASSWD_LENGTH (32 + 1)` in `src/common/mmo.hpp`, the comment
+`char pass[32+1]; // 23+1 for plaintext, 32+1 for md5-ed passwords` in
+`src/login/account.hpp`, and `login_check_password()` comparing with
+`strcmp(sd.passwd, acc.pass)` — which under `passwordencrypt` MD5s the *stored
+value itself*, so it has to remain reproducible by the client. See
+COMPATIBILITY_REPORT.md section 1.5.
+
 ---
 
 ## 2. What was built
 
 | | |
 | --- | --- |
-| PHP files | 57 (5,602 lines) |
+| PHP files | 59 (6,111 lines) |
 | Configuration | 16 files (2,517 lines) |
 | Vue components | 17 |
 | TypeScript modules | 9 |
 | Frontend | 2,346 lines |
 | Migrations | 4 |
 | Factories | 4 |
-| Tests | 12 files, **100 tests, 233 assertions** |
+| Tests | 15 files (3,229 lines), **140 tests, 342 assertions** |
 | Documentation | 7 documents (2,442 lines) |
 
 ### Complete and tested
@@ -149,7 +157,7 @@ column exactly as the emulator needs it.
 
 | Area | Actions | Includes |
 | --- | --: | --- |
-| Account | 16 | Registration, password reset and change, e-mail change and confirmation, sex change, credit transfer, admin search and edit |
+| Account | 14 | Password reset, e-mail change and confirmation, sex change, credit transfer, admin search and edit. Registration and password *change* now have tested credential handling but no web flow |
 | Admin logs (`cplog`) | 10 | Every control-panel audit view |
 | Game logs (`logdata`) | 13 | Pick, zeny, MVP, chat, command, branch, feeding, cash |
 | Support desk | 8 | Player and staff ticket flows, categories, settings |
@@ -195,7 +203,7 @@ Every command below was run, and these are its real results.
 
 | Command | Result |
 | --- | --- |
-| `composer test` | **100 passed**, 233 assertions, 0 failures, 5s |
+| `composer test` | **140 passed**, 342 assertions, 0 failures, 9s |
 | `composer lint` (Pint) | **passed** |
 | `npm run lint` (ESLint + `vue-tsc`) | **passed**, 0 errors, 0 warnings |
 | `npm run build` | **passed**, 16 chunks, 41.7 kB gzipped entry |
@@ -231,8 +239,18 @@ Worth recording, because each would have been a production fault:
 4. MariaDB reports a `CURRENT_TIMESTAMP` default as `current_timestamp()`, which
    the schema generator emitted as a string literal — four service desk tables
    would not create.
-5. Sanctum's SPA mode attaches the session only when a request carries a `Referer`
+5. The schema generator **lowercased enum values**, so the installer created
+   `cp_createlog.sex` as `enum('m','f','s')` with a default of `'m'`. MariaDB's
+   case-insensitive collation hid it: inserting `'M'` silently stored `'m'`.
+   Worse, **the schema comparison that was supposed to catch this normalised it
+   away**, lowercasing both sides before comparing. The comparison is now
+   case-sensitive and also checks defaults. A verification that normalises a
+   difference cannot detect that difference, and this one normalised exactly
+   the field it needed to check.
+6. Sanctum's SPA mode attaches the session only when a request carries a `Referer`
    or `Origin` header, so a request without one silently lost its session.
+7. `cp_pwchange` has columns `change_date` and `change_ip`, not the
+   `request_date`/`ip` an initial implementation of the account service assumed.
 
 ### A data-loss incident in the test harness
 
@@ -331,7 +349,7 @@ Against the project's own checklist:
 | ✅ | Queues configured |
 | 🟨 | API implemented — **8 endpoints** |
 | 🟨 | Security review — **applied to what exists; no review of unbuilt code** |
-| ✅ | Automated tests created — 100 |
+| ✅ | Automated tests created — 140 |
 | 🟨 | Legacy/new compatibility testing — **for what is built** |
 | ✅ | Production build succeeds |
 | ✅ | No placeholder functionality |
@@ -346,8 +364,10 @@ architecture and verification method are finished; the feature work is 4% done.
 
 ### Suggested order for the remaining work
 
-1. **Registration and password reset.** Needs mail, which several other features
-   also wait on. The highest-value unblocking step.
+1. **Registration and password reset.** The credential half is done and tested
+   (`RathenaAccountService`); what remains is the web flow, which needs mail.
+   Mail is the highest-value unblocking step, since several other features wait
+   on it.
 2. **The item/monster merge service (D6).** Thirteen actions depend on it.
 3. **Validated sortable pagination.** Needed by every listing and admin page, and
    closes an injection surface rather than reproducing it.

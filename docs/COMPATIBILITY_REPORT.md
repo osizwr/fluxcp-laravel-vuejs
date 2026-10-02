@@ -19,8 +19,22 @@ state of the legacy schema. The port's installer was then run against a second
 empty database (`fluxcp_blank`), and the two were compared column by column.
 
 **Result.** 25 tables, 196 columns compared, 11 differences — all of them in
-column types, none in table names, column names, nullability, or the set of
-tables. Covered by `tests/Feature/Schema/PanelSchemaInstallTest.php`.
+column types, none in table names, column names, defaults, nullability, or the
+set of tables. Covered by `tests/Feature/Schema/PanelSchemaInstallTest.php`.
+
+The comparison is **case-sensitive on type definitions and includes column
+defaults**. It did not start that way, and the first version masked a real
+defect: it lowercased both sides before comparing, so `enum('M','F','S')` and
+`enum('m','f','s')` looked identical. The schema generator had been lowercasing
+enum values, which meant the installer created `cp_createlog.sex` as
+`enum('m','f','s')` with a default of `'m'`. MariaDB's case-insensitive
+collation hid the consequence — inserting `'M'` silently stored `'m'` — so the
+column would have read back lowercase to FluxCP and rAthena.
+
+Both the generator and the comparison are fixed, and the installed value is now
+verified as `'M'` after a real account creation. The lesson is the one worth
+keeping: **a verification that normalises away a difference cannot detect that
+difference**, and this one was normalising exactly the field it needed to check.
 
 ### 1.1 Auto-increment keys are unsigned
 
@@ -76,6 +90,40 @@ alongside. This port never writes to them (**D2**).
 Asserted by `it_never_writes_a_password_into_the_login_audit_table`.
 
 ---
+
+### 1.4 `cp_createlog.sex` enum case
+
+Fixed, not a difference any more. Recorded above because the masking is the
+instructive part.
+
+### 1.5 The rAthena credential format (verified against rAthena)
+
+**How this was checked.** Previously this had been established from FluxCP's side
+only (`Flux::hashPassword()` is `md5()`). It has now been confirmed against
+**rAthena's own source**, which is the authority:
+
+| Source | Says |
+| --- | --- |
+| `src/common/mmo.hpp` | `#define PASSWD_LENGTH (32 + 1)` |
+| `src/login/account.hpp` | `char pass[32+1];  // 23+1 for plaintext, 32+1 for md5-ed passwords` |
+| `src/login/login.cpp` `login_check_password()` | `return 0 == strcmp( sd.passwd, acc.pass );` when the client sends an unencrypted password |
+| `src/login/login.cpp` `login_check_password()` | under `passwordencrypt`, MD5s **`acc.pass` itself** together with a per-session key |
+| `src/login/login.cpp` `login_mmo_auth_new()` | `safestrncpy(acc.pass, pass, sizeof(acc.pass))` — stores the client-supplied password verbatim; the server never hashes it |
+| `src/login/login.cpp` | `login_config.use_md5_passwds = false` is the default |
+
+**Conclusion.** `login.user_pass` must contain exactly the string the client
+transmits: the password itself by default, or its lowercase 32-character MD5
+digest when the server runs with `use_MD5_passwords: yes`.
+
+A bcrypt or Argon hash is not merely weaker-than-ideal here, it is impossible:
+at 60+ characters it does not fit the column or the emulator's buffer, it is not
+reproducible by the client, and under `passwordencrypt` rAthena would hash the
+hash. An account created that way could never log in to the game.
+
+Both formats are asserted end to end in
+`tests/Feature/Rathena/RagnarokPasswordStorageTest.php`, and
+`RagnarokAuthenticationCompatibilityTest` reproduces `strcmp()` to assert the
+stored value satisfies the emulator's own comparison.
 
 ## 2. Authentication
 

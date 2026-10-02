@@ -24,9 +24,9 @@ concerns are tracked in their own tables below.
 
 | Status | Actions | Share |
 | --- | --: | --: |
-| `IMPLEMENTING` | 2 | 1% |
+| `IMPLEMENTING` | 4 | 3% |
 | `INTENTIONALLY_REPLACED` | 7 | 5% |
-| `NOT_STARTED` | 124 | 89% |
+| `NOT_STARTED` | 122 | 88% |
 | `VERIFIED` | 6 | 4% |
 | **Total** | **139** | |
 
@@ -38,11 +38,11 @@ concerns are tracked in their own tables below.
 | --- | --- | --- | --- | --- |
 | `cart` | `modules/account/cart.php` | `NORMAL` | `NOT_STARTED` |  |
 | `changemail` | `modules/account/changemail.php` | `NORMAL` | `NOT_STARTED` |  |
-| `changepass` | `modules/account/changepass.php` | `NORMAL` | `NOT_STARTED` |  |
+| `changepass` | `modules/account/changepass.php` | `NORMAL` | `IMPLEMENTING` | RathenaAccountService::changePassword() updates rAthena's column and the panel hash together, audited without passwords. No HTTP endpoint yet. |
 | `changesex` | `modules/account/changesex.php` | `NORMAL` | `NOT_STARTED` |  |
 | `confirm` | `modules/account/confirm.php` | `UNAUTH` | `NOT_STARTED` |  |
 | `confirmemail` | `modules/account/confirmemail.php` | `NORMAL` | `NOT_STARTED` |  |
-| `create` | `modules/account/create.php` | `UNAUTH` | `NOT_STARTED` |  |
+| `create` | `modules/account/create.php` | `UNAUTH` | `IMPLEMENTING` | **Credential handling complete and tested; the web flow is not.** RathenaAccountService creates accounts storing `login.user_pass` in the emulator's own format (D1), writes the `cp_createlog` audit without the password (D2), and is reachable from `panel:create-account`. Still missing: the HTTP endpoint, CAPTCHA, and e-mail confirmation, which needs mail. |
 | `edit` | `modules/account/edit.php` | `ADMIN` | `NOT_STARTED` |  |
 | `index` | `modules/account/index.php` | `LOWGM` | `NOT_STARTED` |  |
 | `login` | `modules/account/login.php` | `UNAUTH` | `VERIFIED` | Full legacy flow including the order of its checks and all eight refusal reasons. Credentials handled per D1, audit per D2. Adds throttling. 33 tests. |

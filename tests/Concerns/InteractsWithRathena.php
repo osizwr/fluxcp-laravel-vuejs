@@ -6,6 +6,7 @@ namespace Tests\Concerns;
 
 use App\Support\Rathena\ServerGroup;
 use App\Support\Rathena\ServerRegistry;
+use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\Support\RathenaTestSchema;
@@ -145,7 +146,33 @@ trait InteractsWithRathena
                 $connection->table($table)->truncate();
             }
 
+            $this->restoreStartingIds($connection, $tables);
+
             $connection->statement('SET FOREIGN_KEY_CHECKS = 1');
+        }
+    }
+
+    /**
+     * Put the AUTO_INCREMENT counters back where rAthena starts them.
+     *
+     * TRUNCATE resets the counter to 1, which would make the fixture stop
+     * reproducing the emulator's id ranges after the first test.
+     *
+     * @param  list<string>  $tables
+     */
+    private function restoreStartingIds(Connection $connection, array $tables): void
+    {
+        foreach (RathenaTestSchema::STARTING_IDS as $table => $startingId) {
+            if (! in_array($table, $tables, strict: true)) {
+                continue;
+            }
+
+            // wrapTable() already applies the connection's prefix.
+            $connection->statement(sprintf(
+                'ALTER TABLE %s AUTO_INCREMENT = %d',
+                $connection->getQueryGrammar()->wrapTable($table),
+                $startingId,
+            ));
         }
     }
 
