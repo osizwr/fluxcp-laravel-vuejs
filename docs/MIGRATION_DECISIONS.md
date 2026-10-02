@@ -112,9 +112,24 @@ recorded **as files on disk** under `data/logs/schemas/…`, and `main/preproces
 `updateNeeded()` on *every request*, force-redirecting to the installer when anything is
 outstanding.
 
-**Decision.** The 25 `cp_*` tables are expressed as Laravel migrations on a dedicated
-connection, with the ledger in the database (`migrations`) rather than on disk. The
-per-request installer check is dropped; schema state is a deployment concern.
+**Decision.** The 25 `cp_*` tables are expressed as Laravel migrations, with the ledger in the
+database rather than on disk, and the per-request installer check is dropped — schema state is
+a deployment concern.
+
+Critically, the migrations keep each table **in the database the legacy installer put it in**:
+18 in the login database and 7 in the char/map database. They are not relocated to a tidy
+application-owned database, because the panel joins them directly against rAthena tables in the
+same schema, for example in `account/index`:
+
+```sql
+LEFT OUTER JOIN {$server->loginDatabase}.cp_credits AS credits
+             ON login.account_id = credits.account_id
+```
+
+Moving them would turn every such join into a cross-database join, which breaks outright as
+soon as an operator does what the config explicitly invites and puts the logs or login database
+on a separate host. Laravel's own tables (sessions, cache, queue) are a different matter and do
+live on a separate application connection, since rAthena knows nothing about them.
 
 **Why.** The disk ledger desynchronises from reality whenever `data/` is rebuilt, moved between
 hosts or excluded from a backup, and the per-request check costs a filesystem walk on every
@@ -122,9 +137,9 @@ page view. The resolved end-state of all 44 legacy files was obtained by executi
 version order against a throwaway database, so the migrations reproduce the real final schema
 rather than a reading of it.
 
-**Compatibility.** Migrations use `CREATE TABLE IF NOT EXISTS` semantics and do not drop or
-rewrite existing `cp_*` tables, so pointing the port at a database that already has a FluxCP
-schema is safe.
+**Compatibility.** Each migration checks for the table before creating it and never drops or
+rewrites an existing one, so pointing the port at a database that already carries a FluxCP
+schema is safe and non-destructive.
 
 ---
 
@@ -292,3 +307,56 @@ service text). `config/import/` allows local overrides.
 **Why.** The legacy file mixes credentials with editable copy, so changing the terms of service
 means editing a file that also contains the database password. Splitting by audience is what
 makes "never hardcode secrets" enforceable rather than aspirational.
+
+---
+
+## D13 — The War of Emperium schedule is evaluated correctly
+
+**Legacy behaviour.** `Flux_Athena::isWoe()` resolved each configured window
+with `strtotime()` against a day name, and compared the result to a Unix
+timestamp:
+
+```php
+$serverTime = (int)$this->getServerTime();            // 'U' -- a Unix timestamp
+$start = strtotime("$sDay {$woeDayTime['startingTime']}");
+$end   = strtotime("$eDay {$woeDayTime['endingTime']}");
+
+if ($serverTime > $start && $serverTime < $end) {
+    return true;
+}
+```
+
+Three things are wrong with it.
+
+1. **Windows that cross midnight never match.** `strtotime()` resolves a day
+   name relative to today, so for a window running Saturday 23:00 to Sunday
+   01:00, `$end` lands *before* `$start` whenever today is a Saturday, and the
+   `>` / `<` pair can never both hold. A 23:00 WoE simply does not register.
+2. **The per-pair timezone is ignored.** `getServerTime('U')` formats as a Unix
+   timestamp, which is an absolute instant and carries no timezone, so the
+   `DateTimeZone` that `getServerTime()` carefully applies has no effect on the
+   result. The window is really evaluated in PHP's default timezone.
+3. **Malformed windows are discarded silently.** The config parser `continue`s
+   past any entry whose day is out of range or whose time does not match
+   `\d{2}:\d{2}`, so a typo disables that window — and with it the WoE access
+   restrictions — with no error anywhere.
+
+**Decision.** Windows are modelled as weekly recurring intervals in
+`App\Support\Rathena\WoeWindow`, stored as minutes from the start of the week.
+A window whose end is not after its start is understood to wrap through the end
+of the week, the containment test is done in the pair's own timezone, and a
+malformed window raises `InvalidArgumentException` at boot instead of vanishing.
+
+**Why this is a fix and not a liberty.** The configuration already expresses
+intent unambiguously — the legacy comments give `array(0, '12:00', 0, '14:00')`
+with explicit start and end days — so a window spanning two days is clearly
+meant to be supported. Reproducing the bug would mean the panel's WoE
+restrictions silently fail to apply on exactly the schedules most servers use,
+and those restrictions exist so players cannot scout castles from the website
+during a siege.
+
+**Observable difference.** A server with a WoE window crossing midnight, or one
+whose char/map pair declares a timezone different from the web host's, will now
+see the restriction applied when it previously was not. The window boundary is
+also now half-open (start inclusive, end exclusive) rather than open at both
+ends, so a check exactly at the start minute counts as in progress.
