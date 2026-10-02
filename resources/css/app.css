@@ -1,9 +1,198 @@
 @import 'tailwindcss';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+/*
+|--------------------------------------------------------------------------
+| Design tokens
+|--------------------------------------------------------------------------
+|
+| The legacy panel's theming worked by file resolution: a theme replaced one
+| PHP template and inherited the other 143. That mechanism cannot survive the
+| move to a component tree, so customisation is provided through these tokens
+| and through replaceable layout components instead.
+|
+| See docs/MIGRATION_DECISIONS.md (D7).
+|
+| The palette is deliberately restrained. A control panel is a tool people use
+| while playing, often alt-tabbed out of a game, so it favours density and
+| legibility over decoration: one accent colour, borders rather than shadows,
+| and no gradients.
+|
+*/
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    /* Neutrals. Slightly warm, so the panel does not read as clinical. */
+    --color-shell-50: oklch(0.985 0.002 75);
+    --color-shell-100: oklch(0.967 0.003 75);
+    --color-shell-200: oklch(0.925 0.005 75);
+    --color-shell-300: oklch(0.869 0.006 75);
+    --color-shell-400: oklch(0.708 0.008 75);
+    --color-shell-500: oklch(0.556 0.009 75);
+    --color-shell-600: oklch(0.44 0.009 75);
+    --color-shell-700: oklch(0.356 0.009 75);
+    --color-shell-800: oklch(0.252 0.008 75);
+    --color-shell-900: oklch(0.185 0.007 75);
+    --color-shell-950: oklch(0.13 0.006 75);
+
+    /*
+     * One accent, drawn from Ragnarok's own interface, which is gold on dark
+     * brown. Used for primary actions and the active navigation item, and
+     * nowhere else.
+     */
+    --color-accent-300: oklch(0.84 0.12 80);
+    --color-accent-400: oklch(0.78 0.14 75);
+    --color-accent-500: oklch(0.71 0.15 70);
+    --color-accent-600: oklch(0.62 0.14 68);
+    --color-accent-700: oklch(0.52 0.12 66);
+
+    /* Status. Only ever used to mean status, never for emphasis. */
+    --color-up: oklch(0.65 0.16 150);
+    --color-up-soft: oklch(0.94 0.04 150);
+    --color-down: oklch(0.6 0.2 25);
+    --color-down-soft: oklch(0.94 0.04 25);
+    --color-warn: oklch(0.72 0.15 75);
+    --color-warn-soft: oklch(0.95 0.04 75);
+
+    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+    --radius-panel: 0.375rem;
+}
+
+/*
+| Semantic surface tokens, redefined for dark mode below. Components reference
+| these rather than the palette directly, so a theme can be changed by
+| overriding a handful of values instead of editing every component.
+*/
+:root {
+    --surface-page: var(--color-shell-50);
+    --surface-raised: #ffffff;
+    --surface-sunken: var(--color-shell-100);
+    --surface-hover: var(--color-shell-100);
+    --border-subtle: var(--color-shell-200);
+    --border-strong: var(--color-shell-300);
+    --text-primary: var(--color-shell-900);
+    --text-secondary: var(--color-shell-600);
+    --text-muted: var(--color-shell-500);
+    --status-up-bg: var(--color-up-soft);
+    --status-down-bg: var(--color-down-soft);
+    --status-warn-bg: var(--color-warn-soft);
+
+    color-scheme: light;
+}
+
+:root:not([data-theme='light']) {
+    @media (prefers-color-scheme: dark) {
+        --surface-page: var(--color-shell-950);
+        --surface-raised: var(--color-shell-900);
+        --surface-sunken: var(--color-shell-950);
+        --surface-hover: var(--color-shell-800);
+        --border-subtle: var(--color-shell-800);
+        --border-strong: var(--color-shell-700);
+        --text-primary: var(--color-shell-50);
+        --text-secondary: var(--color-shell-400);
+        --text-muted: var(--color-shell-500);
+        --status-up-bg: oklch(0.28 0.06 150);
+        --status-down-bg: oklch(0.3 0.08 25);
+        --status-warn-bg: oklch(0.3 0.06 75);
+
+        color-scheme: dark;
+    }
+}
+
+:root[data-theme='dark'] {
+    --surface-page: var(--color-shell-950);
+    --surface-raised: var(--color-shell-900);
+    --surface-sunken: var(--color-shell-950);
+    --surface-hover: var(--color-shell-800);
+    --border-subtle: var(--color-shell-800);
+    --border-strong: var(--color-shell-700);
+    --text-primary: var(--color-shell-50);
+    --text-secondary: var(--color-shell-400);
+    --text-muted: var(--color-shell-500);
+    --status-up-bg: oklch(0.28 0.06 150);
+    --status-down-bg: oklch(0.3 0.08 25);
+    --status-warn-bg: oklch(0.3 0.06 75);
+
+    color-scheme: dark;
+}
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+        background-color: var(--surface-page);
+        color: var(--text-primary);
+        font-family: var(--font-sans);
+        font-size: 0.9375rem;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /*
+     * Levels, zeny and player counts sit in columns and are compared against
+     * each other, so they are lined up rather than proportionally spaced.
+     */
+    .tabular {
+        font-variant-numeric: tabular-nums;
+    }
+
+    /*
+     * A visible focus ring on every interactive element. The legacy theme
+     * removed outlines, which makes the panel unusable by keyboard.
+     */
+    :focus-visible {
+        outline: 2px solid var(--color-accent-500);
+        outline-offset: 2px;
+        border-radius: 2px;
+    }
+
+    /* Respect a reduced-motion preference rather than animating regardless. */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+}
+
+@layer components {
+    .panel {
+        background-color: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-panel);
+    }
+
+    .field-label {
+        display: block;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-bottom: 0.375rem;
+    }
+
+    .field-input {
+        display: block;
+        width: 100%;
+        padding: 0.5rem 0.625rem;
+        font-size: 0.9375rem;
+        color: var(--text-primary);
+        background-color: var(--surface-raised);
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-panel);
+    }
+
+    .field-input::placeholder {
+        color: var(--text-muted);
+    }
+
+    .field-input:disabled {
+        background-color: var(--surface-sunken);
+        cursor: not-allowed;
+    }
 }

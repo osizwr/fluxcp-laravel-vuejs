@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Models\Character;
+use App\Services\Rathena\ReferenceData;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -29,6 +30,7 @@ final class CharacterResource extends JsonResource
             'name' => $this->name,
             'slot' => $this->char_num,
             'job_id' => $this->jobId(),
+            'job_name' => app(ReferenceData::class)->jobName($this->jobId()),
             'base_level' => $this->base_level,
             'job_level' => $this->job_level,
             'zeny' => $this->zeny,

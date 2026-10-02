@@ -5,15 +5,20 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Services\Ranking\RankingService;
+use App\Services\Rathena\ReferenceData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 /**
  * Public character ladders.
  */
 final class RankingController
 {
-    public function __construct(private readonly RankingService $rankings) {}
+    public function __construct(
+        private readonly RankingService $rankings,
+        private readonly ReferenceData $reference,
+    ) {}
 
     public function byLevel(Request $request): JsonResponse
     {
@@ -30,9 +35,9 @@ final class RankingController
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, object>  $rows
+     * @param  Collection<int, object>  $rows
      */
-    private function respond(\Illuminate\Support\Collection $rows): JsonResponse
+    private function respond(Collection $rows): JsonResponse
     {
         return response()->json([
             'data' => $rows->values()->map(fn (object $row, int $index): array => [
@@ -41,6 +46,7 @@ final class RankingController
                     'id' => (int) $row->char_id,
                     'name' => $row->name,
                     'job_id' => (int) $row->class,
+                    'job_name' => $this->reference->jobName((int) $row->class),
                     'base_level' => (int) $row->base_level,
                     'job_level' => (int) $row->job_level,
                     'zeny' => (int) $row->zeny,
