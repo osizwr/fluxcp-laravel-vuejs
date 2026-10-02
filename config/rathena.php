@@ -215,8 +215,8 @@ return [
                      * cannot scout castles from the website.
                      */
                     'woe_restricted_routes' => [
-                        'characters.online',
-                        'characters.map-stats',
+                        'character.online',
+                        'character.mapstats',
                     ],
                 ],
 

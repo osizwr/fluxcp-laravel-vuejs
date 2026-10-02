@@ -11,9 +11,11 @@ use App\Models\Concerns\UsesLoginConnection;
 use App\Support\Authorization\PermissionRegistry;
 use App\Support\Rathena\ServerRegistry;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -41,8 +43,17 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property int $character_slots
  * @property int $vip_time
  */
-final class Account extends Model implements AuthenticatableContract
+final class Account extends Model implements AuthenticatableContract, AuthorizableContract
 {
+    /**
+     * Authorizable gives the model can()/cannot(), which resolve through the
+     * gates registered from the ability map. Without it every $user->can()
+     * check in a resource or middleware would be a fatal error rather than a
+     * denial, which is a failure mode worth not having in the authorisation
+     * path.
+     */
+    use Authorizable;
+
     /** @use HasFactory<\Database\Factories\AccountFactory> */
     use HasFactory;
     use UsesLoginConnection;

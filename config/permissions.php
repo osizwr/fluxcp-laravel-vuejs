@@ -249,6 +249,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Route permissions with no legacy equivalent
+    |--------------------------------------------------------------------------
+    |
+    | Endpoints this port adds. They are listed separately so that the block
+    | above stays a faithful record of FluxCP's access.php and it is obvious
+    | which entries are new.
+    |
+    | Because unmapped routes are denied (D3), anything added here has to be
+    | declared -- a new endpoint cannot quietly become public.
+    |
+    */
+
+    'added_routes' => [
+        // The signed-in account's own characters, for the client's character
+        // list. The legacy panel folded this into account/view's template.
+        'character.mine' => AccountLevel::Player,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Ability permissions
     |--------------------------------------------------------------------------
     |

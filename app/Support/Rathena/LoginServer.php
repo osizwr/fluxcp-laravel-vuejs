@@ -35,6 +35,14 @@ final readonly class LoginServer
     ) {}
 
     /**
+     * The login server's network endpoint, for status probing.
+     */
+    public function endpoint(): ServerEndpoint
+    {
+        return new ServerEndpoint('login', $this->address, $this->port);
+    }
+
+    /**
      * @param  array<string, mixed>  $config
      */
     public static function fromConfig(array $config): self

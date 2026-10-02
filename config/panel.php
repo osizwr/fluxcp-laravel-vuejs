@@ -97,6 +97,14 @@ return [
          * which with cleartext credentials made online guessing cheap.
          */
         'max_attempts' => (int) env('PANEL_LOGIN_MAX_ATTEMPTS', 5),
+
+        /*
+         * Looser, because an address is shared by everyone behind one NAT.
+         * This limit is a backstop against one host sweeping many accounts,
+         * not the per-account protection.
+         */
+        'max_attempts_per_address' => (int) env('PANEL_LOGIN_MAX_ATTEMPTS_PER_ADDRESS', 30),
+
         'decay_seconds' => (int) env('PANEL_LOGIN_DECAY_SECONDS', 60),
     ],
 
@@ -153,6 +161,13 @@ return [
     'server_status' => [
         'timeout_seconds' => (float) env('PANEL_SERVER_STATUS_TIMEOUT', 2),
         'cache_seconds' => (int) env('PANEL_SERVER_STATUS_CACHE_SECONDS', 30),
+
+        /*
+         * Show the recorded peak concurrent player count alongside the live
+         * one. The legacy EnablePeakDisplay setting; off by default, because
+         * cp_onlinepeak is only populated if something is recording into it.
+         */
+        'show_peak' => (bool) env('PANEL_SERVER_STATUS_SHOW_PEAK', false),
     ],
 
     /*
@@ -160,6 +175,38 @@ return [
     | Presentation
     |--------------------------------------------------------------------------
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rankings
+    |--------------------------------------------------------------------------
+    |
+    | Ported from the legacy HidePermBannedCharRank, HideTempBannedCharRank,
+    | RankingHideGroupLevel and CharRankingThreshold settings.
+    |
+    */
+
+    'rankings' => [
+        'limit' => (int) env('PANEL_RANKING_LIMIT', 100),
+
+        'hide_permanently_banned' => (bool) env('PANEL_RANKING_HIDE_PERM_BANNED', true),
+        'hide_temporarily_banned' => (bool) env('PANEL_RANKING_HIDE_TEMP_BANNED', false),
+
+        /*
+         * Hide characters belonging to accounts at or above this panel level,
+         * so staff with developer-granted levels or zeny do not head a player
+         * ladder. Null disables the filter. 1 is the junior game master tier.
+         */
+        'hide_at_or_above_level' => env('PANEL_RANKING_HIDE_AT_LEVEL', 1) === null
+            ? null
+            : (int) env('PANEL_RANKING_HIDE_AT_LEVEL', 1),
+
+        /*
+         * Exclude characters whose account has not signed in for this many
+         * days. 0 disables the filter.
+         */
+        'inactive_after_days' => (int) env('PANEL_RANKING_INACTIVE_DAYS', 0),
+    ],
 
     'pagination' => [
         'per_page' => (int) env('PANEL_PER_PAGE', 20),

@@ -268,6 +268,12 @@ final class RathenaTestSchema
             $table->primary(['guild_id', 'char_id']);
         });
 
+        $schema->create('cp_onlinepeak', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('users')->default(0);
+            $table->date('date');
+        });
+
         $schema->create('cp_charprefs', function (Blueprint $table): void {
             $table->increments('id');
             $table->unsignedInteger('account_id');

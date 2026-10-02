@@ -58,7 +58,10 @@ final class PermissionRegistry
      */
     public function routeMap(): array
     {
-        return $this->routes ??= $this->normalise('permissions.routes');
+        return $this->routes ??= array_merge(
+            $this->normalise('permissions.routes'),
+            $this->normalise('permissions.added_routes'),
+        );
     }
 
     /*

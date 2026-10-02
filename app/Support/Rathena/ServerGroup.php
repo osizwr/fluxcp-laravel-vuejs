@@ -119,6 +119,40 @@ final readonly class ServerGroup
     }
 
     /**
+     * Whether the login and char/map databases live on the same MySQL server.
+     *
+     * This decides whether a query may join `login` to `char`. FluxCP always
+     * assumed it could, because it interpolated database names straight into
+     * SQL -- which silently requires the two to be co-located. Several pages
+     * depend on that join, the rankings most visibly, so the panel has to know
+     * when it is not available rather than emit SQL that cannot run.
+     *
+     * Compared on host and port rather than on database name: two different
+     * databases on one server can be joined, two databases on different hosts
+     * cannot.
+     */
+    public function loginAndCharMapShareServer(?string $charMapKey = null): bool
+    {
+        $login = $this->databaseConfig('login');
+        $charMap = array_merge(
+            $this->databaseConfig('char_map'),
+            $this->charMapServer($charMapKey)->databaseOverrides,
+        );
+
+        return (string) ($login['host'] ?? '') === (string) ($charMap['host'] ?? '')
+            && (string) ($login['port'] ?? '') === (string) ($charMap['port'] ?? '');
+    }
+
+    /**
+     * The login database's name, for qualifying a table in a cross-database
+     * join. Only meaningful when loginAndCharMapShareServer() is true.
+     */
+    public function loginDatabaseName(): string
+    {
+        return (string) ($this->databaseConfig('login')['database'] ?? '');
+    }
+
+    /**
      * Raw credentials for one of the group's four database roles.
      *
      * @return array<string, mixed>

@@ -277,14 +277,45 @@ PayPal is configured, so enabling it does not expose a broken flow.
 
 ## D11 — Session authentication, not API tokens
 
-**Decision.** The Vue client is a first-party SPA served from the same origin as the API, and
-authenticates with Laravel's session cookie via Sanctum's SPA mode, with CSRF protection.
-Bearer tokens are not issued to the browser.
+**Decision.** The Vue client is a first-party SPA served from the same origin as
+the API. It authenticates with Laravel's session cookie, and the API routes are
+registered inside the **`web` middleware group** so they get encrypted cookies,
+the session, and CSRF verification. No bearer token is issued to the browser.
 
-**Why.** A token held in JavaScript is readable by any successful XSS; an `HttpOnly` cookie is
-not. The legacy panel is already cookie-session based, with `httponly`, `samesite=Strict` and
-`secure` tied to `ForceHTTPS`, so this preserves its security properties rather than weakening
-them. Token-based auth remains available for genuine third-party API consumers.
+**Why not a token.** A token held in JavaScript is readable by any successful
+XSS; an `HttpOnly` cookie is not. The legacy panel was already cookie-session
+based, with `httponly`, `samesite=Strict` and `secure` tied to its `ForceHTTPS`
+setting, so this preserves its security properties rather than weakening them.
+
+**Why not Sanctum.** Sanctum's SPA mode was implemented first and then removed.
+`EnsureFrontendRequestsAreStateful::fromFrontend()` decides whether to attach
+the session by inspecting the request's `Referer` or `Origin` header:
+
+```php
+$domain = $request->headers->get('referer') ?: $request->headers->get('origin');
+
+if (is_null($domain)) {
+    return false;
+}
+```
+
+A request arriving without either header therefore silently loses its session
+and appears unauthenticated. That is a surprising failure mode to accept in the
+authentication path when the client and the API share an origin and the `web`
+group does the job unconditionally. Nothing else in the application needed
+Sanctum, and an unused dependency sitting in the authentication path is worse
+than no dependency.
+
+**What this gives up.** There is currently no token-based authentication for
+third-party API consumers. Adding Sanctum's token guard later is additive and
+does not disturb the session path, so it is left until a real consumer exists
+rather than carried speculatively.
+
+**Supporting measures**, neither of which the legacy panel had:
+
+- The session id is regenerated on sign-in, which is what prevents session
+  fixation.
+- Sign-in is rate limited per account and, more loosely, per address.
 
 ---
 
