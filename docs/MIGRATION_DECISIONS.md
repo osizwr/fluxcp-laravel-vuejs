@@ -391,3 +391,41 @@ whose char/map pair declares a timezone different from the web host's, will now
 see the restriction applied when it previously was not. The window boundary is
 also now half-open (start inclusive, end exclusive) rather than open at both
 ends, so a check exactly at the start minute counts as in progress.
+
+---
+
+## D14 — Realtime is additive, and public channels carry only public data
+
+**Legacy behaviour.** None. FluxCP had no realtime anything: the status page
+cached to a file on disk and the only machine-readable feed was
+`server/status-xml`, which a client had to poll.
+
+**Decision.** Reverb broadcasting is added as a new capability, and the first
+thing on it is server status, because that is the figure visitors reload the
+panel for. Two rules govern it:
+
+1. **A public channel carries only data the page already shows publicly.** The
+   `server-status` channel carries whether each process answers a TCP
+   connection and how many characters are flagged online — exactly what the
+   public status page displays. Nothing about an individual account or
+   character goes near it.
+2. **Anything account-scoped uses a private or presence channel**, authorised
+   server-side in `routes/channels.php`. A public channel is readable by anyone
+   who knows its name, and channel names are guessable.
+
+**Realtime is never the only path.** The client prefers a broadcast and falls
+back to polling when broadcasting is not configured or the socket drops, and the
+broadcast payload is shaped identically to the REST response so both are applied
+through one code path and cannot drift apart. An operator who has not set up
+Reverb gets a working status page, not a figure frozen at page load.
+
+**Why the measurement moved to a schedule.** The legacy panel probed every
+server from a hook that ran before every request, so page load time depended on
+how long a firewalled port took to time out, multiplied by the number of
+servers. A scheduled command measures once per cycle, repopulates the cache the
+REST endpoint reads, and broadcasts the result, so the cost is fixed rather than
+per visitor.
+
+**Verified end to end**, not assumed: a WebSocket client connected to a running
+Reverb server, subscribed to `server-status`, and received the dispatched event
+with the expected payload.

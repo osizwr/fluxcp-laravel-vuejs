@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Server;
 
-use App\Support\Rathena\CharMapServer;
-
 /**
  * The status of one char/map pair, and of the login server it sits behind.
  *
