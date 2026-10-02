@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\UsesPanelConnection;
+use Database\Factories\PanelCredentialFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -28,8 +29,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class PanelCredential extends Model
 {
-    /** @use HasFactory<\Database\Factories\PanelCredentialFactory> */
+    /** @use HasFactory<PanelCredentialFactory> */
     use HasFactory;
+
     use UsesPanelConnection;
 
     protected $table = 'panel_credentials';

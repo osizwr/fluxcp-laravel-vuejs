@@ -1,0 +1,43 @@
+This project is a reimplementation of the Flux Control Panel (FluxCP) for
+rAthena, rebuilt on Laravel and Vue.
+
+Upstream work
+-------------
+
+FluxCP
+    https://github.com/rathena/FluxCP
+    Copyright (c) the FluxCP contributors.
+    Licensed under the GNU Lesser General Public License v3.0.
+
+    This project reproduces FluxCP's database schema, permission model,
+    configuration surface and behaviour, and was written by reading its source.
+    It is therefore a derivative work in substance and carries the same licence.
+    See LICENSE.
+
+rAthena
+    https://github.com/rathena/rathena
+    Copyright (c) the rAthena development team.
+    Licensed under the GNU General Public License v3.0.
+
+    rAthena owns the game database this panel reads and writes: the login,
+    char, guild, party, inventory, log and item/mob tables and their column
+    definitions. No rAthena source or SQL file is redistributed here. The
+    emulator's schema is a dependency, not part of this project.
+
+Licence of this work
+--------------------
+
+GNU Lesser General Public License v3.0 or later, matching upstream FluxCP.
+
+The copyright holder for the code written for this project has not been set.
+Before publishing or distributing, the project owner should add their own
+copyright line here and in composer.json's author metadata. Nothing has been
+filled in on their behalf, because fabricating a copyright claim would make the
+attribution inaccurate.
+
+Third-party dependencies
+------------------------
+
+PHP and JavaScript dependencies retain their own licences; see
+composer.lock and package-lock.json. Their notices are not reproduced here and
+are not superseded by this file.

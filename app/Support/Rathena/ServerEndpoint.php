@@ -8,9 +8,9 @@ namespace App\Support\Rathena;
  * A TCP endpoint belonging to one of the emulator's three server processes.
  *
  * Deliberately inert: it describes where a server is, and nothing about
- * whether it is running. Reachability is the job of
- * {@see \App\Services\Server\ServerStatusProbe}, which keeps the network call
- * out of the value object so status can be cached and faked in tests.
+ * whether it is running. Reachability is decided by an implementation of the
+ * ProbesServerReachability contract, which keeps the network call out of the
+ * value object so status can be cached and faked in tests.
  */
 final readonly class ServerEndpoint
 {

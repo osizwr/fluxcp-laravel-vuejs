@@ -133,8 +133,6 @@ final readonly class RankingService
 
     /**
      * Exclude characters whose account is banned, stale, or staff.
-     *
-     * @param  Builder  $query
      */
     private function applyAccountFilters(Builder $query, ServerGroup $group, string $pairKey): void
     {

@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\Gender;
 use App\Models\Concerns\UsesCharMapConnection;
 use Carbon\CarbonImmutable;
+use Database\Factories\CharacterFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -44,8 +45,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 final class Character extends Model
 {
-    /** @use HasFactory<\Database\Factories\CharacterFactory> */
+    /** @use HasFactory<CharacterFactory> */
     use HasFactory;
+
     use UsesCharMapConnection;
 
     protected $table = 'char';

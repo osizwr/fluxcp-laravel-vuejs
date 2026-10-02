@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Concerns;
 
+use App\Support\Rathena\ServerGroup;
 use App\Support\Rathena\ServerRegistry;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\RathenaTestSchema;
@@ -74,7 +75,7 @@ trait InteractsWithRathena
     /**
      * The server group under test.
      */
-    protected function serverGroup(): \App\Support\Rathena\ServerGroup
+    protected function serverGroup(): ServerGroup
     {
         return $this->app->make(ServerRegistry::class)->current();
     }

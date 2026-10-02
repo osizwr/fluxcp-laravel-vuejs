@@ -9,6 +9,7 @@ use App\Models\PanelCredential;
 use App\Support\Rathena\ServerRegistry;
 use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Hashing\Hasher;
 
 /**
  * Resolves authenticated accounts for the session guard.
@@ -27,7 +28,7 @@ final class AccountUserProvider extends EloquentUserProvider
     public function __construct(
         private readonly ServerRegistry $servers,
         private readonly RathenaCredentialVerifier $verifier,
-        \Illuminate\Contracts\Hashing\Hasher $hasher,
+        Hasher $hasher,
     ) {
         parent::__construct($hasher, Account::class);
     }

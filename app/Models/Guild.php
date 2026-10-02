@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\UsesCharMapConnection;
+use Database\Factories\GuildFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,8 +23,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property int $guild_id
  * @property string $name
- * @property int $char_id       Guild master's character id.
- * @property string $master     Guild master's character name, denormalised.
+ * @property int $char_id Guild master's character id.
+ * @property string $master Guild master's character name, denormalised.
  * @property int $guild_lv
  * @property int $connect_member
  * @property int $max_member
@@ -36,8 +37,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 final class Guild extends Model
 {
-    /** @use HasFactory<\Database\Factories\GuildFactory> */
+    /** @use HasFactory<GuildFactory> */
     use HasFactory;
+
     use UsesCharMapConnection;
 
     protected $table = 'guild';

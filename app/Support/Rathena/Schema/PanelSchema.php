@@ -99,7 +99,7 @@ final class PanelSchema
                 $table->unsignedInteger('account_id');
                 $table->string('userid', 23);
                 $table->string('user_pass', 32);
-                $table->enum('sex', ['m','f','s'])->default('M');
+                $table->enum('sex', ['m', 'f', 's'])->default('M');
                 $table->string('email', 39);
                 $table->dateTime('reg_date');
                 $table->string('reg_ip', 39);

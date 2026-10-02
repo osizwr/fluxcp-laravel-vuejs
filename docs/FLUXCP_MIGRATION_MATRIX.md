@@ -24,8 +24,10 @@ concerns are tracked in their own tables below.
 
 | Status | Actions | Share |
 | --- | --: | --: |
+| `IMPLEMENTING` | 2 | 1% |
 | `INTENTIONALLY_REPLACED` | 7 | 5% |
-| `NOT_STARTED` | 132 | 95% |
+| `NOT_STARTED` | 124 | 89% |
+| `VERIFIED` | 6 | 4% |
 | **Total** | **139** | |
 
 ## Module actions
@@ -43,14 +45,14 @@ concerns are tracked in their own tables below.
 | `create` | `modules/account/create.php` | `UNAUTH` | `NOT_STARTED` |  |
 | `edit` | `modules/account/edit.php` | `ADMIN` | `NOT_STARTED` |  |
 | `index` | `modules/account/index.php` | `LOWGM` | `NOT_STARTED` |  |
-| `login` | `modules/account/login.php` | `UNAUTH` | `NOT_STARTED` |  |
-| `logout` | `modules/account/logout.php` | `NORMAL` | `NOT_STARTED` |  |
+| `login` | `modules/account/login.php` | `UNAUTH` | `VERIFIED` | Full legacy flow including the order of its checks and all eight refusal reasons. Credentials handled per D1, audit per D2. Adds throttling. 33 tests. |
+| `logout` | `modules/account/logout.php` | `NORMAL` | `VERIFIED` | Session invalidated and token regenerated. Tested. |
 | `prune` | `modules/account/prune.php` | `ANYONE` | `NOT_STARTED` |  |
 | `resend` | `modules/account/resend.php` | `UNAUTH` | `NOT_STARTED` |  |
 | `resetpass` | `modules/account/resetpass.php` | `UNAUTH` | `NOT_STARTED` |  |
 | `resetpw` | `modules/account/resetpw.php` | `UNAUTH` | `NOT_STARTED` |  |
 | `transfer` | `modules/account/transfer.php` | `NORMAL` | `NOT_STARTED` |  |
-| `view` | `modules/account/view.php` | `NORMAL` | `NOT_STARTED` |  |
+| `view` | `modules/account/view.php` | `NORMAL` | `IMPLEMENTING` | **Own account only.** Viewing another account (the `ViewAccount` ability), the admin search of `account/index`, and the credit/ban panels are not built. |
 | `xferlog` | `modules/account/xferlog.php` | `NORMAL` | `NOT_STARTED` |  |
 
 ### `auction`
@@ -86,7 +88,7 @@ concerns are tracked in their own tables below.
 | `divorce` | `modules/character/divorce.php` | `NORMAL` | `NOT_STARTED` |  |
 | `index` | `modules/character/index.php` | `LOWGM` | `NOT_STARTED` |  |
 | `mapstats` | `modules/character/mapstats.php` | `ANYONE` | `NOT_STARTED` |  |
-| `online` | `modules/character/online.php` | `ANYONE` | `NOT_STARTED` |  |
+| `online` | `modules/character/online.php` | `ANYONE` | `VERIFIED` | Paginated and searchable. Location withheld without `ViewOnlinePosition`, hidden characters withheld without `IgnoreHiddenPref`, listing refused during WoE. 7 tests. |
 | `prefs` | `modules/character/prefs.php` | `NORMAL` | `NOT_STARTED` |  |
 | `resetlook` | `modules/character/resetlook.php` | `NORMAL` | `NOT_STARTED` |  |
 | `resetpos` | `modules/character/resetpos.php` | `NORMAL` | `NOT_STARTED` |  |
@@ -219,7 +221,7 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `index` | `modules/main/index.php` | `ANYONE` | `NOT_STARTED` |  |
+| `index` | `modules/main/index.php` | `ANYONE` | `IMPLEMENTING` | The client serves a front page showing server status. The legacy front page also rendered news, which depends on the news CMS. |
 | `page_not_found` | `modules/main/page_not_found.php` | `ANYONE` | `NOT_STARTED` |  |
 | `preprocess` | `modules/main/preprocess.php` | `ANYONE` | `NOT_STARTED` | Global pre-dispatch hook: date-field assembly, installer redirect, credit unhold, account prune, PayPal return, server/theme switch, WoE gate. Decomposes into middleware + scheduled jobs. |
 
@@ -267,21 +269,21 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `alchemist` | `modules/ranking/alchemist.php` | `UNLISTED` | `NOT_STARTED` |  |
-| `blacksmith` | `modules/ranking/blacksmith.php` | `UNLISTED` | `NOT_STARTED` |  |
-| `character` | `modules/ranking/character.php` | `ANYONE` | `NOT_STARTED` |  |
+| `alchemist` | `modules/ranking/alchemist.php` | `UNLISTED` | `NOT_STARTED` | Needs the alchemist job-class list and the fame column. |
+| `blacksmith` | `modules/ranking/blacksmith.php` | `UNLISTED` | `NOT_STARTED` | Needs the blacksmith job-class list and the fame column. |
+| `character` | `modules/ranking/character.php` | `ANYONE` | `VERIFIED` | Level ladder with the ban, staff, deletion and inactivity filters. Handles the login/char cross-database join the legacy panel assumed was always possible. 12 tests shared with the zeny ladder. |
 | `death` | `modules/ranking/death.php` | `ANYONE` | `NOT_STARTED` |  |
 | `guild` | `modules/ranking/guild.php` | `ANYONE` | `NOT_STARTED` |  |
-| `homunculus` | `modules/ranking/homunculus.php` | `UNLISTED` | `NOT_STARTED` |  |
+| `homunculus` | `modules/ranking/homunculus.php` | `UNLISTED` | `NOT_STARTED` | Needs the homunculus table and class names, which are ported in config/rathena_reference.php. |
 | `mvp` | `modules/ranking/mvp.php` | `ANYONE` | `NOT_STARTED` |  |
-| `zeny` | `modules/ranking/zeny.php` | `ANYONE` | `NOT_STARTED` |  |
+| `zeny` | `modules/ranking/zeny.php` | `ANYONE` | `VERIFIED` | As above, plus the per-character HideFromZenyRanking opt-out. |
 
 ### `server`
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
 | `info` | `modules/server/info.php` | `ANYONE` | `NOT_STARTED` |  |
-| `status` | `modules/server/status.php` | `ANYONE` | `NOT_STARTED` |  |
+| `status` | `modules/server/status.php` | `ANYONE` | `VERIFIED` | Per-process reachability, live and peak player counts, WoE state. Measurement moved off the request path and broadcast over Reverb (D14). Peak now read from the correct database. 5 tests. |
 | `status-xml` | `modules/server/status-xml.php` | `ANYONE` | `NOT_STARTED` |  |
 
 ### `service`
@@ -335,19 +337,19 @@ concerns are tracked in their own tables below.
 | --- | --- | --- | --- |
 | `Flux` | Static config/registry god-object + helpers | Laravel config + dedicated services | `NOT_STARTED` |
 | `Flux_Config` | Dot-notation array wrapper | `Illuminate\Config` / typed value objects | `INTENTIONALLY_REPLACED` |
-| `Flux_Connection` | Multi-database PDO wrapper (main/logs/web) | Runtime-registered Laravel connections (D5) | `NOT_STARTED` |
+| `Flux_Connection` | Multi-database PDO wrapper (main/logs/web) | Runtime-registered Laravel connections (D5) | `VERIFIED` |
 | `Flux_Connection_Statement` | PDO statement wrapper with encoding conversion | Query builder / PDO via Laravel | `INTENTIONALLY_REPLACED` |
-| `Flux_Dispatcher` | module/action router + auth gate | Laravel router + permission middleware | `NOT_STARTED` |
+| `Flux_Dispatcher` | module/action router + auth gate | Laravel router + permission middleware | `VERIFIED` |
 | `Flux_Template` | View renderer **and** 57 view helpers | Blade shell + Vue components + API resources | `NOT_STARTED` |
-| `Flux_Authorization` | Access-level checks, `allowedTo*` magic getters | Permission registry + Gates/Policies (D3) | `NOT_STARTED` |
-| `Flux_SessionData` | Session state (account, server, theme, messages) | Laravel session + authenticated user | `NOT_STARTED` |
+| `Flux_Authorization` | Access-level checks, `allowedTo*` magic getters | Permission registry + Gates/Policies (D3) | `VERIFIED` |
+| `Flux_SessionData` | Session state (account, server, theme, messages) | Laravel session + authenticated user | `IMPLEMENTING` |
 | `Flux_DataObject` | Array-to-object row wrapper | Eloquent models | `INTENTIONALLY_REPLACED` |
-| `Flux_LoginServer` | Auth, registration, bans, credits, prefs | Split into auth, ban, credit and preference services | `NOT_STARTED` |
-| `Flux_CharServer / Flux_MapServer / Flux_BaseServer` | TCP reachability probe via `fsockopen` | Server status service + cached probe | `NOT_STARTED` |
-| `Flux_Athena / Flux_LoginAthenaGroup` | Server-group containers | Server-group registry (D5) | `NOT_STARTED` |
+| `Flux_LoginServer` | Auth, registration, bans, credits, prefs | Split into auth, ban, credit and preference services | `IMPLEMENTING` |
+| `Flux_CharServer / Flux_MapServer / Flux_BaseServer` | TCP reachability probe via `fsockopen` | Server status service + cached probe | `VERIFIED` |
+| `Flux_Athena / Flux_LoginAthenaGroup` | Server-group containers | Server-group registry (D5) | `VERIFIED` |
 | `Flux_TemporaryTable` | Destructive item/mob table merge | Dedicated merge service (D6) | `NOT_STARTED` |
 | `Flux_Paginator` | Sortable/filterable SQL pagination | Laravel pagination + validated sort allow-list | `NOT_STARTED` |
-| `Flux_Installer*` | File-ledger schema installer (4 classes) | Laravel migrations (D4) | `INTENTIONALLY_REPLACED` |
+| `Flux_Installer*` | File-ledger schema installer (4 classes) | `panel:install-schema` command (D4) | `VERIFIED` |
 | `Flux_Captcha` | GD CAPTCHA generator | CAPTCHA service, reCAPTCHA retained | `NOT_STARTED` |
 | `Flux_EmblemExporter` | Guild emblem BMP/GIF conversion | Emblem service | `NOT_STARTED` |
 | `Flux_ItemShop / Flux_ItemShop_Cart` | Credit shop + session cart | Shop + cart services | `NOT_STARTED` |
@@ -365,19 +367,19 @@ concerns are tracked in their own tables below.
 
 | Concern | Legacy | Status | Notes |
 | --- | --- | --- | --- |
-| Routing | `Flux_Dispatcher` module/action | `NOT_STARTED` | API routes + SPA history routing. |
-| Authentication | `Flux_LoginServer::isAuth()` | `NOT_STARTED` | Session auth via Sanctum SPA mode (D11); rAthena credential compatibility (D1). |
-| Authorization | `access.php` 139 action keys + 46 features | `NOT_STARTED` | Permission registry, deny-by-default (D3). |
-| Database connections | 4 handles per server group | `NOT_STARTED` | Runtime registration (D5). |
-| Application schema | 25 `cp_*` tables, 44 SQL files | `NOT_STARTED` | Laravel migrations (D4). |
-| Configuration | 361 options in one array | `NOT_STARTED` | Split by audience (D12). |
-| Themes | PHP template inheritance, 3 themes | `NOT_STARTED` | Design tokens + components (D7). |
+| Routing | `Flux_Dispatcher` module/action | `VERIFIED` | API routes + SPA history routing. 8 endpoints so far. |
+| Authentication | `Flux_LoginServer::isAuth()` | `VERIFIED` | Session cookie auth in the web middleware group (D11); rAthena credential compatibility (D1). Registration and password reset not built. |
+| Authorization | `access.php` 139 action keys + 46 features | `VERIFIED` | Permission registry with 133 route and 47 ability entries, deny-by-default (D3). Gates registered for every ability. |
+| Database connections | 4 handles per server group | `VERIFIED` | Runtime registration (D5), plus co-location detection for the login/char join. |
+| Application schema | 25 `cp_*` tables, 44 SQL files | `VERIFIED` | `panel:install-schema` (D4). 196 columns compared against the legacy end state; 11 benign type differences recorded in the compatibility report. |
+| Configuration | 361 options in one array | `IMPLEMENTING` | Split by audience (D12). The options the built features read are ported; database-backed admin-editable settings are not built. |
+| Themes | PHP template inheritance, 3 themes | `IMPLEMENTING` | Design tokens, light/dark, replaceable shell (D7). No theme-selection UI beyond appearance. |
 | Add-ons | `addons/` loader, 1 example | `NOT_STARTED` | Laravel packages (D8). |
 | Localisation | 4 languages, `Flux::message()` | `NOT_STARTED` | Laravel translations + client catalogue. |
 | Mail | Bundled PHPMailer 5.x | `NOT_STARTED` | Queued mailables. |
-| Realtime | None (XML status feed, page refresh) | `NOT_STARTED` | Reverb broadcasting; new capability, not a port. |
-| Queues/scheduling | Inline in `preprocess` on every request | `NOT_STARTED` | Jobs + scheduler. |
-| Server status | `fsockopen` per request | `NOT_STARTED` | Probe service, cached, broadcast. |
+| Realtime | None (XML status feed, page refresh) | `VERIFIED` | Reverb broadcasting with a polling fallback (D14). Verified end to end with a WebSocket client. |
+| Queues/scheduling | Inline in `preprocess` on every request | `IMPLEMENTING` | Status measurement is scheduled. Account pruning and credit release are not built. |
+| Server status | `fsockopen` per request | `VERIFIED` | Cached probe behind a contract, measured on a schedule and broadcast. |
 | Pagination/sorting | `Flux_Paginator`, column names from request | `NOT_STARTED` | Validated sort allow-list (SQL-injection surface in legacy). |
-| Automated tests | None in repository | `NOT_STARTED` | Pest/PHPUnit feature + integration tests. |
+| Automated tests | None in repository | `IMPLEMENTING` | 97 PHPUnit tests, 213 assertions. Integration tests run against a real MariaDB schema. |
 

@@ -6,6 +6,7 @@ namespace Tests\Feature\Schema;
 
 use App\Support\Rathena\Schema\PanelSchema;
 use App\Support\Rathena\ServerRegistry;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Concerns\InteractsWithRathena;
@@ -96,7 +97,7 @@ final class PanelSchemaInstallTest extends TestCase
             $table->string('operator_note', 64)->nullable();
         });
 
-        \Illuminate\Support\Facades\DB::connection($connection)->table('cp_credits')->insert([
+        DB::connection($connection)->table('cp_credits')->insert([
             'account_id' => 2000001,
             'balance' => 4200,
             'operator_note' => 'added by the operator',
@@ -104,7 +105,7 @@ final class PanelSchemaInstallTest extends TestCase
 
         $this->artisan('panel:install-schema')->assertSuccessful();
 
-        $row = \Illuminate\Support\Facades\DB::connection($connection)
+        $row = DB::connection($connection)
             ->table('cp_credits')
             ->where('account_id', 2000001)
             ->first();

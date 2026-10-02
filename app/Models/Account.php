@@ -11,14 +11,15 @@ use App\Models\Concerns\UsesLoginConnection;
 use App\Support\Authorization\PermissionRegistry;
 use App\Support\Rathena\ServerRegistry;
 use Carbon\CarbonImmutable;
+use Database\Factories\AccountFactory;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Foundation\Auth\Access\Authorizable;
 
 /**
  * An rAthena account: a row of the `login` table.
@@ -54,8 +55,9 @@ final class Account extends Model implements AuthenticatableContract, Authorizab
      */
     use Authorizable;
 
-    /** @use HasFactory<\Database\Factories\AccountFactory> */
+    /** @use HasFactory<AccountFactory> */
     use HasFactory;
+
     use UsesLoginConnection;
 
     protected $table = 'login';

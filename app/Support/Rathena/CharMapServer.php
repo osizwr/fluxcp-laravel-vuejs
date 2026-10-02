@@ -23,8 +23,8 @@ final readonly class CharMapServer
      * @param  list<string>  $resetDenyMaps
      * @param  list<string>  $woeRestrictedRoutes
      * @param  array<string, mixed>  $databaseOverrides  Connection keys this
-     *         pair overrides on top of the group's char_map credentials,
-     *         mirroring FluxCP's per-pair 'Database' setting.
+     *                                                   pair overrides on top of the group's char_map credentials,
+     *                                                   mirroring FluxCP's per-pair 'Database' setting.
      */
     public function __construct(
         public string $key,

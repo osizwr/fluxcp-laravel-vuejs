@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Contracts\ProbesServerReachability;
 use App\Models\Account;
 use App\Models\Character;
-use App\Contracts\ProbesServerReachability;
+use App\Support\Rathena\ServerRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -233,7 +234,7 @@ final class PublicEndpointTest extends TestCase
             ],
         ]);
 
-        $this->app->forgetInstance(\App\Support\Rathena\ServerRegistry::class);
+        $this->app->forgetInstance(ServerRegistry::class);
     }
 
     /*

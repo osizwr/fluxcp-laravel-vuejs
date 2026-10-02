@@ -7,7 +7,9 @@ namespace App\Providers;
 use App\Enums\AccountLevel;
 use App\Models\Account;
 use App\Services\Auth\AccountUserProvider;
+use App\Services\Auth\RathenaCredentialVerifier;
 use App\Support\Authorization\PermissionRegistry;
+use App\Support\Rathena\ServerRegistry;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -39,8 +41,8 @@ final class AuthorizationServiceProvider extends ServiceProvider
     private function registerAuthProvider(): void
     {
         Auth::provider('rathena-accounts', fn ($app): AccountUserProvider => new AccountUserProvider(
-            $app->make(\App\Support\Rathena\ServerRegistry::class),
-            $app->make(\App\Services\Auth\RathenaCredentialVerifier::class),
+            $app->make(ServerRegistry::class),
+            $app->make(RathenaCredentialVerifier::class),
             $app->make(Hasher::class),
         ));
     }
