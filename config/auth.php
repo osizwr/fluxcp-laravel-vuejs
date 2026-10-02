@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\User;
+declare(strict_types=1);
 
 return [
 
@@ -17,7 +17,6 @@ return [
 
     'defaults' => [
         'guard' => env('AUTH_GUARD', 'web'),
-        'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
 
     /*
@@ -40,7 +39,7 @@ return [
     'guards' => [
         'web' => [
             'driver' => 'session',
-            'provider' => 'users',
+            'provider' => 'accounts',
         ],
     ],
 
@@ -62,15 +61,18 @@ return [
     */
 
     'providers' => [
-        'users' => [
-            'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', User::class),
+
+        /*
+         * Accounts are rAthena's, in its `login` table on its own connection.
+         * The driver is registered in AuthorizationServiceProvider and backed
+         * by the AccountUserProvider class, which redirects remember-me token
+         * and password hash lookups to the panel's own table, because
+         * rAthena's schema has neither. See MIGRATION_DECISIONS.md (D1).
+         */
+        'accounts' => [
+            'driver' => 'rathena-accounts',
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
     ],
 
     /*
@@ -92,14 +94,17 @@ return [
     |
     */
 
-    'passwords' => [
-        'users' => [
-            'provider' => 'users',
-            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 60,
-            'throttle' => 60,
-        ],
-    ],
+    /*
+    |--------------------------------------------------------------------------
+    | Password resets
+    |--------------------------------------------------------------------------
+    |
+    | Laravel's password broker is not used. FluxCP has its own reset flow
+    | backed by `cp_resetpass`, which an existing panel install and its
+    | operators already share, so resets go through that table rather than a
+    | parallel Laravel one.
+    |
+    */
 
     /*
     |--------------------------------------------------------------------------

@@ -32,5 +32,23 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+
+        <!--
+            The panel's own tables (sessions, cache, queue, panel_credentials)
+            run on in-memory SQLite. They are small, owned entirely by this
+            application, and nothing joins them to rAthena's.
+
+            The rAthena connections point at real MariaDB databases instead.
+            Those tests are integration tests by nature: they exercise an
+            80-column reserved-word table, enum columns, cross-database
+            connections and the emulator's own id ranges. Running them on
+            SQLite would prove the queries parse, not that they work.
+        -->
+        <env name="RATHENA_DB_HOST" value="127.0.0.1"/>
+        <env name="RATHENA_DB_PORT" value="3306"/>
+        <env name="RATHENA_DB_DATABASE" value="fluxcp_test"/>
+        <env name="RATHENA_DB_USERNAME" value="root"/>
+        <env name="RATHENA_DB_PASSWORD" value=""/>
+        <env name="RATHENA_LOGS_DB_DATABASE" value="fluxcp_test_logs"/>
     </php>
 </phpunit>

@@ -1,25 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
-class DatabaseSeeder extends Seeder
+/**
+ * The panel owns almost no data of its own.
+ *
+ * Accounts, characters and guilds belong to rAthena and must never be seeded
+ * into a real server's database, so there is deliberately nothing here that
+ * writes to those tables. Test fixtures are built by the model factories
+ * against a disposable database instead.
+ */
+final class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        //
     }
 }
