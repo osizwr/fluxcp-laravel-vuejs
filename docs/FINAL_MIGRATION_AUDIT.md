@@ -101,7 +101,7 @@ column exactly as the emulator needs it.
 | Frontend | 2,346 lines |
 | Migrations | 4 |
 | Factories | 4 |
-| Tests | 11 files, **97 tests, 213 assertions** |
+| Tests | 12 files, **100 tests, 233 assertions** |
 | Documentation | 7 documents (2,442 lines) |
 
 ### Complete and tested
@@ -195,7 +195,7 @@ Every command below was run, and these are its real results.
 
 | Command | Result |
 | --- | --- |
-| `composer test` | **97 passed**, 213 assertions, 0 failures, 80s |
+| `composer test` | **100 passed**, 233 assertions, 0 failures, 5s |
 | `composer lint` (Pint) | **passed** |
 | `npm run lint` (ESLint + `vue-tsc`) | **passed**, 0 errors, 0 warnings |
 | `npm run build` | **passed**, 16 chunks, 41.7 kB gzipped entry |
@@ -233,6 +233,42 @@ Worth recording, because each would have been a production fault:
    would not create.
 5. Sanctum's SPA mode attaches the session only when a request carries a `Referer`
    or `Origin` header, so a request without one silently lost its session.
+
+### A data-loss incident in the test harness
+
+Recorded because it is the most serious defect found in this project's own code,
+and because the fix is a pattern worth keeping.
+
+The harness took its table listing from
+`getSchemaBuilder()->getTableListing()` with **no schema argument**. On
+MySQL/MariaDB that returns every table the connected user can see, **across every
+database, schema-qualified** — on the development machine, 555 names of which 458
+belonged to unrelated databases. Truncating each name in turn therefore emptied
+**every database on the server**, not just the test one.
+
+It went unnoticed because the suite passed throughout: the test databases were
+correctly configured and correctly reset, so the symptom was damage outside the
+tests' own scope. The only visible hint was the suite taking 80 seconds; with the
+listing scoped it takes 5, because it had been truncating 555 tables before
+every single test.
+
+Two changes, and the second is the one that matters:
+
+1. The listing is scoped to the connection's own database, and a
+   schema-qualified name reaching `truncate()` now throws.
+2. **An allow-list of databases the harness may destroy.** A connection pointing
+   anywhere else fails the test before any destructive call. Correct code is not
+   enough on its own; a guard is what makes the next mistake loud instead of
+   catastrophic.
+
+Pinned by `tests/Feature/Diagnostic/TestIsolationTest.php`, which asserts the
+scoping, asserts that the unscoped call really does differ on this server, and
+asserts that the guard refuses a non-disposable database.
+
+**The lesson generalises beyond tests.** Any destructive operation driven by a
+listing should name its scope explicitly and verify the target before acting.
+The deployment guide's advice to withhold `DROP` from the panel's database user
+is the same principle applied to production.
 
 ---
 
@@ -295,7 +331,7 @@ Against the project's own checklist:
 | ✅ | Queues configured |
 | 🟨 | API implemented — **8 endpoints** |
 | 🟨 | Security review — **applied to what exists; no review of unbuilt code** |
-| ✅ | Automated tests created — 97 |
+| ✅ | Automated tests created — 100 |
 | 🟨 | Legacy/new compatibility testing — **for what is built** |
 | ✅ | Production build succeeds |
 | ✅ | No placeholder functionality |

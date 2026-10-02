@@ -195,13 +195,18 @@ php artisan reverb:start
 composer test
 ```
 
-97 tests, 213 assertions.
+100 tests, 233 assertions.
 
 The tests against rAthena's schema are **integration tests against a real
 MySQL/MariaDB database**, not SQLite. They exercise an 80-column
 reserved-word table, enum columns, cross-database connections and the
 emulator's own id ranges; on SQLite they would prove the queries parse rather
 than that they work.
+
+The harness refuses to run against any database other than the two named in
+`phpunit.xml`, and a schema-qualified table name reaching `truncate()` throws.
+Both guards exist because an unscoped table listing once emptied every database
+on a development machine — see the audit for the detail.
 
 Create the two throwaway databases named in `phpunit.xml` before running them:
 

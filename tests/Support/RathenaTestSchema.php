@@ -6,6 +6,7 @@ namespace Tests\Support;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 
 /**
  * Builds the rAthena tables the test suite needs.
@@ -24,6 +25,21 @@ use Illuminate\Support\Facades\Schema;
  */
 final class RathenaTestSchema
 {
+    /**
+     * Databases this fixture is permitted to drop tables in.
+     *
+     * Laravel's own dropAllTables() is correctly scoped to the connection's
+     * schema, so this is defence in depth rather than a fix. It is here
+     * because this class destroys structure, and a destructive operation
+     * pointed at the wrong database should fail loudly rather than succeed.
+     *
+     * @var list<string>
+     */
+    private const DESTROYABLE_DATABASES = [
+        'fluxcp_test',
+        'fluxcp_test_logs',
+    ];
+
     /**
      * Create every table across the three connections.
      *
@@ -53,6 +69,14 @@ final class RathenaTestSchema
 
         foreach ($connections as $connection) {
             $database = Schema::connection($connection)->getConnection()->getDatabaseName();
+
+            if (! in_array($database, self::DESTROYABLE_DATABASES, strict: true)) {
+                throw new RuntimeException(
+                    "Refusing to drop tables in the database '{$database}' (connection "
+                    ."'{$connection}'). Only ".implode(', ', self::DESTROYABLE_DATABASES)
+                    .' may be used as a test fixture. Check the RATHENA_* values in phpunit.xml.'
+                );
+            }
 
             if (in_array($database, $seen, strict: true)) {
                 continue;
