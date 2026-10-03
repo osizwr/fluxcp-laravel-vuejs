@@ -341,6 +341,71 @@ final class RathenaTestSchema
             $table->index('char_id');
         });
 
+        /*
+         * Player shops. rAthena names these inconsistently, and a vending
+         * stall sells out of the seller's cart while a buying store holds no
+         * stock -- which is why only the vending items join through
+         * cart_inventory.
+         */
+        $schema->create('vendings', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('account_id')->default(0);
+            $table->unsignedInteger('char_id')->default(0);
+            $table->unsignedTinyInteger('sex')->default(1);
+            $table->string('map', 20)->default('');
+            $table->unsignedSmallInteger('x')->default(0);
+            $table->unsignedSmallInteger('y')->default(0);
+            $table->string('title', 80)->default('');
+            $table->boolean('autotrade')->default(false);
+        });
+
+        $schema->create('vending_items', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('vending_id')->default(0);
+            $table->unsignedSmallInteger('index')->default(0);
+            $table->unsignedInteger('cartinventory_id')->default(0);
+            $table->unsignedSmallInteger('amount')->default(0);
+            $table->unsignedInteger('price')->default(0);
+            $table->index('vending_id');
+        });
+
+        $schema->create('buyingstores', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('account_id')->default(0);
+            $table->unsignedInteger('char_id')->default(0);
+            $table->unsignedTinyInteger('sex')->default(1);
+            $table->string('map', 20)->default('');
+            $table->unsignedSmallInteger('x')->default(0);
+            $table->unsignedSmallInteger('y')->default(0);
+            $table->string('title', 80)->default('');
+            $table->unsignedInteger('limit')->default(0);
+            $table->boolean('autotrade')->default(false);
+        });
+
+        $schema->create('buyingstore_items', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('buyingstore_id')->default(0);
+            $table->unsignedSmallInteger('index')->default(0);
+            $table->unsignedInteger('nameid')->default(0);
+            $table->unsignedSmallInteger('amount')->default(0);
+            $table->unsignedInteger('price')->default(0);
+            $table->index('buyingstore_id');
+        });
+
+        $schema->create('cart_inventory', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('char_id')->default(0);
+            $table->unsignedInteger('nameid')->default(0);
+            $table->smallInteger('amount')->default(0);
+            $table->boolean('identify')->default(false);
+            $table->tinyInteger('refine')->default(0);
+            $table->unsignedInteger('card0')->default(0);
+            $table->unsignedInteger('card1')->default(0);
+            $table->integer('card2')->default(0);
+            $table->integer('card3')->default(0);
+            $table->index('char_id');
+        });
+
         $schema->create('guild_alliance', function (Blueprint $table): void {
             $table->unsignedInteger('guild_id')->default(0);
             $table->unsignedInteger('alliance_id')->default(0);

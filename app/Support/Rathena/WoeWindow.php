@@ -109,6 +109,36 @@ final readonly class WoeWindow
     /**
      * Duration of the window in minutes, accounting for week wrap.
      */
+    /**
+     * The day a window opens, named.
+     *
+     * rAthena numbers days from Sunday, as PHP's `w` does, so the mapping is
+     * positional rather than a lookup through a date library -- the stored
+     * value is a day index and not a date.
+     */
+    public function startDayName(): string
+    {
+        return self::dayName($this->startDay);
+    }
+
+    public function endDayName(): string
+    {
+        return self::dayName($this->endDay);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function dayNames(): array
+    {
+        return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    }
+
+    private static function dayName(int $day): string
+    {
+        return self::dayNames()[$day] ?? 'Unknown';
+    }
+
     public function durationInMinutes(): int
     {
         $duration = $this->endMinute - $this->startMinute;

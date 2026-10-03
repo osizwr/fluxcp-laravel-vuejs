@@ -403,4 +403,71 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Castles
+    |--------------------------------------------------------------------------
+    |
+    | War of Emperium castles, by the id rAthena uses in `guild_castle`. The
+    | names are the iRO ones, which is what FluxCP shipped.
+    |
+    | Removing an entry removes that castle from the castles page and from the
+    | guild ladder's castle count, which is how an operator excludes the
+    | novice castles or a set their server does not run.
+    |
+    | FluxCP's castlenames.php also carried the 44 kRO names inside a block
+    | comment, as an alternative set to paste over these. They are not
+    | reproduced here -- an operator who wants them edits this array, which is
+    | the same amount of work as un-commenting was, and carrying a second dead
+    | copy in a comment is how the two drift apart.
+    |
+    */
+
+    'castles' => [
+        0 => 'Neuschwanstein',
+        1 => 'Hohenschwangau',
+        2 => 'Nuenberg',
+        3 => 'Wuerzburg',
+        4 => 'Rothenburg',
+        5 => 'Repherion',
+        6 => 'Eeyolbriggar',
+        7 => 'Yesnelph',
+        8 => 'Bergel',
+        9 => 'Mersetzdeitz',
+        10 => 'Bright Arbor',
+        11 => 'Scarlet Palace',
+        12 => 'Holy Shadow',
+        13 => 'Sacred Altar',
+        14 => 'Bamboo Grove Hill',
+        15 => 'Kriemhild',
+        16 => 'Swanhild',
+        17 => 'Fadhgridh',
+        18 => 'Skoegul',
+        19 => 'Gondul',
+        20 => 'Novice Aldebaran',
+        21 => 'Novice Geffen',
+        22 => 'Novice Payon',
+        23 => 'Novice Prontera',
+        24 => 'Himinn',
+        25 => 'Andlangr',
+        26 => 'Viblainn',
+        27 => 'Hljod',
+        28 => 'Skidbladnir',
+        29 => 'Mardol',
+        30 => 'Cyr',
+        31 => 'Horn',
+        32 => 'Gefn',
+        33 => 'Bandis',
+        34 => 'Leilah',
+        35 => 'Pavianne',
+        36 => 'Jasmine',
+        37 => 'Roxie',
+        38 => 'Curly Sue',
+        39 => 'Gaebolg',
+        40 => 'Richard',
+        41 => 'Wigner',
+        42 => 'Heine',
+        43 => 'Nerious',
+    ],
+
 ];

@@ -14,10 +14,12 @@ use App\Http\Controllers\Api\MonsterController;
 use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\PasswordController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\PlayerShopController;
 use App\Http\Controllers\Api\RankingController;
 use App\Http\Controllers\Api\RegistrationController;
 use App\Http\Controllers\Api\ServerStatisticsController;
 use App\Http\Controllers\Api\ServerStatusController;
+use App\Http\Controllers\Api\WorldController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -140,6 +142,29 @@ Route::middleware('permission')->group(function (): void {
     Route::get('news/{article}', [NewsController::class, 'show'])
         ->whereNumber('article')
         ->name('news.view');
+
+    /*
+     * Castle ownership and the siege schedule.
+     *
+     * The schedule is reported per world with its timezone and the next
+     * absolute start, because "Saturday 20:00" without saying whose 20:00 is
+     * the usual reason players turn up an hour out.
+     */
+    Route::get('world/castles', [WorldController::class, 'castles'])->name('castle.index');
+    Route::get('world/siege-schedule', [WorldController::class, 'siegeSchedule'])->name('woe.index');
+
+    /*
+     * Player shops. Vending stalls and buying stores share an implementation
+     * because they differ only in which tables they read.
+     */
+    Route::get('shops/{kind}', [PlayerShopController::class, 'index'])
+        ->whereIn('kind', ['vending', 'buying'])
+        ->name('vending.index');
+
+    Route::get('shops/{kind}/{shop}', [PlayerShopController::class, 'show'])
+        ->whereIn('kind', ['vending', 'buying'])
+        ->whereNumber('shop')
+        ->name('vending.viewshop');
 
     /*
      * Guilds. The emblem is a PNG decoded from the gzip-compressed BMP
