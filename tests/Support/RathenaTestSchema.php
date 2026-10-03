@@ -279,6 +279,17 @@ final class RathenaTestSchema
             $table->index('account_id');
         });
 
+        $schema->create('cp_txnlog', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('account_id')->default(0);
+            $table->string('txn_id', 32)->default('');
+            $table->string('payer_email', 128)->default('');
+            $table->decimal('mc_gross', 10, 2)->default(0);
+            $table->string('mc_currency', 3)->default('USD');
+            $table->string('payment_status', 32)->default('');
+            $table->dateTime('process_date')->nullable();
+        });
+
         $schema->create('cp_cmsnews', function (Blueprint $table): void {
             $table->increments('id');
             $table->string('title', 100);
@@ -537,6 +548,23 @@ final class RathenaTestSchema
             $table->date('date');
         });
 
+        /*
+         * rAthena keeps these two beside the character data rather than in the
+         * logs database.
+         */
+        $schema->create('charlog', function (Blueprint $table): void {
+            $table->dateTime('time')->useCurrent();
+            $table->string('char_msg', 255)->default('char select');
+            $table->unsignedInteger('account_id')->default(0);
+            $table->unsignedTinyInteger('char_num')->default(0);
+            $table->string('name', 30)->default('');
+        });
+
+        $schema->create('interlog', function (Blueprint $table): void {
+            $table->dateTime('time')->useCurrent();
+            $table->string('log', 255)->default('');
+        });
+
         $schema->create('cp_charprefs', function (Blueprint $table): void {
             $table->increments('id');
             $table->unsignedInteger('account_id');
@@ -576,6 +604,75 @@ final class RathenaTestSchema
             $table->string('user', 23)->default('');
             $table->tinyInteger('rcode')->default(0);
             $table->string('log', 255)->default('');
+        });
+
+        /*
+         * rAthena's game logs. Which of these a real server populates depends
+         * on `log_athena.conf`; the browser intersects declared columns with
+         * the real schema so a differently configured server is an empty table
+         * rather than a 500.
+         */
+        $schema->create('atcommandlog', function (Blueprint $table): void {
+            $table->increments('atcommand_id');
+            $table->dateTime('atcommand_date')->useCurrent();
+            $table->unsignedInteger('account_id')->default(0);
+            $table->unsignedInteger('char_id')->default(0);
+            $table->string('char_name', 25)->default('');
+            $table->string('map', 11)->default('');
+            $table->text('command');
+        });
+
+        $schema->create('chatlog', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->dateTime('time')->useCurrent();
+            $table->string('type', 1)->default('O');
+            $table->unsignedInteger('type_id')->default(0);
+            $table->unsignedInteger('src_charid')->default(0);
+            $table->string('src_accountid', 11)->default('');
+            $table->string('src_map', 11)->default('');
+            $table->string('src_charname', 25)->default('');
+            $table->string('dst_charname', 25)->default('');
+            $table->string('message', 150)->default('');
+        });
+
+        $schema->create('branchlog', function (Blueprint $table): void {
+            $table->increments('branch_id');
+            $table->dateTime('branch_date')->useCurrent();
+            $table->unsignedInteger('account_id')->default(0);
+            $table->unsignedInteger('char_id')->default(0);
+            $table->string('char_name', 25)->default('');
+            $table->string('map', 11)->default('');
+        });
+
+        $schema->create('npclog', function (Blueprint $table): void {
+            $table->increments('npc_id');
+            $table->dateTime('npc_date')->useCurrent();
+            $table->unsignedInteger('account_id')->default(0);
+            $table->unsignedInteger('char_id')->default(0);
+            $table->string('char_name', 25)->default('');
+            $table->string('map', 11)->default('');
+            $table->string('mes', 255)->default('');
+        });
+
+        $schema->create('cashlog', function (Blueprint $table): void {
+            $table->string('id', 20)->primary();
+            $table->dateTime('time')->useCurrent();
+            $table->unsignedInteger('char_id')->default(0);
+            $table->string('type', 1)->default('S');
+            $table->string('cash_type', 1)->default('O');
+            $table->integer('amount')->default(0);
+            $table->string('map', 11)->default('');
+        });
+
+        $schema->create('feedinglog', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->dateTime('time')->useCurrent();
+            $table->unsignedInteger('char_id')->default(0);
+            $table->unsignedInteger('target_id')->default(0);
+            $table->string('type', 1)->default('P');
+            $table->smallInteger('intimacy')->default(0);
+            $table->unsignedInteger('item_id')->default(0);
+            $table->string('map', 11)->default('');
         });
 
         $schema->create('mvplog', function (Blueprint $table): void {

@@ -161,7 +161,18 @@ return [
         'logdata.chat' => AccountLevel::Administrator,
         'logdata.command' => AccountLevel::Administrator,
         'logdata.feeding' => AccountLevel::Administrator,
-        'logdata.index' => AccountLevel::Administrator,
+        /*
+         * A floor, not the decision. The real gate is per view in
+         * config/log_browsers.php, where every view is Administrator —
+         * matching the legacy access file, so default behaviour is identical.
+         *
+         * The floor is lower so that lowering a single view actually works: a
+         * route held at Administrator would refuse the junior staff member
+         * before the per-view level was ever consulted. The menu returns an
+         * empty list for somebody who may open nothing.
+         */
+        'logdata.index' => AccountLevel::JuniorGameMaster,
+        'logdata.view' => AccountLevel::JuniorGameMaster,
         'logdata.inter' => AccountLevel::Administrator,
         'logdata.login' => AccountLevel::Administrator,
         'logdata.mvp' => AccountLevel::Administrator,

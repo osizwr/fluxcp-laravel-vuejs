@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\GuildController;
 use App\Http\Controllers\Api\IpBanController;
 use App\Http\Controllers\Api\ItemController;
+use App\Http\Controllers\Api\LogBrowserController;
 use App\Http\Controllers\Api\MonsterController;
 use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\PasswordController;
@@ -182,6 +183,19 @@ Route::middleware('permission')->group(function (): void {
     Route::get('pages/{path}', [StaticPageController::class, 'show'])
         ->where('path', '[A-Za-z0-9][A-Za-z0-9\-\/]*')
         ->name('pages.content');
+
+    /*
+     * The log browsers.
+     *
+     * One endpoint for all twenty views, which the legacy had as twenty-two
+     * near-identical modules. Each view declares its own minimum level in
+     * config/log_browsers.php on top of this route's: the item log is everyday
+     * moderation, the chat log is every private message players have sent.
+     */
+    Route::get('logs', [LogBrowserController::class, 'index'])->name('logdata.index');
+    Route::get('logs/{view}', [LogBrowserController::class, 'show'])
+        ->where('view', '[a-z\-]+')
+        ->name('logdata.view');
 
     /*
      * IP bans.

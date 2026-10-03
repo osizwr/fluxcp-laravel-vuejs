@@ -750,3 +750,54 @@ slash or a capital letter was simply unreachable. Paths are normalised to
 lower case without surrounding slashes, and validated to letters, digits,
 dashes and slashes — which also refuses anything that could be read as a
 traversal or a query string.
+
+---
+
+## D21 — The log browsers are declarations, and each carries its own level
+
+**Legacy behaviour.** 22 modules — `cplog/ban`, `cplog/login`, `logdata/pick`,
+`logdata/zeny` and the rest — each a file repeating the same sequence: count
+the rows, build a paginator, set its sortable columns, fetch a page, render a
+table. All 22 were `AccountLevel::ADMIN` in `config/access.php`.
+
+**The problem with 22 copies** is not the duplication itself. It is that they
+drift: the sortable column lists, the date filtering and the ordering
+defaults were already inconsistent between them in the version ported here,
+because a fix applied to one was not applied to the others.
+
+**Decision.** The views are declarations in `config/log_browsers.php` — table,
+connection, columns with labels and types, filterable columns, date column,
+level — and one controller reads any of them. Adding a log view is an entry in
+that file.
+
+**Columns are intersected with the real schema.** A view declares the columns
+it would like, and only the ones the table actually has are selected. This is
+not defensiveness for its own sake: rAthena's log schema varies by version,
+and *which tables exist at all* depends on what the operator enabled in
+`log_athena.conf`. A hardcoded `SELECT` turns "this server logs slightly
+differently" into a 500 on an admin page, and a missing table turns "we do not
+log that" into one as well. A view whose table is absent reports
+`available: false` with a sentence saying so.
+
+**The levels are not loosened.** Every view is `Administrator`, which is what
+the legacy had for all 22. Widening who can read the logs is an operator's
+decision, not a migration's, and an earlier draft of this work had several
+views at junior and senior level before that was caught — the levels here are
+the legacy ones, deliberately.
+
+**Why per view rather than one setting.** So the decision can be made view by
+view. The item and zeny logs are everyday moderation; the chat log is every
+private message players have sent each other, and the transaction log is
+payment data. An operator who wants junior staff handling item disputes can
+lower those two views without also handing over the chat log.
+
+For that lever to work, the *route* floor is `JuniorGameMaster` while the
+*view* level is `Administrator`. The route being held at Administrator would
+refuse a junior staff member before the per-view level was ever consulted.
+Default behaviour is identical to the legacy; the floor only exists so that
+lowering a single view has an effect.
+
+**`cp_resetpass.code` is not among the columns of the password-reset view.** It
+is a digest rather than a working token (D15), but a log browser has no reason
+to show it, and listing it would put it in every administrator's browser
+history.
