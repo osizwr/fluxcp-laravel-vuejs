@@ -299,6 +299,42 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | IP bans
+    |--------------------------------------------------------------------------
+    |
+    | Patterns that may never be banned. A ban covering the operator's own
+    | range locks every administrator out of the panel *and* the game server,
+    | and the only way back is editing the database by hand — so this list is
+    | the one safety net worth having. Add your game server, web server and
+    | your own address.
+    |
+    | Entries are shell-style globs in the same `203.0.113.*` form the ban list
+    | itself uses, and a whitelisted single address is also protected from any
+    | pattern that would cover it.
+    |
+    | FluxCP's IpWhitelistPattern was a PCRE interpolated into a regular
+    | expression, with its own config file warning "This string isn't escaped
+    | so be careful which chars you use!". An operator writing the obvious
+    | `192.168.*.*` got a pattern where `.` matched any character and `*` was a
+    | quantifier — whitelisting far more than intended, or failing to compile.
+    |
+    | The defaults are the legacy ones: localhost, and the 0.x range, which
+    | covers the all-interfaces wildcards.
+    |
+    */
+
+    'ip_bans' => [
+        'whitelist' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('PANEL_IP_BAN_WHITELIST', '127.0.0.1,0.*.*.*,0.0.0.0')),
+        ))),
+
+        // Default length of a new ban, in days, when none is given.
+        'default_days' => (int) env('PANEL_IP_BAN_DEFAULT_DAYS', 7),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Account maintenance
     |--------------------------------------------------------------------------
     |

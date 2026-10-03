@@ -190,6 +190,21 @@ final class RathenaTestSchema
             $table->index('account_id');
         });
 
+        /*
+         * The panel's IP ban history, paired with rAthena's own `ipbanlist`.
+         * Append-only: a lift is a new row, not a deletion.
+         */
+        $schema->create('cp_ipbanlog', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->string('ip_address', 39);
+            $table->unsignedInteger('banned_by')->nullable();
+            $table->tinyInteger('ban_type');
+            $table->dateTime('ban_until');
+            $table->dateTime('ban_date');
+            $table->text('ban_reason')->nullable();
+            $table->index('ip_address');
+        });
+
         $schema->create('cp_banlog', function (Blueprint $table): void {
             $table->increments('id');
             $table->unsignedInteger('account_id');

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CharacterController;
 use App\Http\Controllers\Api\CharacterManagementController;
 use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\GuildController;
+use App\Http\Controllers\Api\IpBanController;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\MonsterController;
 use App\Http\Controllers\Api\NewsController;
@@ -142,6 +143,22 @@ Route::middleware('permission')->group(function (): void {
     Route::get('news/{article}', [NewsController::class, 'show'])
         ->whereNumber('article')
         ->name('news.view');
+
+    /*
+     * IP bans.
+     *
+     * These write rAthena's own `ipbanlist`, which the login server reads, so
+     * they affect the game as well as the panel. Each write needs the matching
+     * ability on top of the route's staff level.
+     *
+     * The pattern is part of the path, so it is URL-encoded by the client --
+     * `203.0.113.*` contains no reserved characters, but encoding it keeps the
+     * route from depending on that.
+     */
+    Route::get('ip-bans', [IpBanController::class, 'index'])->name('ipban.index');
+    Route::post('ip-bans', [IpBanController::class, 'store'])->name('ipban.add');
+    Route::put('ip-bans/{pattern}', [IpBanController::class, 'update'])->name('ipban.edit');
+    Route::delete('ip-bans', [IpBanController::class, 'destroy'])->name('ipban.unban');
 
     /*
      * Castle ownership and the siege schedule.
