@@ -115,7 +115,7 @@ final readonly class RathenaAccountService
     ): void {
         $group = $this->servers->current();
 
-        $this->validatePassword($group, $newPassword, $account->userid);
+        $this->validatePassword($group, $newPassword, $account->userid, $account);
 
         $this->connections
             ->connection($group->loginConnection())
@@ -168,6 +168,21 @@ final readonly class RathenaAccountService
             'birthdate' => $birthdate,
             'character_slots' => $this->defaultCharacterSlots($group),
         ])->save();
+
+        /*
+         * Re-read, because this INSERT deliberately does not list every
+         * column. rAthena's `login` table has around twenty more -- `state`,
+         * `unban_time`, `expiration_time`, `logincount` and the rest -- whose
+         * values come from the schema's own defaults, and the panel should not
+         * be restating those: the emulator owns this table, and a hardcoded
+         * default here would silently diverge the day rAthena changes one.
+         *
+         * The cost of not re-reading is that the returned model carries null
+         * for each of them, so the first caller to read $account->state gets
+         * null where an integer is guaranteed by the column. One SELECT is
+         * worth more than a model that lies about the row it just wrote.
+         */
+        $account->refresh();
 
         return $account;
     }
@@ -298,11 +313,20 @@ final readonly class RathenaAccountService
      * truncated on write and could then never be matched, producing an account
      * that cannot log in anywhere.
      *
+     * @param  Account|null  $account  The account the password is for, when
+     *                                 there is one. Null during registration,
+     *                                 where the account does not exist yet and
+     *                                 is a plain player by definition.
+     *
      * @throws ValidationException
      */
-    private function validatePassword(ServerGroup $group, string $password, string $username): void
-    {
-        $policy = (array) config('panel.registration.password');
+    private function validatePassword(
+        ServerGroup $group,
+        string $password,
+        string $username,
+        ?Account $account = null,
+    ): void {
+        $policy = $this->passwordPolicy($account);
         $storageLimit = $this->credentials->maximumPasswordLength($group);
 
         $max = (int) ($policy['max_length'] ?? 31);
@@ -353,6 +377,44 @@ final readonly class RathenaAccountService
         }
 
         $validator->validate();
+    }
+
+    /**
+     * The password policy that applies to an account.
+     *
+     * Staff get the stricter set from `panel.registration.password.staff`,
+     * merged over the player one so an operator only has to state what
+     * differs.
+     *
+     * The legacy panel had this backwards. changepass.php computed
+     * `$useGMPassSecurity = $account->group_level < Flux::config('EnableGMPassSecurity')`
+     * and applied the GM rules when that was true -- which is when the account
+     * is *below* the staff threshold. Ordinary players got the strict policy
+     * and game masters got the loose one, the opposite of what the setting's
+     * name describes. See docs/MIGRATION_DECISIONS.md (D17).
+     *
+     * @return array<string, mixed>
+     */
+    private function passwordPolicy(?Account $account): array
+    {
+        $policy = (array) config('panel.registration.password');
+        $staff = (array) ($policy['staff'] ?? []);
+
+        unset($policy['staff']);
+
+        if (! $account instanceof Account) {
+            return $policy;
+        }
+
+        $appliesAt = $staff['applies_at_or_above_level'] ?? null;
+
+        if ($appliesAt === null || $account->accountLevel()->value < (int) $appliesAt) {
+            return $policy;
+        }
+
+        unset($staff['applies_at_or_above_level']);
+
+        return [...$policy, ...$staff];
     }
 
     private function usernameTaken(ServerGroup $group, string $username): bool

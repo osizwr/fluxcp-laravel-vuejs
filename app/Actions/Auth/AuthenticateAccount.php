@@ -8,8 +8,8 @@ use App\Enums\LoginFailure;
 use App\Exceptions\LoginFailed;
 use App\Models\Account;
 use App\Models\PanelCredential;
+use App\Services\Auth\AccountPasswordChecker;
 use App\Services\Auth\IpBanService;
-use App\Services\Auth\RathenaCredentialVerifier;
 use App\Support\Rathena\ServerGroup;
 use App\Support\Rathena\ServerRegistry;
 use Illuminate\Contracts\Hashing\Hasher;
@@ -52,7 +52,7 @@ final readonly class AuthenticateAccount
 
     public function __construct(
         private ServerRegistry $servers,
-        private RathenaCredentialVerifier $verifier,
+        private AccountPasswordChecker $passwords,
         private IpBanService $ipBans,
         private Hasher $hasher,
         private ConnectionResolverInterface $connections,
@@ -113,10 +113,10 @@ final readonly class AuthenticateAccount
     /**
      * Find the account and check the password.
      *
-     * The panel's own hash is tried first, so a normal sign-in never touches
-     * rAthena's weak column. The fallback exists only for accounts that have
-     * not signed in since the migration, and for accounts created directly in
-     * the game or by another tool.
+     * Which credential store counts is decided by
+     * {@see AccountPasswordChecker}, shared with the change-password endpoint
+     * so that the two cannot disagree about what an account's current password
+     * is.
      *
      * When no account matches, a hash is still verified against a dummy value
      * before failing. Without that, "no such account" returns measurably
@@ -136,28 +136,11 @@ final readonly class AuthenticateAccount
             throw LoginFailed::because(LoginFailure::InvalidCredentials);
         }
 
-        if ($this->matchesPanelCredential($account, $password)) {
-            return $account;
-        }
-
-        $stored = (string) $account->getRawOriginal('user_pass');
-
-        if (! $this->verifier->verify($group, $password, $stored)) {
+        if (! $this->passwords->matches($group, $account, $password)) {
             throw LoginFailed::because(LoginFailure::InvalidCredentials, $account->account_id);
         }
 
         return $account;
-    }
-
-    private function matchesPanelCredential(Account $account, string $password): bool
-    {
-        $hash = $account->panelCredential?->password_hash;
-
-        if ($hash === null || $hash === '') {
-            return false;
-        }
-
-        return $this->hasher->check($password, $hash);
     }
 
     /**

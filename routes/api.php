@@ -3,9 +3,14 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CaptchaController;
 use App\Http\Controllers\Api\CharacterController;
+use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\NewsController;
+use App\Http\Controllers\Api\PasswordController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\RankingController;
+use App\Http\Controllers\Api\RegistrationController;
 use App\Http\Controllers\Api\ServerStatisticsController;
 use App\Http\Controllers\Api\ServerStatusController;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +45,52 @@ Route::middleware('permission')->group(function (): void {
      * action which rendered an account's own details.
      */
     Route::get('account', [AuthController::class, 'show'])->name('account.view');
+
+    /*
+     * Registration and e-mail confirmation.
+     *
+     * All three are guests-only, which is the legacy access level. Confirming
+     * is included deliberately: an account awaiting confirmation cannot sign
+     * in, so the person following the link is necessarily a guest.
+     */
+    Route::post('auth/register', [RegistrationController::class, 'store'])
+        ->name('account.create');
+
+    Route::post('auth/confirm', [RegistrationController::class, 'confirm'])
+        ->name('account.confirm');
+
+    Route::post('auth/confirm/resend', [RegistrationController::class, 'resend'])
+        ->name('account.resend');
+
+    /*
+     * Password reset. Two steps: ask for a link, then use it.
+     *
+     * The route names are the legacy ones -- resetpass requested, resetpw
+     * completed -- so each traces back to its entry in config/permissions.php.
+     */
+    Route::post('auth/password/forgot', [PasswordResetController::class, 'store'])
+        ->name('account.resetpass');
+
+    Route::post('auth/password/reset', [PasswordResetController::class, 'update'])
+        ->name('account.resetpw');
+
+    /*
+     * Credentials of the signed-in account.
+     */
+    Route::put('account/password', [PasswordController::class, 'update'])
+        ->name('account.changepass');
+
+    Route::put('account/email', [EmailController::class, 'update'])
+        ->name('account.changemail');
+
+    Route::post('account/email/confirm', [EmailController::class, 'confirm'])
+        ->name('account.confirmemail');
+
+    /*
+     * The CAPTCHA image, when the self-hosted driver is in use. Open to
+     * everyone, because the forms that need it are open to guests.
+     */
+    Route::get('captcha', [CaptchaController::class, 'show'])->name('captcha.index');
 
     /*
      * Public server information.

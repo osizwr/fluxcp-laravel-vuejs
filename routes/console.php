@@ -27,3 +27,13 @@ Schedule::command('panel:broadcast-server-status')
     ->everyThirtySeconds()
     ->withoutOverlapping()
     ->runInBackground();
+
+/*
+ * Registrations whose confirmation window has passed. Daily, off-peak, and
+ * guarded by PANEL_PRUNE_UNCONFIRMED -- the command refuses to delete anything
+ * unless the operator has turned pruning on, so scheduling it here is safe on
+ * an installation that has not asked for it.
+ */
+Schedule::command('panel:prune-unconfirmed')
+    ->dailyAt('04:10')
+    ->withoutOverlapping();

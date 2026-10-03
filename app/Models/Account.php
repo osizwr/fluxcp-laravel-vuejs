@@ -238,9 +238,20 @@ final class Account extends Model implements AuthenticatableContract, Authorizab
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * The state rAthena has this account in, when it is one the panel models.
+     *
+     * Null covers two different things on purpose: a state rAthena set that
+     * this panel does not interpret, and a column with no value at all. Both
+     * mean "nothing to report here", and neither is worth raising over --
+     * this is read while rendering an account, where a TypeError would turn an
+     * unrecognised integer into a 500.
+     */
     public function state(): ?AccountState
     {
-        return AccountState::tryFrom($this->state);
+        return $this->state === null
+            ? null
+            : AccountState::tryFrom($this->state);
     }
 
     public function isPermanentlyBanned(): bool

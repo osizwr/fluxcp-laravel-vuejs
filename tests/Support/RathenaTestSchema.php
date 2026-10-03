@@ -193,7 +193,12 @@ final class RathenaTestSchema
         $schema->create('cp_banlog', function (Blueprint $table): void {
             $table->increments('id');
             $table->unsignedInteger('account_id');
-            $table->unsignedInteger('banned_by');
+            /*
+             * Nullable, matching PanelSchema: null means the panel itself
+             * acted rather than a member of staff, as when a registration is
+             * held pending e-mail confirmation.
+             */
+            $table->unsignedInteger('banned_by')->nullable();
             $table->tinyInteger('ban_type');
             $table->dateTime('ban_until')->nullable();
             $table->dateTime('ban_date');
@@ -223,6 +228,38 @@ final class RathenaTestSchema
             $table->string('new_password', 32)->nullable();
             $table->dateTime('change_date');
             $table->string('change_ip', 39)->default('');
+
+            $table->index('account_id');
+        });
+
+        $schema->create('cp_resetpass', function (Blueprint $table): void {
+            $table->increments('id');
+            // The stored value is a digest of the token, never the token. See D15.
+            $table->string('code', 32);
+            $table->integer('account_id');
+            // Retained for compatibility, never written. See D2.
+            $table->string('old_password', 32)->default('');
+            $table->string('new_password', 32)->nullable();
+            $table->dateTime('request_date');
+            $table->string('request_ip', 39)->default('');
+            $table->dateTime('reset_date')->nullable();
+            $table->string('reset_ip', 39)->nullable();
+            $table->tinyInteger('reset_done')->default(0);
+
+            $table->index('account_id');
+        });
+
+        $schema->create('cp_emailchange', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->string('code', 32);
+            $table->integer('account_id');
+            $table->string('old_email', 39);
+            $table->string('new_email', 39);
+            $table->dateTime('request_date');
+            $table->string('request_ip', 39)->default('');
+            $table->dateTime('change_date')->nullable();
+            $table->string('change_ip', 39)->nullable();
+            $table->tinyInteger('change_done')->default(0);
 
             $table->index('account_id');
         });
