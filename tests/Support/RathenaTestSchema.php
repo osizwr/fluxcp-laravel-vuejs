@@ -292,6 +292,43 @@ final class RathenaTestSchema
         self::createReferenceTables($connection);
 
         /*
+         * rAthena keeps the death count in char_reg_num under the key
+         * PC_DIE_COUNTER rather than as a column on `char`, which is why the
+         * death ladder joins rather than selects. `key` is reserved in MySQL
+         * and stays quoted.
+         */
+        $schema->create('char_reg_num', function (Blueprint $table): void {
+            $table->unsignedInteger('char_id')->default(0);
+            $table->string('key', 32)->default('');
+            $table->unsignedInteger('index')->default(0);
+            $table->bigInteger('value')->default(0);
+            $table->primary(['char_id', 'key', 'index']);
+        });
+
+        $schema->create('homunculus', function (Blueprint $table): void {
+            $table->increments('homun_id');
+            $table->unsignedInteger('char_id')->default(0);
+            $table->unsignedSmallInteger('class')->default(0);
+            $table->string('name', 24)->default('');
+            $table->unsignedSmallInteger('level')->default(0);
+            $table->unsignedInteger('exp')->default(0);
+            $table->unsignedInteger('intimacy')->default(0);
+            $table->unsignedSmallInteger('hunger')->default(0);
+            // A released homunculus stays in the table, so the ladder filters
+            // on this rather than assuming every row is live.
+            $table->boolean('alive')->default(true);
+            $table->index('char_id');
+        });
+
+        $schema->create('guild_castle', function (Blueprint $table): void {
+            $table->unsignedInteger('castle_id')->primary();
+            $table->unsignedInteger('guild_id')->default(0);
+            $table->unsignedInteger('economy')->default(0);
+            $table->unsignedInteger('defense')->default(0);
+            $table->index('guild_id');
+        });
+
+        /*
          * A subset of rAthena's 80-column `char` table: the columns the panel
          * reads. `char` is a reserved word and must stay quoted.
          */
@@ -401,6 +438,17 @@ final class RathenaTestSchema
             $table->string('map', 11)->default('');
 
             $table->index('type');
+        });
+
+        $schema->create('mvplog', function (Blueprint $table): void {
+            $table->increments('mvp_id');
+            $table->dateTime('mvp_date')->useCurrent();
+            $table->unsignedInteger('kill_char_id')->default(0);
+            $table->unsignedSmallInteger('monster_id')->default(0);
+            $table->unsignedInteger('prize')->default(0);
+            $table->unsignedBigInteger('mvpexp')->default(0);
+            $table->string('map', 11)->default('');
+            $table->index('kill_char_id');
         });
 
         $schema->create('zenylog', function (Blueprint $table): void {

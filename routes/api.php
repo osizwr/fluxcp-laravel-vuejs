@@ -148,6 +148,24 @@ Route::middleware('permission')->group(function (): void {
     Route::get('rankings/zeny', [RankingController::class, 'byZeny'])->name('ranking.zeny');
 
     /*
+     * The fame ladders. One route for both branches, because alchemist and
+     * blacksmith differ only in which class ids count.
+     */
+    Route::get('rankings/alchemist', [RankingController::class, 'byFame'])
+        ->defaults('branch', 'alchemist')
+        ->name('ranking.alchemist');
+
+    Route::get('rankings/blacksmith', [RankingController::class, 'byFame'])
+        ->defaults('branch', 'blacksmith')
+        ->name('ranking.blacksmith');
+
+    Route::get('rankings/deaths', [RankingController::class, 'byDeaths'])->name('ranking.death');
+    Route::get('rankings/homunculus', [RankingController::class, 'byHomunculus'])
+        ->name('ranking.homunculus');
+    Route::get('rankings/guilds', [RankingController::class, 'byGuild'])->name('ranking.guild');
+    Route::get('rankings/mvp', [RankingController::class, 'byMvp'])->name('ranking.mvp');
+
+    /*
      * Characters. The who-is-online listing is refused while War of Emperium
      * is running, because it reveals where characters are and would let guilds
      * scout castle defences from the website during a siege.

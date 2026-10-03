@@ -367,4 +367,40 @@ return [
         'mode_teleportblock' => 'Teleport block',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Fame ladder job classes
+    |--------------------------------------------------------------------------
+    |
+    | rAthena awards fame points to three job branches, and each has its own
+    | ladder. The class ids are the ones the emulator writes to `char.class`,
+    | including the baby and third-class variants -- a ladder that listed only
+    | the base class would be empty on a server where everybody has rebirthed.
+    |
+    | Ported from FluxCP's jobs_alchemist.php and jobs_blacksmith.php.
+    |
+    */
+
+    'fame_classes' => [
+        'alchemist' => [
+            18 => 'Alchemist',
+            4019 => 'Creator',
+            4041 => 'Baby Alchemist',
+            4071 => 'Genetic',
+            4078 => 'Genetic+',
+            4107 => 'Baby Genetic',
+            4259 => 'Biolo',
+        ],
+
+        'blacksmith' => [
+            10 => 'Blacksmith',
+            4011 => 'Whitesmith',
+            4033 => 'Baby Blacksmith',
+            4058 => 'Mechanic',
+            4064 => 'Mechanic+',
+            4100 => 'Baby Mechanic',
+            4253 => 'Meister',
+        ],
+    ],
+
 ];

@@ -109,7 +109,7 @@ const routes: RouteRecordRaw[] = [
         meta: { title: "Who's online" },
     },
     {
-        path: '/rankings/:ladder(level|zeny)',
+        path: '/rankings/:ladder(level|zeny|alchemist|blacksmith|deaths|homunculus|guilds|mvp)',
         name: 'rankings',
         component: themedRoute('rankings', 'RankingsPage', () => import('../pages/RankingsPage.vue')),
         meta: { title: 'Rankings' },
