@@ -111,7 +111,7 @@ COMPATIBILITY_REPORT.md section 1.5.
 | TypeScript modules | 20 |
 | Migrations | 4 |
 | Factories | 4 |
-| Tests | 25 files, **328 tests, 1,134 assertions** |
+| Tests | 26 files, **349 tests, 1,247 assertions** |
 | API endpoints | 21 |
 | Documentation | 9 documents |
 
@@ -236,7 +236,7 @@ maintained by hand.
   `config/panel.php` and needs a deploy to change.
 - **A worked add-on package** (D8). The permission registry is designed for
   third-party contribution, but no example exists.
-- **Frontend tests.** The backend has 328; the Vue layer has none.
+- **Frontend tests.** The backend has 349; the Vue layer has none.
 
 ---
 
@@ -246,7 +246,7 @@ Every command below was run, and these are its real results.
 
 | Command | Result |
 | --- | --- |
-| `composer test` | **328 passed**, 1,134 assertions, 0 failures, 18s |
+| `composer test` | **349 passed**, 1,247 assertions, 0 failures, 18s |
 | `composer lint` (Pint) | **passed** |
 | `npm run lint` (ESLint + `vue-tsc`) | **passed**, 0 errors, 0 warnings |
 | `npm run build` | **passed**, 16 chunks, 41.7 kB gzipped entry |
@@ -392,7 +392,7 @@ Against the project's own checklist:
 | ✅ | Queues configured |
 | 🟨 | API implemented — **21 endpoints** |
 | 🟨 | Security review — **applied to what exists; no review of unbuilt code** |
-| ✅ | Automated tests created — 328 |
+| ✅ | Automated tests created — 349 |
 | 🟨 | Legacy/new compatibility testing — **for what is built** |
 | ✅ | Production build succeeds |
 | ✅ | No placeholder functionality |

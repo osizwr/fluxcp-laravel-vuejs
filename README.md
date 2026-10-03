@@ -20,7 +20,7 @@ pointed at an existing install without migrating data.
 > FluxCP's sign-in behaviour step for step, the account credential flows fix
 > nine defects in the legacy originals rather than carrying them over, and the
 > schema installer has been compared column by column against the legacy schema.
-> 328 tests, 1,134 assertions.
+> 349 tests, 1,247 assertions.
 
 ---
 
