@@ -97,10 +97,47 @@ final class SiteDataEndpointTest extends TestCase
         $data = $this->getJson('/api/server/statistics')->assertOk()->json('data');
 
         $this->assertArrayNotHasKey('uptime', $data);
+
+        // The whole key set is pinned, so a figure cannot be added here
+        // without somebody deciding it is one the panel can actually source.
         $this->assertSame(
-            ['accounts', 'characters', 'guilds', 'players_online'],
+            ['accounts', 'characters', 'guilds', 'parties', 'zeny', 'players_online', 'rates'],
             array_keys($data),
         );
+    }
+
+    #[Test]
+    public function statistics_include_the_figures_the_legacy_server_info_page_showed(): void
+    {
+        $account = Account::factory()->create();
+
+        Character::factory()->forAccount($account)->state(['zeny' => 1000])->create();
+        Character::factory()->forAccount($account)->state(['zeny' => 500])->create();
+
+        $response = $this->getJson('/api/server/info')->assertOk();
+
+        $response->assertJsonPath('data.zeny', 1500)
+            ->assertJsonPath('data.rates.renewal', true);
+
+        /*
+         * Rates are the operator's declaration, not something read from the
+         * emulator -- rAthena keeps them in conf files the panel cannot see.
+         * The flag says which it is, so a page can avoid presenting defaults
+         * as fact.
+         */
+        $this->assertIsBool($response->json('data.rates.declared'));
+    }
+
+    #[Test]
+    public function a_missing_party_table_reports_null_rather_than_zero(): void
+    {
+        // Zero would read as "nobody has a party" on a server whose schema
+        // simply does not have the table.
+        Cache::flush();
+
+        $this->getJson('/api/server/statistics')
+            ->assertOk()
+            ->assertJsonPath('data.parties', null);
     }
 
     #[Test]

@@ -3,9 +3,13 @@
 An honest account of what was discovered, what was built, and what was not.
 
 The headline is simple: **the audit is complete, the foundation is complete, and
-the feature migration is about 42% done**. 59 of FluxCP's 139 module actions are
-finished — 49 ported and tested, 10 deliberately replaced — and 77 have not been
-started. Nothing here is rounded up; the counts come from
+**every one of FluxCP's 139 module actions is now
+accounted for**: 119 ported with passing tests and 20 deliberately replaced,
+each with its reason recorded.
+
+That is not the same as the migration being finished, and this document does
+not claim it is. What remains is listed in §3: it is cross-cutting work and
+interface, not module actions. Nothing here is rounded up; the counts come from
 [FLUXCP_MIGRATION_MATRIX.md](FLUXCP_MIGRATION_MATRIX.md), which is the
 authority, and this file must not claim more than it shows.
 
@@ -105,13 +109,13 @@ COMPATIBILITY_REPORT.md section 1.5.
 
 | | |
 | --- | --- |
-| PHP files | 124 |
+| PHP files | 147 |
 | Configuration | 18 files (2,883 lines) |
-| Vue components | 49 (11 core blocks, 8 fantasy blocks, pages, layouts, UI) |
+| Vue components | 56 (11 core blocks, 8 fantasy blocks, pages, layouts, UI) |
 | TypeScript modules | 20 |
 | Migrations | 4 |
 | Factories | 4 |
-| Tests | 35 files, **507 tests, 1,748 assertions** |
+| Tests | 44 files, **678 tests, 2,348 assertions** |
 | API endpoints | 52 |
 | Documentation | 9 documents |
 
@@ -174,33 +178,28 @@ COMPATIBILITY_REPORT.md section 1.5.
 
 ## 3. What was not built
 
-**77 of 139 actions.** The matrix lists each one; grouped by area:
+**No module actions remain.** All 139 are ported with a passing test or
+deliberately replaced, and the matrix records which and why.
 
-| Area | Actions | Includes |
-| --- | --: | --- |
-| Game logs (`logdata`) | 13 | Pick, zeny, MVP, chat, command, branch, feeding, cash |
-| Admin logs (`cplog`) | 10 | Every control-panel audit view |
-| Support desk | 8 | Player and staff ticket flows, categories, settings |
-| Item shop (`purchase`) | 7 | Browse, cart, checkout, pending delivery |
-| Account | 6 | Sex change, credit transfer and its log, the item-shop cart, the admin search and edit screens |
-| Donations | 6 | PayPal flow, IPN, history, trusted donors |
-| IP bans | 5 |  |
-| Static page CMS | 5 | All of it; the public news listing and article views are done |
-| Item shop admin | 4 |  |
-| News admin | 4 | Add, edit, delete, manage. Public reading is done |
-| Front page and hook | 2 | `main/index` is partly built; `page_not_found` and the global `preprocess` hook are not |
-| Character | 1 | `character/index`, the staff search screen |
-| Admin mail | 1 | The broadcast tool |
-| Server | 1 | `status-xml`, the legacy machine-readable feed |
-| Terms of service | 1 |  |
-| Unauthorised page | 1 |  |
-| Web commands | 1 |  |
-| WoE | 1 | `woe/custom` |
+What is outstanding is not features — it is the things that sit around them.
 
-The rows sum to 77, which is the figure in
-[FLUXCP_MIGRATION_MATRIX.md](FLUXCP_MIGRATION_MATRIX.md). This table is
-generated from the matrix rather than maintained by hand, after an earlier
-revision of it summed to one less than it claimed.
+### The interface lags the API
+
+Roughly a third of what the server now does has no page in front of it. The
+endpoints are built and tested; the Vue layer covers the player-facing side
+(sign-in and registration, account and security, characters, items, monsters,
+rankings, guilds, history, shops, the world pages) and almost none of the
+administrative side.
+
+Specifically without an interface: the log browsers, the staff search and
+account editor, IP bans, the news and page editors, the support desk's staff
+queue, the shop administration, the donation screens, and the broadcast mailer.
+Each is reachable and usable over the API, which is how the tests exercise
+them, but an operator cannot do any of it from the panel yet.
+
+This is the honest reading of "the migration is complete": complete as a port
+of behaviour, not as a replacement an operator could run their server from
+without touching the API directly.
 
 ### Cross-cutting work outstanding
 
@@ -215,8 +214,6 @@ revision of it summed to one less than it claimed.
   the legacy did. In use by eleven listings.
 
   A correction to an earlier revision of this document, which claimed
-
-  A correction to an earlier revision of this document, which claimed
   `Flux_Paginator` took column names from the request and was therefore an
   injection surface. Re-reading it, that is wrong: `getSQL()` iterates
   `$this->sortableColumns`, an allow-list every calling module passes as a
@@ -229,38 +226,37 @@ revision of it summed to one less than it claimed.
   because it closes a hole. The real reasons to do it early are that it is
   needed everywhere and that doing it afterwards means retrofitting every
   listing.
-- **The 57 `Flux_Template` view helpers**, which encode a large amount of
-  game-domain formatting. The formatting the item, monster and character pages
-  needed is now ported, as data rather than as methods: job names, homunculus
-  names, item types, equip locations, equip jobs and classes, trade
-  restrictions, item flags, monster modes, fame-ladder classes and castle names
-  — 342 entries in `config/rathena_reference.php`, decoded by
-  `AttributeDecoder`. What remains is the formatting the unbuilt pages need,
-  chiefly around the item shop, the logs and the admin screens.
+- **The `Flux_Template` view helpers.** The game-domain formatting they encoded
+  is ported as data rather than as methods — job and homunculus names, item
+  types, equip locations, equip jobs and classes, trade restrictions, item
+  flags, monster modes, fame-ladder classes, shop categories, gender-linked
+  classes and castle names, in `config/rathena_reference.php`, decoded by
+  `AttributeDecoder`. Every server-side consumer has what it needs. What
+  remains is presentational formatting the unbuilt admin *pages* will want,
+  which is a frontend question rather than a porting one.
 - **Localisation.** `lang/en` now covers the authentication and account
   messages, which fixed a real defect: there was no `lang/` directory at all, so
   every `trans()` call in the sign-in path returned its own key and a failed
   sign-in showed the visitor the literal string
   `auth.failure.invalid_credentials`. The other three upstream languages are not
   ported, and most interface copy is still inline in the Vue components.
-- **Mail beyond the account flows.** `Flux_Mailer` shipped nine templates. Four
-  are ported or replaced — `confirm`, `resetpass`, `changemail`, and `newpass`
-  which became a change *notice* rather than a password (D16). The remaining
-  four are not, because the features that send them are not built:
-  `contactform`, `newticket` and `ticketreply` belong to the support desk, and
-  `marketing1` to the admin broadcast tool (`mail/index`).
+- ~~**Mail.**~~ Done. `Flux_Mailer`'s nine templates are covered: `confirm`,
+  `resetpass` and `changemail` ported; `newpass` replaced by a change *notice*
+  rather than a password (D16); `marketing1` by the broadcast mailer; and
+  `contactform`, `newticket` and `ticketreply` by the support desk, which
+  carries its conversation in the panel rather than by e-mail.
 
-  Two deliberate differences from `Flux_Mailer`: no mailable is queued by
-  default (see `PANEL_QUEUE_MAIL` and the reasoning in `config/panel.php`), and
-  the success log line records the mailable class but **not** the recipient.
-  The legacy log included the address, which over time builds a file mapping
-  account activity to e-mail addresses, readable by anyone who can read the
-  application's logs.
+  Three deliberate differences from `Flux_Mailer`: account mail is not queued
+  by default (see `PANEL_QUEUE_MAIL` and the reasoning in `config/panel.php`),
+  a broadcast always is; the success log line records the mailable class but
+  **not** the recipient, where the legacy logged the address and so built a
+  file mapping account activity to e-mail addresses; and the verification
+  call-back for payments goes over HTTPS rather than a raw socket on port 80.
 - **Database-backed admin-editable settings** (D12). Policy currently lives in
   `config/panel.php` and needs a deploy to change.
 - **A worked add-on package** (D8). The permission registry is designed for
   third-party contribution, but no example exists.
-- **Frontend tests.** The backend has 507; the Vue layer has none. This is now the largest single gap in the verification story, and it grew with every page added this round.
+- **Frontend tests.** The backend has 678; the Vue layer has none. This is **the largest single gap in the project**, and it has grown with every page added.
 
 ---
 
@@ -270,7 +266,7 @@ Every command below was run, and these are its real results.
 
 | Command | Result |
 | --- | --- |
-| `composer test` | **507 passed**, 1,748 assertions, 0 failures, 64s |
+| `composer test` | **678 passed**, 2,348 assertions, 0 failures, 86s |
 | `composer lint` (Pint) | **passed** |
 | `npm run lint` (ESLint + `vue-tsc`) | **passed**, 0 errors, 0 warnings |
 | `npm run build` | **passed**, 16 chunks, 41.7 kB gzipped entry |
@@ -416,7 +412,7 @@ Against the project's own checklist:
 | ✅ | Queues configured |
 | 🟨 | API implemented — **52 endpoints** |
 | 🟨 | Security review — **applied to what exists; no review of unbuilt code** |
-| ✅ | Automated tests created — 507 |
+| ✅ | Automated tests created — 678 |
 | 🟨 | Legacy/new compatibility testing — **for what is built** |
 | ✅ | Production build succeeds |
 | ✅ | No placeholder functionality |
@@ -427,34 +423,24 @@ Against the project's own checklist:
 | ✅ | Final audit completed |
 
 **This is not a 100% migration and is not presented as one.** The audit,
-architecture and verification method are finished; the feature work is 42% done.
+architecture and verification method are finished, and every module action is ported or deliberately replaced. What is not finished is listed in §3.
 
 ### Suggested order for the remaining work
 
-1. **The item/monster merge service (D6).** Thirteen actions depend on it, and
-   until it exists none of them can be written correctly: a port that queries
-   `item_db` directly looks right on a vanilla install and silently serves
-   pre-renewal stats while ignoring every custom item on a real server.
-2. **Validated sortable pagination.** Needed by every listing and admin page.
-   Doing it before the listings means not retrofitting fifteen of them.
-3. **Character detail and management**, which is the largest remaining
-   player-facing area now that the credential flows are done.
-4. **The remaining `Flux_Template` helpers**, as the pages that need them arrive.
-   55 of 57 are still unported, and they encode most of the game-domain
-   formatting the item, monster and character pages need.
-5. **Guilds**, including emblem conversion.
-6. **Admin**: bans, IP bans, account search and edit, the log browsers.
-7. **Item shop and donations**, together — the credit flow spans both.
-8. **Support desk.**
-9. **Frontend tests.** Worth starting before the Vue surface grows further; the
-   account pages added for the credential flows are the first substantial
-   interactive forms and are currently covered only through the API.
-10. **Database-backed admin settings (D12)**, once the policy surface has stopped
-    moving.
-11. **Localisation**, last, once the string surface has stopped moving. Most
-    interface copy is still inline in the components.
-
-Registration and password reset headed this list in the previous revision and
-are now done, together with confirmation, resend, password change, e-mail change
-and pruning. Mail was the unblocking step named there; it exists for the account
-flows, and the admin broadcast tool is the only mail-dependent feature left.
+1. **Frontend tests.** The largest single gap. 678 tests cover the server and
+   none cover the client, and the client is about to be worked on — which is
+   exactly the moment that matters, because a redesign with no tests is
+   verified by nothing but somebody's eye.
+2. **The administrative interface.** Every endpoint listed above exists and is
+   tested; what they need is pages. The log browsers already publish their own
+   column definitions, so one table component renders all twenty.
+3. **Database-backed admin settings (D12).** Policy lives in `config/panel.php`
+   and needs a deploy to change. Now that the policy surface has stopped
+   moving, this is worth doing.
+4. **Localisation.** `lang/en` covers the server's messages; the other three
+   upstream languages are not ported, and most interface copy is still inline
+   in the components. Worth doing after the interface settles, not before.
+5. **A worked add-on package (D8).** The permission registry is designed for
+   third-party contribution and there is still no example of one.
+6. **Discord webhooks**, the one legacy library deliberately left for last
+   because nothing depends on it.

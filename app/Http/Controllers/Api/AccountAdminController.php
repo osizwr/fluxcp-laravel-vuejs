@@ -10,6 +10,7 @@ use App\Support\Rathena\ServerRegistry;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -42,6 +43,109 @@ final class AccountAdminController
         private readonly ConnectionResolverInterface $connections,
         private readonly ServerRegistry $servers,
     ) {}
+
+    /**
+     * One account in full, for staff.
+     *
+     * Ports the half of modules/account/view.php that showed somebody else's
+     * account. A player's own account is served by `GET /api/account`; this is
+     * the screen a game master opens from the search results, so it gathers
+     * what they would otherwise open four pages to find.
+     */
+    public function show(Request $request, Account $account): JsonResponse
+    {
+        $actor = $request->user();
+
+        abort_unless($actor instanceof Account, 401);
+
+        /*
+         * Viewing is gated by the same rank rule as editing. Staff reading an
+         * account above their own is how a junior game master finds out which
+         * address an administrator signs in from.
+         */
+        abort_unless(
+            $actor->outranks($account) || $actor->can('EditHigherPower'),
+            403,
+            'You may not view an account of that rank.',
+        );
+
+        $connection = $this->connections->connection(
+            $this->servers->current()->loginConnection(),
+        );
+
+        return response()->json([
+            'data' => [
+                'id' => $account->account_id,
+                'username' => $account->userid,
+                'email' => $account->email,
+                'gender' => $account->sex->value,
+                'birthdate' => $account->birthdate?->toDateString(),
+
+                'group' => [
+                    'id' => $account->group_id,
+                    'name' => $account->groupName(),
+                    'level' => $account->accountLevel()->value,
+                    'label' => $account->accountLevel()->label(),
+                ],
+
+                'state' => [
+                    'code' => $account->state,
+                    'label' => $account->state()?->label(),
+                    'permanently_banned' => $account->isPermanentlyBanned(),
+                    'temporarily_banned' => $account->isTemporarilyBanned(),
+                    'ban_expires_at' => $account->temporaryBanExpiresAt()?->toIso8601String(),
+                    'expired' => $account->hasExpired(),
+                ],
+
+                'activity' => [
+                    'login_count' => $account->logincount,
+                    'last_login_at' => $account->lastlogin?->toIso8601String(),
+                    'last_ip' => $account->last_ip,
+                ],
+
+                'credits' => (int) ($connection->table('cp_credits')
+                    ->where('account_id', $account->account_id)
+                    ->value('balance') ?? 0),
+
+                /*
+                 * The characters, which is the first thing somebody opening
+                 * this page is looking for. The credential column is never
+                 * selected anywhere in this controller.
+                 */
+                'characters' => $account->characters()
+                    ->orderBy('char_num')
+                    ->get()
+                    ->map(fn ($character): array => [
+                        'id' => $character->char_id,
+                        'name' => $character->name,
+                        'slot' => $character->char_num,
+                        'job_id' => $character->class,
+                        'base_level' => $character->base_level,
+                        'job_level' => $character->job_level,
+                        'online' => $character->online,
+                        'pending_deletion' => ($character->delete_date ?? 0) > 0,
+                    ])
+                    ->all(),
+
+                // The most recent entries from the ban history, so a decision
+                // about this account can be made without opening the log
+                // browser.
+                'recent_bans' => $connection->table('cp_banlog')
+                    ->where('account_id', $account->account_id)
+                    ->orderByDesc('ban_date')
+                    ->limit(5)
+                    ->get()
+                    ->map(fn (object $row): array => [
+                        'type' => (int) $row->ban_type,
+                        'reason' => (string) ($row->ban_reason ?? ''),
+                        'at' => $row->ban_date === null
+                            ? null
+                            : Carbon::parse((string) $row->ban_date)->toIso8601String(),
+                    ])
+                    ->all(),
+            ],
+        ]);
+    }
 
     /**
      * @throws ValidationException

@@ -73,6 +73,14 @@ return [
         'account.resetpw' => AccountLevel::Unauthenticated,
         'account.transfer' => AccountLevel::Player,
         'account.view' => AccountLevel::Player,
+        /*
+         * One account in full, for staff. The legacy `account/view` served
+         * both this and a player's own details from one action; they are two
+         * routes here, and this one additionally applies the rank rule — staff
+         * reading an account above their own is how a junior game master finds
+         * out which address an administrator signs in from.
+         */
+        'account.viewone' => AccountLevel::JuniorGameMaster,
         'account.xferlog' => AccountLevel::Player,
 
         // auction

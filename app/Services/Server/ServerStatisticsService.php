@@ -48,8 +48,50 @@ final readonly class ServerStatisticsService
             'accounts' => $this->countAccounts(),
             'characters' => $this->countCharacters(),
             'guilds' => $this->countGuilds(),
+            'parties' => $this->countParties(),
+            'zeny' => $this->totalZeny(),
             'players_online' => $this->countOnline(),
         ]);
+    }
+
+    /**
+     * Parties in existence.
+     *
+     * Counted separately from guilds because they are a different table and a
+     * different thing: a party is temporary and a guild is not.
+     *
+     * Returns null when the table is absent, which it is on a server old
+     * enough or trimmed enough not to have one. Null renders as "not
+     * available" rather than as zero, which would read as "nobody has a
+     * party".
+     */
+    private function countParties(): ?int
+    {
+        $connection = $this->connections->connection(
+            $this->servers->currentCharMapServer()->connectionName(),
+        );
+
+        if (! $connection->getSchemaBuilder()->hasTable('party')) {
+            return null;
+        }
+
+        return $connection->table('party')->count();
+    }
+
+    /**
+     * All the zeny held by characters.
+     *
+     * The legacy server information page showed this, and it is the figure an
+     * operator watches for inflation. Excludes characters queued for deletion,
+     * whose zeny is about to stop existing.
+     */
+    private function totalZeny(): int
+    {
+        return (int) $this->connections
+            ->connection($this->servers->currentCharMapServer()->connectionName())
+            ->table('char')
+            ->where(fn ($q) => $q->where('delete_date', 0)->orWhereNull('delete_date'))
+            ->sum('zeny');
     }
 
     /**

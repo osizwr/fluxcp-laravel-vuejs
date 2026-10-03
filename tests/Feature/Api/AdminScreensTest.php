@@ -163,6 +163,75 @@ final class AdminScreensTest extends TestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Account detail
+    |--------------------------------------------------------------------------
+    */
+
+    #[Test]
+    public function staff_can_view_one_account_in_full(): void
+    {
+        $player = Account::factory()->named('player')->state(['logincount' => 12])->create();
+
+        Character::factory()->forAccount($player)->named('Hero')->state(['char_num' => 0])->create();
+
+        DB::connection($this->loginConnection())->table('cp_credits')->insert([
+            'account_id' => $player->account_id, 'balance' => 250,
+        ]);
+
+        DB::connection($this->loginConnection())->table('cp_banlog')->insert([
+            'account_id' => $player->account_id, 'banned_by' => null, 'ban_type' => 2,
+            'ban_until' => '9999-12-31 23:59:59', 'ban_date' => now(), 'ban_reason' => 'Botting',
+        ]);
+
+        $this->actingAs(Account::factory()->administrator()->create())
+            ->getJson("/api/admin/accounts/{$player->account_id}")
+            ->assertOk()
+            ->assertJsonPath('data.username', 'player')
+            ->assertJsonPath('data.credits', 250)
+            ->assertJsonPath('data.activity.login_count', 12)
+            ->assertJsonPath('data.characters.0.name', 'Hero')
+            ->assertJsonPath('data.recent_bans.0.reason', 'Botting');
+    }
+
+    #[Test]
+    public function the_detail_view_never_carries_a_credential(): void
+    {
+        $player = Account::factory()->named('player')->withPassword('Zeny4Days!')->create();
+
+        $response = $this->actingAs(Account::factory()->administrator()->create())
+            ->getJson("/api/admin/accounts/{$player->account_id}")
+            ->assertOk();
+
+        $this->assertStringNotContainsString('Zeny4Days!', $response->getContent());
+        $this->assertStringNotContainsString('user_pass', $response->getContent());
+    }
+
+    #[Test]
+    public function staff_cannot_view_an_account_above_their_own_rank(): void
+    {
+        /*
+         * Reading an account above your own is how a junior game master finds
+         * out which address an administrator signs in from.
+         */
+        $target = Account::factory()->administrator()->create();
+
+        $this->actingAs(Account::factory()->juniorGameMaster()->create())
+            ->getJson("/api/admin/accounts/{$target->account_id}")
+            ->assertStatus(403);
+    }
+
+    #[Test]
+    public function a_player_cannot_view_another_account(): void
+    {
+        $target = Account::factory()->create();
+
+        $this->actingAs(Account::factory()->create())
+            ->getJson("/api/admin/accounts/{$target->account_id}")
+            ->assertStatus(403);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Account editing
     |--------------------------------------------------------------------------
     */

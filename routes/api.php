@@ -156,6 +156,14 @@ Route::middleware('permission')->group(function (): void {
         ->name('server.statistics');
 
     /*
+     * The legacy server information page: the same figures, plus the world's
+     * declared rates. Its own route name so it keeps its entry in the
+     * permission map and its line in the migration matrix.
+     */
+    Route::get('server/info', [ServerStatisticsController::class, 'index'])
+        ->name('server.info');
+
+    /*
      * Public news. Read-only -- the admin half of the legacy CMS is not built,
      * so there is no write path rather than a stub that looks like one.
      */
@@ -331,6 +339,10 @@ Route::middleware('permission')->group(function (): void {
      */
     Route::get('admin/accounts', [AdminSearchController::class, 'accounts'])
         ->name('account.index');
+
+    Route::get('admin/accounts/{account}', [AccountAdminController::class, 'show'])
+        ->whereNumber('account')
+        ->name('account.viewone');
 
     Route::put('admin/accounts/{account}', [AccountAdminController::class, 'update'])
         ->whereNumber('account')

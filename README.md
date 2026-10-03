@@ -9,9 +9,13 @@ pointed at an existing install without migrating data.
 
 > ### Status: in progress, not production ready
 >
-> The migration is partial. Of FluxCP's 139 module actions, **49 are complete and
-> covered by tests**, 10 are deliberately replaced rather than ported, 3 are
-> partially built, and **77 have not been started**.
+> Every one of FluxCP's 139 module actions is accounted for: **119 ported with
+> passing tests** and 20 deliberately replaced, each with its reason recorded.
+>
+> That is not the same as finished. There are **no frontend tests**, several
+> admin screens have an API but no interface yet, and localisation covers
+> English only. Those are listed in
+> [`docs/FINAL_MIGRATION_AUDIT.md`](docs/FINAL_MIGRATION_AUDIT.md) §3.
 >
 > [`docs/FLUXCP_MIGRATION_MATRIX.md`](docs/FLUXCP_MIGRATION_MATRIX.md) is the
 > authority on what works. Nothing in this README claims more than it shows.
@@ -20,7 +24,7 @@ pointed at an existing install without migrating data.
 > FluxCP's sign-in behaviour step for step, the account credential flows fix
 > nine defects in the legacy originals rather than carrying them over, and the
 > schema installer has been compared column by column against the legacy schema.
-> 507 tests, 1,748 assertions.
+> 678 tests, 2,348 assertions.
 
 ---
 
