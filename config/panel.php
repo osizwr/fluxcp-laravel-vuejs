@@ -59,6 +59,30 @@ return [
             'min_numbers' => (int) env('PANEL_PASSWORD_MIN_NUMBER', 1),
             'min_symbols' => (int) env('PANEL_PASSWORD_MIN_SYMBOL', 0),
             'allow_username_inside' => (bool) env('PANEL_PASSWORD_ALLOW_USERNAME', false),
+
+            /*
+             * A stricter policy for staff accounts, applied at or above the
+             * panel level named below. Any key omitted here falls back to the
+             * player value above.
+             *
+             * The legacy panel had this the wrong way round. changepass.php
+             * read `$account->group_level < Flux::config('EnableGMPassSecurity')`
+             * to decide whether to apply the GM rules, which applied the
+             * stricter policy to ordinary players and the looser one to game
+             * masters -- the opposite of the intent, and of what the setting's
+             * name says. See docs/MIGRATION_DECISIONS.md (D17).
+             */
+            'staff' => [
+                'applies_at_or_above_level' => env('PANEL_STAFF_PASSWORD_LEVEL', 1) === null
+                    ? null
+                    : (int) env('PANEL_STAFF_PASSWORD_LEVEL', 1),
+
+                'min_length' => (int) env('PANEL_STAFF_PASSWORD_MIN', 12),
+                'min_uppercase' => (int) env('PANEL_STAFF_PASSWORD_MIN_UPPER', 1),
+                'min_lowercase' => (int) env('PANEL_STAFF_PASSWORD_MIN_LOWER', 1),
+                'min_numbers' => (int) env('PANEL_STAFF_PASSWORD_MIN_NUMBER', 1),
+                'min_symbols' => (int) env('PANEL_STAFF_PASSWORD_MIN_SYMBOL', 1),
+            ],
         ],
 
         'allow_duplicate_emails' => (bool) env('PANEL_ALLOW_DUPLICATE_EMAILS', false),
@@ -129,6 +153,100 @@ return [
             'site_key' => env('RECAPTCHA_SITE_KEY'),
             'secret_key' => env('RECAPTCHA_SECRET_KEY'),
         ],
+
+        /*
+         * The challenge the 'native' driver generates itself.
+         *
+         * The character set leaves out 0/O/1/I/L and anything else that is
+         * ambiguous in a distorted image, because a challenge a person cannot
+         * read is a challenge that stops registrations rather than robots.
+         */
+        'native' => [
+            'length' => (int) env('PANEL_CAPTCHA_LENGTH', 5),
+            'characters' => env('PANEL_CAPTCHA_CHARACTERS', 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'),
+            'width' => (int) env('PANEL_CAPTCHA_WIDTH', 200),
+            'height' => (int) env('PANEL_CAPTCHA_HEIGHT', 70),
+
+            /*
+             * How long a generated challenge stays answerable. Short, because
+             * the answer sits in the session and a long window lets one solved
+             * challenge be replayed across many submissions.
+             */
+            'expires_after_seconds' => (int) env('PANEL_CAPTCHA_EXPIRE_SECONDS', 600),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Password reset
+    |--------------------------------------------------------------------------
+    |
+    | The legacy flow had three problems this one does not. It e-mailed a
+    | newly generated password in cleartext, it stored both the old and the new
+    | password in cp_resetpass, and it never checked how old a reset code was
+    | -- cp_resetpass.request_date was written and then never read, so a code
+    | from a mailbox compromised years later still worked.
+    |
+    | See docs/MIGRATION_DECISIONS.md (D15, D16).
+    |
+    */
+
+    'password_reset' => [
+        'enabled' => (bool) env('PANEL_PASSWORD_RESET_ENABLED', true),
+
+        'expires_after_hours' => (int) env('PANEL_PASSWORD_RESET_EXPIRE_HOURS', 2),
+
+        /*
+         * Accounts at or above this panel level cannot have their password
+         * reset by e-mail, because holding the mailbox would then be enough to
+         * take over a game master account. The legacy NoResetPassGroupLevel
+         * setting; 1 is the junior game master tier. Null allows every account.
+         */
+        'blocked_at_or_above_level' => env('PANEL_PASSWORD_RESET_BLOCK_LEVEL', 1) === null
+            ? null
+            : (int) env('PANEL_PASSWORD_RESET_BLOCK_LEVEL', 1),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | E-mail change
+    |--------------------------------------------------------------------------
+    |
+    | The legacy RequireChangeConfirm setting. With confirmation on, the new
+    | address has to be proven reachable before it replaces the old one, so a
+    | hijacked session cannot redirect the account's recovery mail to an
+    | address the attacker merely typed in.
+    |
+    */
+
+    'email_change' => [
+        'require_confirmation' => (bool) env('PANEL_REQUIRE_EMAIL_CHANGE_CONFIRMATION', true),
+
+        /*
+         * The legacy flow never expired these either: confirmemail.php looked
+         * up cp_emailchange by code and change_done only.
+         */
+        'expires_after_hours' => (int) env('PANEL_EMAIL_CHANGE_EXPIRE_HOURS', 24),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Outbound mail
+    |--------------------------------------------------------------------------
+    |
+    | Whether the account credential e-mails go through the queue.
+    |
+    | Off by default, which is the opposite of the usual advice and deliberate:
+    | a queued message on a server with no `queue:work` running is a message
+    | that is never sent, and the people affected are the ones who cannot
+    | finish registering or get back into their account -- so they cannot
+    | report it either. Turn this on once a worker is running and registration
+    | stops waiting on your mail server.
+    |
+    */
+
+    'mail' => [
+        'queue' => (bool) env('PANEL_QUEUE_MAIL', false),
     ],
 
     /*
