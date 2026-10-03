@@ -801,3 +801,54 @@ lowering a single view has an effect.
 is a digest rather than a working token (D15), but a log browser has no reason
 to show it, and listing it would put it in every administrator's browser
 history.
+
+---
+
+## D22 — The account search cannot search by password
+
+**Legacy behaviour.** `modules/account/index.php` accepted a `password`
+parameter and matched it against `login.user_pass`:
+
+```php
+$password = $params->get('password');
+...
+$sqlpartial .= "AND user_pass = ? ";
+```
+
+**Why that is worse on this schema than it would be elsewhere.** `user_pass` is
+cleartext, or unsalted MD5 when the server runs with `use_MD5_passwords` (D1).
+A search over it is therefore:
+
+- a way to find every account sharing a password, by typing a common one;
+- a way to confirm a guess against the entire player base in one request,
+  rather than one account at a time through a rate-limited sign-in form;
+- available to anyone who can open the admin search, which on a typical server
+  is more people than can read the database.
+
+It is an oracle that turns one leaked or guessed password into a list of every
+account using it.
+
+**Decision.** The filter is not ported, and `login.user_pass` is not among the
+columns the search selects, so there is nothing for a response to leak by
+accident. Every other filter the legacy screen had — account id, name, e-mail,
+last address, gender, state, group, login count, and the last-login and
+birthdate ranges — is present.
+
+This is consistent with what FluxCP's own access map already said: the related
+`SearchCpChangePass` ability was `NOONE`, which is the upstream project
+reaching the same conclusion about the neighbouring feature and leaving this
+one in place.
+
+**Rank protection on the edit screen** is recorded here too, because it is the
+other half of the same problem. Staff may not edit an account at or above their
+own rank, and may not grant a rank they do not themselves exceed. Without both,
+the lowest-ranked person who can open the edit screen promotes themselves to
+administrator in two steps and the permission ladder is decorative. FluxCP had
+the idea as the `EditHigherPower` ability, defaulted to `NOONE`; it is enforced
+here rather than being a flag nobody turns on.
+
+Nor can the screen set a password. The legacy edit form did not offer that
+either, and it should not: an administrator helping somebody locked out
+triggers a reset rather than choosing a credential they then know. The columns
+the emulator records — `logincount`, `lastlogin`, `last_ip` — are not editable
+either, because rewriting them is falsifying an audit trail.

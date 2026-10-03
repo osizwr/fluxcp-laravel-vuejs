@@ -98,16 +98,16 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `ban` | `modules/cplog/ban.php` | `ADMIN` | `NOT_STARTED` |  |
-| `changemail` | `modules/cplog/changemail.php` | `ADMIN` | `NOT_STARTED` |  |
-| `changepass` | `modules/cplog/changepass.php` | `ADMIN` | `NOT_STARTED` |  |
-| `create` | `modules/cplog/create.php` | `ADMIN` | `NOT_STARTED` |  |
-| `index` | `modules/cplog/index.php` | `ADMIN` | `NOT_STARTED` |  |
-| `ipban` | `modules/cplog/ipban.php` | `ADMIN` | `NOT_STARTED` |  |
-| `login` | `modules/cplog/login.php` | `ADMIN` | `NOT_STARTED` |  |
-| `paypal` | `modules/cplog/paypal.php` | `ADMIN` | `NOT_STARTED` |  |
-| `resetpass` | `modules/cplog/resetpass.php` | `ADMIN` | `NOT_STARTED` |  |
-| `txnview` | `modules/cplog/txnview.php` | `ADMIN` | `NOT_STARTED` |  |
+| `ban` | `modules/cplog/ban.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `changemail` | `modules/cplog/changemail.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `changepass` | `modules/cplog/changepass.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `create` | `modules/cplog/create.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `index` | `modules/cplog/index.php` | `ADMIN` | `INTENTIONALLY_REPLACED` | A menu with no data of its own; `GET /api/logs` lists the views the viewer may open, and the menu itself is a client route. |
+| `ipban` | `modules/cplog/ipban.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `login` | `modules/cplog/login.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `paypal` | `modules/cplog/paypal.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `resetpass` | `modules/cplog/resetpass.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) `cp_resetpass.code` is deliberately not among its columns. |
+| `txnview` | `modules/cplog/txnview.php` | `ADMIN` | `INTENTIONALLY_REPLACED` | A single-transaction view of the same table as `paypal`. Filtering the transactions view by `txn_id` is the same thing with one endpoint instead of two. |
 
 ### `donate`
 
@@ -170,11 +170,11 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `add` | `modules/ipban/add.php` | `ADMIN` | `NOT_STARTED` |  |
-| `edit` | `modules/ipban/edit.php` | `ADMIN` | `NOT_STARTED` |  |
-| `index` | `modules/ipban/index.php` | `ADMIN` | `NOT_STARTED` |  |
-| `remove` | `modules/ipban/remove.php` | `ADMIN` | `NOT_STARTED` |  |
-| `unban` | `modules/ipban/unban.php` | `ADMIN` | `NOT_STARTED` |  |
+| `add` | `modules/ipban/add.php` | `ADMIN` | `VERIFIED` | `POST /api/ip-bans`. The whitelist is checked first: a pattern covering the operator's own range locks every administrator out of the panel *and* the game. Needs ModifyIpBan on top of the route level. |
+| `edit` | `modules/ipban/edit.php` | `ADMIN` | `VERIFIED` | `PUT /api/ip-bans/{pattern}`. The edit is recorded in `cp_ipbanlog`, so widening a ban leaves a trace of who did it and why. Cannot widen onto the whitelist. |
+| `index` | `modules/ipban/index.php` | `ADMIN` | `VERIFIED` | `GET /api/ip-bans`. Expired rows are kept and flagged rather than hidden. 21 tests cover the module. |
+| `remove` | `modules/ipban/remove.php` | `ADMIN` | `INTENTIONALLY_REPLACED` | Folded into `unban`, which already took a list. A single-item removal is a list of one, and two endpoints doing the same write is how their audit rows diverge. |
+| `unban` | `modules/ipban/unban.php` | `ADMIN` | `VERIFIED` | `DELETE /api/ip-bans`, taking a list as the legacy did. Deletes the `ipbanlist` row — current state the login server reads — and adds a `cp_ipbanlog` row. Patterns that were not banned are reported rather than ignored. Needs RemoveIpBan. |
 
 ### `item`
 
@@ -197,19 +197,19 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `branch` | `modules/logdata/branch.php` | `ADMIN` | `NOT_STARTED` |  |
-| `cashpoints` | `modules/logdata/cashpoints.php` | `ADMIN` | `NOT_STARTED` |  |
-| `char` | `modules/logdata/char.php` | `ADMIN` | `NOT_STARTED` |  |
-| `chat` | `modules/logdata/chat.php` | `ADMIN` | `NOT_STARTED` |  |
-| `command` | `modules/logdata/command.php` | `ADMIN` | `NOT_STARTED` |  |
-| `feeding` | `modules/logdata/feeding.php` | `ADMIN` | `NOT_STARTED` |  |
-| `index` | `modules/logdata/index.php` | `ADMIN` | `NOT_STARTED` |  |
-| `inter` | `modules/logdata/inter.php` | `ADMIN` | `NOT_STARTED` |  |
-| `login` | `modules/logdata/login.php` | `ADMIN` | `NOT_STARTED` |  |
-| `mvp` | `modules/logdata/mvp.php` | `ADMIN` | `NOT_STARTED` |  |
-| `npc` | `modules/logdata/npc.php` | `ADMIN` | `NOT_STARTED` |  |
-| `pick` | `modules/logdata/pick.php` | `ADMIN` | `NOT_STARTED` |  |
-| `zeny` | `modules/logdata/zeny.php` | `ADMIN` | `NOT_STARTED` |  |
+| `branch` | `modules/logdata/branch.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `cashpoints` | `modules/logdata/cashpoints.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `char` | `modules/logdata/char.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) Read from the char/map connection, where rAthena keeps it. |
+| `chat` | `modules/logdata/chat.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) The most privacy-sensitive table in the database. |
+| `command` | `modules/logdata/command.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `feeding` | `modules/logdata/feeding.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `index` | `modules/logdata/index.php` | `ADMIN` | `INTENTIONALLY_REPLACED` | A menu with no data of its own; see `cplog.index`. |
+| `inter` | `modules/logdata/inter.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) Char/map connection. |
+| `login` | `modules/logdata/login.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `mvp` | `modules/logdata/mvp.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `npc` | `modules/logdata/npc.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `pick` | `modules/logdata/pick.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
+| `zeny` | `modules/logdata/zeny.php` | `ADMIN` | `VERIFIED` | One of the 20 declared views in `config/log_browsers.php`, read by one controller. Columns are intersected with the real schema, so a differently configured server gets a narrower table and an absent one reports `available: false` rather than a 500. Administrator, as in the legacy. 21 tests cover all of them. (D21) |
 
 ### `mail`
 
@@ -236,22 +236,22 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `add` | `modules/news/add.php` | `ADMIN` | `NOT_STARTED` |  |
-| `delete` | `modules/news/delete.php` | `ADMIN` | `NOT_STARTED` |  |
-| `edit` | `modules/news/edit.php` | `ADMIN` | `NOT_STARTED` |  |
+| `add` | `modules/news/add.php` | `ADMIN` | `VERIFIED` | `POST /api/news`. The byline defaults to the account writing it rather than being free text. `link` is restricted to http and https. (D20) |
+| `delete` | `modules/news/delete.php` | `ADMIN` | `VERIFIED` | `DELETE /api/news/{id}`. |
+| `edit` | `modules/news/edit.php` | `ADMIN` | `VERIFIED` | Split into `GET /api/news/{id}/edit` and `PUT /api/news/{id}`. Editing leaves `created` alone — it orders the front page, and moving it would push an old article back to the top for a typo fix. |
 | `index` | `modules/news/index.php` | `ANYONE` | `VERIFIED` | Public listing from `cp_cmsnews`, newest first, paginated. Excerpts are derived with tags stripped; the stored rich text is returned only for a single article. No category or thumbnail, because the legacy schema has neither. 16 tests shared with the other site-data endpoints. |
-| `manage` | `modules/news/manage.php` | `ADMIN` | `NOT_STARTED` |  |
+| `manage` | `modules/news/manage.php` | `ADMIN` | `VERIFIED` | `GET /api/news/manage`. Paginated and sortable; omits bodies. |
 | `view` | `modules/news/view.php` | `ANYONE` | `VERIFIED` | Single article including its body. |
 
 ### `pages`
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `add` | `modules/pages/add.php` | `ADMIN` | `NOT_STARTED` |  |
-| `content` | `modules/pages/content.php` | `ANYONE` | `NOT_STARTED` |  |
-| `delete` | `modules/pages/delete.php` | `ADMIN` | `NOT_STARTED` |  |
-| `edit` | `modules/pages/edit.php` | `ADMIN` | `NOT_STARTED` |  |
-| `index` | `modules/pages/index.php` | `ADMIN` | `NOT_STARTED` |  |
+| `add` | `modules/pages/add.php` | `ADMIN` | `VERIFIED` | `POST /api/pages`. Paths are validated to letters, digits, dashes and slashes, which refuses anything readable as a traversal or query string. |
+| `content` | `modules/pages/content.php` | `ANYONE` | `VERIFIED` | `GET /api/pages/{path}`. Public, reached by path so a page keeps a stable URL across edits. Paths are normalised, which fixes the legacy's exact-match lookup leaving a page unreachable when its link and row disagreed about a slash or a capital. Nested paths work. |
+| `delete` | `modules/pages/delete.php` | `ADMIN` | `VERIFIED` | `DELETE /api/pages/{id}`. 20 tests cover news and pages. (D20) |
+| `edit` | `modules/pages/edit.php` | `ADMIN` | `VERIFIED` | `PUT /api/pages/{id}`. |
+| `index` | `modules/pages/index.php` | `ADMIN` | `VERIFIED` | `GET /api/pages`. Administrator; omits bodies. |
 
 ### `purchase`
 

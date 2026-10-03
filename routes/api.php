@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\AccountAdminController;
 use App\Http\Controllers\Api\AccountHistoryController;
+use App\Http\Controllers\Api\AdminSearchController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CaptchaController;
 use App\Http\Controllers\Api\CharacterController;
@@ -21,6 +23,7 @@ use App\Http\Controllers\Api\RankingController;
 use App\Http\Controllers\Api\RegistrationController;
 use App\Http\Controllers\Api\ServerStatisticsController;
 use App\Http\Controllers\Api\ServerStatusController;
+use App\Http\Controllers\Api\ServerStatusXmlController;
 use App\Http\Controllers\Api\StaticPageController;
 use App\Http\Controllers\Api\WorldController;
 use Illuminate\Support\Facades\Route;
@@ -131,6 +134,13 @@ Route::middleware('permission')->group(function (): void {
     Route::get('server/status', [ServerStatusController::class, 'index'])->name('server.status');
 
     /*
+     * The legacy machine-readable feed, kept at its original shape so server
+     * listing sites, Discord bots and forum widgets already polling it keep
+     * working after a migration. New consumers should use the JSON above.
+     */
+    Route::get('server/status.xml', ServerStatusXmlController::class)->name('server.status-xml');
+
+    /*
      * Aggregate counts over the game tables, for the statistics block. Real
      * queries, cached: these are full-table counts behind a landing page.
      */
@@ -183,6 +193,25 @@ Route::middleware('permission')->group(function (): void {
     Route::get('pages/{path}', [StaticPageController::class, 'show'])
         ->where('path', '[A-Za-z0-9][A-Za-z0-9\-\/]*')
         ->name('pages.content');
+
+    /*
+     * Staff search and account editing.
+     *
+     * The legacy account search accepted a `password` parameter and matched it
+     * against `login.user_pass`. It is not ported: on a server storing
+     * cleartext that is a way to find every account sharing a password, and to
+     * confirm a guess against the whole player base at once.
+     * See docs/MIGRATION_DECISIONS.md (D22).
+     */
+    Route::get('admin/accounts', [AdminSearchController::class, 'accounts'])
+        ->name('account.index');
+
+    Route::put('admin/accounts/{account}', [AccountAdminController::class, 'update'])
+        ->whereNumber('account')
+        ->name('account.edit');
+
+    Route::get('admin/characters', [AdminSearchController::class, 'characters'])
+        ->name('character.index');
 
     /*
      * The log browsers.
