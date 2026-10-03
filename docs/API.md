@@ -332,6 +332,111 @@ people load when something looks broken, so it must not itself fail.
 
 ---
 
+## Server statistics
+
+### `GET /api/server/statistics`
+
+Route name `server.statistics`. Access: **anyone**.
+
+Aggregate counts over the game tables, for the statistics block.
+
+```json
+{
+  "data": {
+    "accounts": 1842,
+    "characters": 5310,
+    "guilds": 94,
+    "players_online": 1247
+  },
+  "meta": { "cache_seconds": 300 }
+}
+```
+
+Every figure is a real query. Accounts exclude rAthena's own inter-server
+accounts (`sex = 'S'`) and accounts disabled with a negative `group_id`;
+characters exclude those queued for deletion.
+
+**There is no uptime field, deliberately.** rAthena records no start time the
+panel can read, so the figure would have to be invented — and a statistics
+endpoint is the last place an invented number belongs. A test asserts its
+absence.
+
+These are full-table counts behind a landing page, so they are cached;
+`cache_seconds` says for how long.
+
+---
+
+## Character classes
+
+### `GET /api/characters/classes`
+
+Route name `character.classes`. Access: **anyone**.
+
+| Parameter | |
+| --- | --- |
+| `limit` | 1–50, default 8 |
+
+A genuine `GROUP BY class` over the character table, ordered by popularity,
+with names resolved server-side so the client carries no copy of rAthena's 153
+job names.
+
+```json
+{
+  "data": [
+    { "job_id": 5, "job_name": "Merchant", "characters": 912 },
+    { "job_id": 1, "job_name": "Swordsman", "characters": 704 }
+  ]
+}
+```
+
+An aggregate: no individual character is identifiable from it. Returns an empty
+array on a server with no characters, rather than inventing classes to fill a
+block.
+
+---
+
+## News
+
+### `GET /api/news`
+
+Route name `news.index`. Access: **anyone**. Paginated.
+
+### `GET /api/news/{article}`
+
+Route name `news.view`. Access: **anyone**.
+
+FluxCP's news CMS, read from `cp_cmsnews`, newest first.
+
+```json
+{
+  "data": [
+    {
+      "id": 12,
+      "title": "Season opens",
+      "excerpt": "Adventurers assemble at the gates of…",
+      "author": "gamemaster",
+      "link": null,
+      "published_at": "2026-09-28T10:00:00+00:00",
+      "updated_at": null
+    }
+  ]
+}
+```
+
+**No category and no thumbnail.** The legacy `cp_cmsnews` schema has neither,
+so returning them would mean inventing them.
+
+The `excerpt` is derived from the body with tags stripped, because truncating
+HTML at a character count produces unbalanced markup — and because a listing
+that interpolated stored rich text unescaped is how a news CMS becomes an XSS
+vector. The full `body` is returned **only** for a single article, where the
+client renders it as HTML deliberately.
+
+Read-only. The admin half of the legacy CMS — manage, add, edit, delete — is
+not built, so there is no write path rather than a stub that looks like one.
+
+---
+
 ## Realtime
 
 Server status is also broadcast, so a client does not have to poll.

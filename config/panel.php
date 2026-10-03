@@ -208,6 +208,21 @@ return [
         'inactive_after_days' => (int) env('PANEL_RANKING_INACTIVE_DAYS', 0),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Statistics
+    |--------------------------------------------------------------------------
+    |
+    | Aggregate counts over the game tables. These are full-table counts and
+    | the blocks that show them sit on the front page, so without caching the
+    | landing page becomes the most expensive query in the application.
+    |
+    */
+
+    'statistics' => [
+        'cache_seconds' => (int) env('PANEL_STATISTICS_CACHE_SECONDS', 300),
+    ],
+
     'pagination' => [
         'per_page' => (int) env('PANEL_PER_PAGE', 20),
         'max_per_page' => (int) env('PANEL_MAX_PER_PAGE', 100),

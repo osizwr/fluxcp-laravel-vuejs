@@ -227,6 +227,16 @@ final class RathenaTestSchema
             $table->index('account_id');
         });
 
+        $schema->create('cp_cmsnews', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->string('title', 100);
+            $table->text('body');
+            $table->string('link', 100)->default('');
+            $table->string('author', 100)->default('');
+            $table->dateTime('created')->nullable();
+            $table->dateTime('modified')->nullable();
+        });
+
         $schema->create('cp_loginprefs', function (Blueprint $table): void {
             $table->increments('id');
             $table->unsignedInteger('account_id');

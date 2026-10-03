@@ -265,6 +265,16 @@ return [
         // The signed-in account's own characters, for the client's character
         // list. The legacy panel folded this into account/view's template.
         'character.mine' => AccountLevel::Player,
+
+        // How many characters there are of each job class, for the class
+        // showcase block. A public aggregate; no individual character is
+        // identifiable from it.
+        'character.classes' => AccountLevel::Anyone,
+
+        // Aggregate server counts for the statistics block. The legacy
+        // server.info action covered server information generally, but this
+        // is a distinct endpoint rather than a reinterpretation of it.
+        'server.statistics' => AccountLevel::Anyone,
     ],
 
     /*

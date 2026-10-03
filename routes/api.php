@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CharacterController;
+use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\RankingController;
+use App\Http\Controllers\Api\ServerStatisticsController;
 use App\Http\Controllers\Api\ServerStatusController;
 use Illuminate\Support\Facades\Route;
 
@@ -45,6 +47,22 @@ Route::middleware('permission')->group(function (): void {
     Route::get('server/status', [ServerStatusController::class, 'index'])->name('server.status');
 
     /*
+     * Aggregate counts over the game tables, for the statistics block. Real
+     * queries, cached: these are full-table counts behind a landing page.
+     */
+    Route::get('server/statistics', [ServerStatisticsController::class, 'index'])
+        ->name('server.statistics');
+
+    /*
+     * Public news. Read-only -- the admin half of the legacy CMS is not built,
+     * so there is no write path rather than a stub that looks like one.
+     */
+    Route::get('news', [NewsController::class, 'index'])->name('news.index');
+    Route::get('news/{article}', [NewsController::class, 'show'])
+        ->whereNumber('article')
+        ->name('news.view');
+
+    /*
      * Public ladders.
      */
     Route::get('rankings/level', [RankingController::class, 'byLevel'])->name('ranking.character');
@@ -60,5 +78,12 @@ Route::middleware('permission')->group(function (): void {
         ->name('character.online');
 
     Route::get('characters/mine', [CharacterController::class, 'mine'])->name('character.mine');
+
+    /*
+     * Character counts per job class, for the class showcase. A public
+     * aggregate from which no individual character is identifiable.
+     */
+    Route::get('characters/classes', [ServerStatisticsController::class, 'classes'])
+        ->name('character.classes');
 
 });
