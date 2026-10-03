@@ -335,6 +335,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Item shop
+    |--------------------------------------------------------------------------
+    |
+    | Items bought with credits and collected in game. FluxCP's ItemShopMaxCost,
+    | ItemShopMaxQuantity, ItemShopItemPerPage and ShopImageExtensions.
+    |
+    | The panel never writes to a character's inventory: a purchase writes a
+    | `cp_redeemlog` row and an rAthena script hands the item over. The
+    | character may be online, and the map server would overwrite anything
+    | written underneath it.
+    |
+    */
+
+    'item_shop' => [
+        'enabled' => (bool) env('PANEL_ITEM_SHOP_ENABLED', true),
+
+        // Caps on what an operator may list, not on what a player may spend.
+        'max_cost' => (int) env('PANEL_ITEM_SHOP_MAX_COST', 99999),
+        'max_quantity' => (int) env('PANEL_ITEM_SHOP_MAX_QUANTITY', 99),
+
+        /*
+         * Item images live on a disk rather than in the database, as the
+         * legacy had them, named after the shop item's id.
+         */
+        'image_disk' => env('PANEL_ITEM_SHOP_IMAGE_DISK', 'public'),
+        'image_directory' => env('PANEL_ITEM_SHOP_IMAGE_DIR', 'shop'),
+        'image_extensions' => ['png', 'jpg', 'jpeg', 'gif'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Account maintenance
     |--------------------------------------------------------------------------
     |

@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\GuildController;
 use App\Http\Controllers\Api\IpBanController;
 use App\Http\Controllers\Api\ItemController;
+use App\Http\Controllers\Api\ItemShopAdminController;
+use App\Http\Controllers\Api\ItemShopController;
 use App\Http\Controllers\Api\LogBrowserController;
 use App\Http\Controllers\Api\MonsterController;
 use App\Http\Controllers\Api\NewsController;
@@ -194,6 +196,39 @@ Route::middleware('permission')->group(function (): void {
     Route::get('pages/{path}', [StaticPageController::class, 'show'])
         ->where('path', '[A-Za-z0-9][A-Za-z0-9\-\/]*')
         ->name('pages.content');
+
+    /*
+     * The credit shop.
+     *
+     * Purchases are paid for in credits and collected in game: checkout writes
+     * a `cp_redeemlog` row and an rAthena script hands the item over. The
+     * panel does not touch a character's inventory, because the character may
+     * be online and the map server would overwrite it.
+     */
+    Route::get('shop', [ItemShopController::class, 'index'])->name('purchase.index');
+    Route::get('shop/cart', [ItemShopController::class, 'cart'])->name('purchase.cart');
+    Route::post('shop/cart', [ItemShopController::class, 'addToCart'])->name('purchase.add');
+    Route::delete('shop/cart/item', [ItemShopController::class, 'removeFromCart'])
+        ->name('purchase.remove');
+    Route::delete('shop/cart', [ItemShopController::class, 'clearCart'])->name('purchase.clear');
+    Route::post('shop/checkout', [ItemShopController::class, 'checkout'])
+        ->name('purchase.checkout');
+    Route::get('shop/pending', [ItemShopController::class, 'pending'])->name('purchase.pending');
+
+    /*
+     * Managing what the shop sells. Each needs its own ability on top of the
+     * route level, as the legacy access map had them.
+     */
+    Route::post('admin/shop', [ItemShopAdminController::class, 'store'])->name('itemshop.add');
+    Route::put('admin/shop/{item}', [ItemShopAdminController::class, 'update'])
+        ->whereNumber('item')
+        ->name('itemshop.edit');
+    Route::delete('admin/shop/{item}', [ItemShopAdminController::class, 'destroy'])
+        ->whereNumber('item')
+        ->name('itemshop.delete');
+    Route::delete('admin/shop/{item}/image', [ItemShopAdminController::class, 'destroyImage'])
+        ->whereNumber('item')
+        ->name('itemshop.imagedel');
 
     /*
      * Support tickets.

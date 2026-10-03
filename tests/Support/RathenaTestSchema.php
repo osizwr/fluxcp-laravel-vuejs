@@ -300,6 +300,33 @@ final class RathenaTestSchema
             $table->dateTime('modified')->nullable();
         });
 
+        $schema->create('cp_itemshop', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('nameid')->default(0);
+            $table->integer('category')->nullable();
+            $table->unsignedInteger('quantity')->default(0);
+            $table->unsignedInteger('cost')->default(0);
+            $table->text('info')->nullable();
+            $table->tinyInteger('use_existing')->default(0);
+            $table->dateTime('create_date')->nullable();
+            $table->index('nameid');
+        });
+
+        $schema->create('cp_redeemlog', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('nameid')->default(0);
+            $table->unsignedInteger('quantity')->default(0);
+            $table->unsignedInteger('cost')->default(0);
+            $table->unsignedInteger('account_id')->default(0);
+            $table->unsignedInteger('char_id')->nullable();
+            $table->unsignedTinyInteger('redeemed')->default(0);
+            $table->dateTime('redemption_date')->nullable();
+            $table->dateTime('purchase_date')->nullable();
+            $table->integer('credits_before')->default(0);
+            $table->integer('credits_after')->default(0);
+            $table->index('account_id');
+        });
+
         $schema->create('cp_servicedesk', function (Blueprint $table): void {
             $table->increments('ticket_id');
             $table->integer('account_id')->default(0);

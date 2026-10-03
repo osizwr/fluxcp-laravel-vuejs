@@ -470,4 +470,25 @@ return [
         43 => 'Nerious',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Item shop categories
+    |--------------------------------------------------------------------------
+    |
+    | Ported from FluxCP's shopcategories.php. A shop item's `category` column
+    | holds one of these ids.
+    |
+    */
+
+    'shop_categories' => [
+        0 => 'Headgears',
+        1 => 'Wings',
+        2 => 'Armors',
+        3 => 'Weapons',
+        4 => 'Healing Items',
+        5 => 'Pets',
+        6 => 'Miscellaneous',
+        7 => 'Cards',
+    ],
+
 ];
