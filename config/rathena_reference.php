@@ -208,4 +208,163 @@ return [
         6052 => 'Elanor',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Item and monster attribute columns
+    |--------------------------------------------------------------------------
+    |
+    | Modern rAthena stores these as one boolean column per attribute rather
+    | than as a bitmask: `item_db_re` has a `location_head_top` column, a
+    | `job_swordman` column, a `trade_nodrop` column and so on. The maps below
+    | turn those column names into labels.
+    |
+    | Ported from FluxCP's config/itemtypes.php, equip_locations.php,
+    | equip_jobs.php, equip_upper.php, trade_restrictions.php, itemsflags.php
+    | and monstermode.php.
+    |
+    | The job and class lists are split because the renewal entries only exist
+    | on a renewal server; reading them on a pre-renewal one asks for columns
+    | that are not there.
+    |
+    */
+
+    'item_types' => [
+        'ammo' => 'Ammo',
+        'armor' => 'Armor',
+        'card' => 'Card',
+        'cash' => 'Cash Shop Reward',
+        'delayconsume' => 'Delay Consume',
+        'etc' => 'Etc',
+        'healing' => 'Healing',
+        'petarmor' => 'Pet Armor',
+        'petegg' => 'Pet Egg',
+        'shadowgear' => 'Shadow Equipment',
+        'usable' => 'Usable',
+        'weapon' => 'Weapon',
+    ],
+
+    'equip_locations' => [
+        'location_head_top' => 'Upper Headgear',
+        'location_head_mid' => 'Middle Headgear',
+        'location_head_low' => 'Lower Headgear',
+        'location_armor' => 'Armor',
+        'location_right_hand' => 'Main Hand',
+        'location_left_hand' => 'Off Hand',
+        'location_garment' => 'Garment',
+        'location_shoes' => 'Footgear',
+        'location_right_accessory' => 'Accessory Right',
+        'location_left_accessory' => 'Accessory Left',
+        'location_costume_head_top' => 'Costume Top Headgear',
+        'location_costume_head_mid' => 'Costume Mid Headgear',
+        'location_costume_head_low' => 'Costume Low Headgear',
+        'location_costume_garment' => 'Costume Garment',
+        'location_ammo' => 'Ammo',
+        'location_shadow_armor' => 'Shadow Armor',
+        'location_shadow_weapon' => 'Shadow Weapon',
+        'location_shadow_shield' => 'Shadow Shield',
+        'location_shadow_shoes' => 'Shadow Shoes',
+        'location_shadow_right_accessory' => 'Shadow Accessory Right (Earring)',
+        'location_shadow_left_accessory' => 'Shadow Accessory Left (Pendant)',
+    ],
+
+    'equip_jobs' => [
+        'base' => [
+            'job_all' => 'All jobs',
+            'job_novice' => 'Novice',
+            'job_supernovice' => 'Super Novice',
+            'job_swordman' => 'Swordman',
+            'job_mage' => 'Mage',
+            'job_archer' => 'Archer',
+            'job_acolyte' => 'Acolyte',
+            'job_merchant' => 'Merchant',
+            'job_thief' => 'Thief',
+            'job_knight' => 'Knight',
+            'job_priest' => 'Priest',
+            'job_wizard' => 'Wizard',
+            'job_blacksmith' => 'Blacksmith',
+            'job_hunter' => 'Hunter',
+            'job_assassin' => 'Assassin',
+            'job_crusader' => 'Crusader',
+            'job_monk' => 'Monk',
+            'job_sage' => 'Sage',
+            'job_rogue' => 'Rogue',
+            'job_alchemist' => 'Alchemist',
+            'job_barddancer' => 'Bard / Dancer',
+            'job_taekwon' => 'Taekwon',
+            'job_stargladiator' => 'Star Gladiator',
+            'job_soullinker' => 'Soul Linker',
+            'job_gunslinger' => 'Gunslinger',
+            'job_ninja' => 'Ninja',
+        ],
+        'renewal' => [
+            'job_kagerouoboro' => 'Kagerou / Oboro',
+            'job_rebellion' => 'Rebellion',
+            'job_summoner' => 'Summoner',
+        ],
+    ],
+
+    'equip_classes' => [
+        'base' => [
+            'class_all' => 'All classes',
+            'class_normal' => 'Normal',
+            'class_upper' => 'Upper',
+            'class_baby' => 'Baby',
+        ],
+        'renewal' => [
+            'class_third' => 'Third',
+            'class_third_upper' => 'Third Upper',
+            'class_third_baby' => 'Third Baby',
+        ],
+    ],
+
+    'trade_restrictions' => [
+        'trade_nodrop' => "Can't be dropped",
+        'trade_notrade' => "Can't be traded with another player",
+        'trade_tradepartner' => "Can't be traded with a partner",
+        'trade_nosell' => "Can't be sold to an NPC",
+        'trade_nocart' => "Can't be put in a cart",
+        'trade_nostorage' => "Can't be put in storage",
+        'trade_noguildstorage' => "Can't be put in guild storage",
+        'trade_nomail' => "Can't be attached to mail",
+        'trade_noauction' => "Can't be auctioned",
+    ],
+
+    'item_flags' => [
+        'flag_buyingstore' => 'Available to buying stores',
+        'flag_deadbranch' => 'Dead branch type',
+        'flag_container' => 'Is a container',
+        'flag_uniqueid' => 'Unique stack',
+        'flag_bindonequip' => 'Bound to the character on equipping',
+        'flag_dropannounce' => 'Announced to the character on drop',
+        'flag_noconsume' => 'Not consumed on use',
+    ],
+
+    'monster_modes' => [
+        'mode_aggressive' => 'Aggressive',
+        'mode_angry' => 'Angry',
+        'mode_assist' => 'Assist',
+        'mode_canattack' => 'Can attack',
+        'mode_canmove' => 'Can move',
+        'mode_castsensorchase' => 'Cast sensor chase',
+        'mode_castsensoridle' => 'Cast sensor idle',
+        'mode_changechase' => 'Change chase',
+        'mode_changetargetchase' => 'Change target chase',
+        'mode_changetargetmelee' => 'Change target melee',
+        'mode_detector' => 'Detector',
+        'mode_fixeditemdrop' => 'Fixed item drop',
+        'mode_ignoremagic' => 'Ignores magic',
+        'mode_ignoremelee' => 'Ignores melee',
+        'mode_ignoremisc' => 'Ignores misc',
+        'mode_ignoreranged' => 'Ignores ranged',
+        'mode_knockbackimmune' => 'Knockback immune',
+        'mode_looter' => 'Looter',
+        'mode_mvp' => 'MVP',
+        'mode_norandomwalk' => 'Plant',
+        'mode_randomtarget' => 'Random target',
+        'mode_skillimmune' => 'Skill immune',
+        'mode_statusimmune' => 'Status immune',
+        'mode_targetweak' => 'Targets the weak',
+        'mode_teleportblock' => 'Teleport block',
+    ],
+
 ];

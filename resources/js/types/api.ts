@@ -156,3 +156,75 @@ export interface NewsArticle {
     /** Rich text, sent only when a single article was requested. */
     body?: string
 }
+
+/* -------------------------------------------------------------------------- */
+/* Item and monster databases                                                 */
+/* -------------------------------------------------------------------------- */
+
+export interface Item {
+    id: number
+    name: string
+    aegis_name: string
+    type: string | null
+    subtype: string | null
+    /** True when the row came from the server's own item_db2 rather than stock. */
+    is_custom: boolean
+    origin_table: string | null
+    price: { buy: number | null; sell: number | null }
+    weight: number | null
+    attack: number | null
+    defense: number | null
+    range: number | null
+    slots: number
+    weapon_level: number | null
+    view: number | null
+    gender: string | null
+    equip_level: { min: number | null; max: number | null }
+    refineable: boolean
+    /** Decoded from rAthena's one-column-per-attribute layout by the server. */
+    equip_locations: string[]
+    jobs: string[]
+    classes: string[]
+    trade_restrictions: string[]
+    flags: string[]
+    /** Only sent on the detail view; the listing omits it. */
+    script?: string | null
+}
+
+export interface Monster {
+    id: number
+    name: string
+    aegis_name: string
+    level: number
+    hp: number
+    sp: number
+    experience: { base: number; job: number; mvp: number }
+    attack: { min: number; max: number }
+    defense: number
+    magic_defense: number
+    size: number | null
+    race: number | null
+    element: number | null
+    is_mvp: boolean
+    modes: string[]
+    is_custom: boolean
+    origin_table: string | null
+}
+
+/** The search vocabulary, so the client does not keep its own copy. */
+export interface ItemVocabulary {
+    types: Record<string, string>
+    locations: Record<string, string>
+    jobs: Record<string, string>
+    classes: Record<string, string>
+    operators: string[]
+    comparable: string[]
+    sortable: string[]
+}
+
+/** What a listing endpoint reports about the sort that was applied. */
+export interface ListMeta {
+    sortable: string[]
+    sort: string | null
+    direction: 'asc' | 'desc'
+}

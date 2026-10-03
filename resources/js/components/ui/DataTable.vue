@@ -16,6 +16,12 @@ export interface Column {
     numeric?: boolean
     /** Hidden below the small breakpoint, for secondary detail. */
     secondary?: boolean
+    /**
+     * The name the server accepts for sorting on this column, when it accepts
+     * one. Absent means the column is not sortable, so a header is plain text
+     * rather than a control that does nothing.
+     */
+    sort?: string
 }
 
 const props = withDefaults(
@@ -28,13 +34,38 @@ const props = withDefaults(
         emptyTitle?: string
         emptyDescription?: string
         caption?: string
+        /** The sort currently applied, as the server reported it. */
+        sort?: string | null
+        direction?: 'asc' | 'desc'
     }>(),
     {
         loading: false,
         error: null,
         emptyTitle: 'Nothing to show',
+        sort: null,
+        direction: 'asc',
     },
 )
+
+/**
+ * Asks the page to re-sort. The table does not sort its own rows: only the
+ * current page is in the browser, so sorting here would reorder twenty rows
+ * out of thousands and quietly lie about the ranking.
+ */
+const emit = defineEmits<{ sort: [column: string] }>()
+
+/** aria-sort for the header cell, which is what a screen reader announces. */
+function ariaSort(column: Column): 'ascending' | 'descending' | 'none' | undefined {
+    if (column.sort === undefined) {
+        return undefined
+    }
+
+    if (props.sort !== column.sort) {
+        return 'none'
+    }
+
+    return props.direction === 'asc' ? 'ascending' : 'descending'
+}
 </script>
 
 <template>
@@ -75,13 +106,32 @@ const props = withDefaults(
                             v-for="column in props.columns"
                             :key="column.key"
                             scope="col"
-                            class="px-3 py-2 text-left text-[0.75rem] font-semibold tracking-wide text-[var(--text-secondary)] uppercase"
+                            class="text-[0.75rem] font-semibold tracking-wide text-[var(--text-secondary)] uppercase"
                             :class="[
-                                column.numeric ? 'text-right' : '',
+                                column.numeric ? 'text-right' : 'text-left',
                                 column.secondary ? 'hidden sm:table-cell' : '',
+                                column.sort === undefined ? 'px-3 py-2' : '',
                             ]"
+                            :aria-sort="ariaSort(column)"
                         >
-                            {{ column.label }}
+                            <button
+                                v-if="column.sort !== undefined"
+                                type="button"
+                                class="flex w-full items-center gap-1 px-3 py-2 uppercase hover:text-[var(--text-primary)]"
+                                :class="column.numeric ? 'justify-end' : ''"
+                                @click="emit('sort', column.sort)"
+                            >
+                                {{ column.label }}
+                                <span
+                                    class="text-[0.625rem]"
+                                    :class="props.sort === column.sort ? '' : 'opacity-0'"
+                                    aria-hidden="true"
+                                >
+                                    {{ props.direction === 'asc' ? '\u25B2' : '\u25BC' }}
+                                </span>
+                            </button>
+
+                            <template v-else>{{ column.label }}</template>
                         </th>
                     </tr>
                 </thead>

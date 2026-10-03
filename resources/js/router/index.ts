@@ -115,6 +115,30 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Rankings' },
     },
     {
+        path: '/items',
+        name: 'items',
+        component: themedRoute('items', 'ItemsPage', () => import('../pages/ItemsPage.vue')),
+        meta: { title: 'Items' },
+    },
+    {
+        path: '/items/:id(\\d+)',
+        name: 'item',
+        component: themedRoute('item', 'ItemPage', () => import('../pages/ItemPage.vue')),
+        meta: { title: 'Item' },
+    },
+    {
+        path: '/monsters',
+        name: 'monsters',
+        component: themedRoute('monsters', 'MonstersPage', () => import('../pages/MonstersPage.vue')),
+        meta: { title: 'Monsters' },
+    },
+    {
+        path: '/monsters/:id(\\d+)',
+        name: 'monster',
+        component: themedRoute('monster', 'MonsterPage', () => import('../pages/MonsterPage.vue')),
+        meta: { title: 'Monster' },
+    },
+    {
         path: '/:pathMatch(.*)*',
         name: 'not-found',
         component: themedRoute('not-found', 'NotFoundPage', () => import('../pages/NotFoundPage.vue')),

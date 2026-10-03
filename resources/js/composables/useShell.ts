@@ -43,6 +43,8 @@ export function useShell(): {
         { to: '/', label: 'Status' },
         { to: '/rankings/level', label: 'Rankings' },
         { to: '/who-is-online', label: "Who's online" },
+        { to: '/items', label: 'Items' },
+        { to: '/monsters', label: 'Monsters' },
         ...(auth.isAuthenticated
             ? [
                   { to: '/characters', label: 'Characters' },

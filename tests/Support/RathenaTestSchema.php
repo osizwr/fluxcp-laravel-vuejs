@@ -429,6 +429,12 @@ final class RathenaTestSchema
     {
         $schema = Schema::connection($connection);
 
+        /*
+         * Modern rAthena stores each equip location, job, class, trade
+         * restriction and flag as its own boolean column rather than as a
+         * bitmask, which is why there are so many of them. A representative
+         * selection is enough to exercise the decoding.
+         */
         foreach (['item_db_re', 'item_db2_re'] as $table) {
             $schema->create($table, function (Blueprint $table): void {
                 $table->unsignedInteger('id')->primary();
@@ -443,11 +449,26 @@ final class RathenaTestSchema
                 $table->unsignedSmallInteger('defense')->nullable();
                 $table->unsignedTinyInteger('range')->nullable();
                 $table->unsignedTinyInteger('slots')->nullable();
+                $table->unsignedTinyInteger('weapon_level')->nullable();
                 $table->unsignedSmallInteger('equip_level_min')->nullable();
-                $table->unsignedInteger('equip_locations')->nullable();
-                $table->boolean('refineable')->default(false);
+                $table->unsignedSmallInteger('equip_level_max')->nullable();
+                $table->string('gender', 6)->nullable();
                 $table->unsignedSmallInteger('view')->nullable();
                 $table->text('script')->nullable();
+
+                foreach ([
+                    'location_head_top', 'location_head_mid', 'location_head_low',
+                    'location_armor', 'location_right_hand', 'location_left_hand',
+                    'location_garment', 'location_shoes',
+                    'location_right_accessory', 'location_left_accessory',
+                    'job_all', 'job_novice', 'job_swordman', 'job_mage', 'job_archer',
+                    'job_acolyte', 'job_merchant', 'job_thief',
+                    'class_all', 'class_normal', 'class_upper', 'class_baby',
+                    'trade_nodrop', 'trade_notrade', 'trade_nosell', 'trade_nostorage',
+                    'flag_buyingstore', 'flag_container', 'flag_bindonequip',
+                ] as $attribute) {
+                    $table->unsignedTinyInteger($attribute)->nullable();
+                }
             });
         }
 
@@ -468,6 +489,16 @@ final class RathenaTestSchema
                 $table->unsignedSmallInteger('DEF')->default(0);
                 $table->unsignedSmallInteger('MDEF')->default(0);
                 $table->unsignedTinyInteger('MEXP')->default(0);
+                $table->unsignedSmallInteger('Size')->default(1);
+                $table->unsignedSmallInteger('Race')->default(0);
+                $table->unsignedSmallInteger('Element')->default(0);
+
+                foreach ([
+                    'mode_aggressive', 'mode_assist', 'mode_canattack', 'mode_canmove',
+                    'mode_looter', 'mode_mvp', 'mode_detector', 'mode_norandomwalk',
+                ] as $mode) {
+                    $table->unsignedTinyInteger($mode)->nullable();
+                }
             });
         }
     }

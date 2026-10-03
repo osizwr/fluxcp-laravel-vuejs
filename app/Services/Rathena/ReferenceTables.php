@@ -65,6 +65,43 @@ final readonly class ReferenceTables
     }
 
     /**
+     * The columns the base table has, for a caller that needs to know whether
+     * this server's schema models a given attribute.
+     *
+     * Needed because rAthena's schema is not fixed: the mob table has used
+     * `ID`/`iName`/`LV` and `id`/`name_english`/`level` across versions, and
+     * the item table gains attribute columns as the emulator adds features. A
+     * panel that assumes one shape renders an empty listing on the other.
+     *
+     * @return list<string>
+     */
+    public function columns(string $kind, ?CharMapServer $server = null): array
+    {
+        $server ??= $this->servers->currentCharMapServer();
+
+        return $this->merge->columns(
+            $server->connectionName(),
+            $this->tablesFor($kind, $server)['base'],
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function itemColumns(?CharMapServer $server = null): array
+    {
+        return $this->columns('items', $server);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function monsterColumns(?CharMapServer $server = null): array
+    {
+        return $this->columns('monsters', $server);
+    }
+
+    /**
      * Which physical tables a kind resolves to for a given world.
      *
      * Exposed because the diagnostics command and the tests report it, and

@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CaptchaController;
 use App\Http\Controllers\Api\CharacterController;
 use App\Http\Controllers\Api\EmailController;
+use App\Http\Controllers\Api\ItemController;
+use App\Http\Controllers\Api\MonsterController;
 use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\PasswordController;
 use App\Http\Controllers\Api\PasswordResetController;
@@ -112,6 +114,32 @@ Route::middleware('permission')->group(function (): void {
     Route::get('news/{article}', [NewsController::class, 'show'])
         ->whereNumber('article')
         ->name('news.view');
+
+    /*
+     * The item and monster databases.
+     *
+     * Both read through the merge service, so a server's own item_db2 and
+     * mob_db2 entries appear with their custom stats rather than the stock
+     * ones (D6).
+     *
+     * `item.iteminfo` is the legacy name for the filter vocabulary the search
+     * form is built from. It is held at ADMIN in the permission map, matching
+     * the legacy access level.
+     */
+    Route::get('items', [ItemController::class, 'index'])->name('item.index');
+
+    Route::get('items/vocabulary', [ItemController::class, 'vocabulary'])
+        ->name('item.iteminfo');
+
+    Route::get('items/{item}', [ItemController::class, 'show'])
+        ->whereNumber('item')
+        ->name('item.view');
+
+    Route::get('monsters', [MonsterController::class, 'index'])->name('monster.index');
+
+    Route::get('monsters/{monster}', [MonsterController::class, 'show'])
+        ->whereNumber('monster')
+        ->name('monster.view');
 
     /*
      * Public ladders.
