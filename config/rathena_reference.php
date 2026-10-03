@@ -491,4 +491,39 @@ return [
         7 => 'Cards',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Gender-linked job classes
+    |--------------------------------------------------------------------------
+    |
+    | Jobs that exist only for one gender: Bard and Dancer and everything they
+    | become. An account holding one of these cannot change its gender, because
+    | rAthena would leave the character as a class its new gender cannot be --
+    | which the client renders as an invisible or crashing character.
+    |
+    | Ported from FluxCP's jobs_gender_linked.php.
+    |
+    */
+
+    'gender_linked_classes' => [
+        19 => 'Bard',
+        20 => 'Dancer',
+        4020 => 'Clown',
+        4021 => 'Gypsy',
+        4042 => 'Baby Bard',
+        4043 => 'Baby Dancer',
+        4068 => 'Minstrel',
+        4069 => 'Wanderer',
+        4075 => 'Minstrel+',
+        4076 => 'Wanderer+',
+        4104 => 'Baby Minstrel',
+        4105 => 'Baby Wanderer',
+        4211 => 'Kagerou',
+        4212 => 'Oboro',
+        4223 => 'Baby Kagerou',
+        4224 => 'Baby Oboro',
+        4263 => 'Troubadour',
+        4264 => 'Trouvere',
+    ],
+
 ];

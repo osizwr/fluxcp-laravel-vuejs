@@ -269,6 +269,47 @@ return [
 
         // How many maps the map statistics page lists.
         'map_statistics_limit' => (int) env('PANEL_MAP_STATS_LIMIT', 50),
+
+        /*
+         * Credits charged for a gender change. 0 is free. FluxCP's
+         * ChargeGenderChange.
+         */
+        'gender_change_cost' => (int) env('PANEL_GENDER_CHANGE_COST', 0),
+
+        /*
+         * Credit transfers between players. FluxCP allowed them with no cap,
+         * which makes the panel a laundering route for credits bought on one
+         * account and moved to another. A cap is a cheap brake; 0 disables
+         * transfers entirely.
+         */
+        'credit_transfer' => [
+            'enabled' => (bool) env('PANEL_CREDIT_TRANSFER_ENABLED', true),
+            'max_per_transfer' => (int) env('PANEL_CREDIT_TRANSFER_MAX', 0),
+        ],
+
+        /*
+         * Web commands queued for the game server to run. Off by default:
+         * the table is read by a script with game-master powers, so what goes
+         * into it matters more than most tables here.
+         */
+        'web_commands' => [
+            'enabled' => (bool) env('PANEL_WEB_COMMANDS_ENABLED', false),
+
+            /*
+             * Commands the panel will queue, as shell globs: `@refresh` is one
+             * command, `@storage*` a family. An empty list accepts nothing, so
+             * turning the feature on without configuring it is inert rather
+             * than open.
+             *
+             * FluxCP inserted whatever was submitted, with no allow-list at
+             * all, into a table an rAthena script runs with game-master
+             * powers. See docs/MIGRATION_DECISIONS.md (D23).
+             */
+            'allowed' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('PANEL_WEB_COMMANDS_ALLOWED', '')),
+            ))),
+        ],
     ],
 
     /*

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Support\Rathena\ServerRegistry;
+use App\Support\Rathena\WoeWindow;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Http\JsonResponse;
 
@@ -89,6 +90,97 @@ final class WorldController
                 'held' => count(array_filter($castles, fn (array $c): bool => $c['owner'] !== null)),
             ],
         ]);
+    }
+
+    /**
+     * The custom siege schedule some servers keep in script variables.
+     *
+     * Ports modules/woe/custom.php. A common rAthena setup stores the siege
+     * window in `mapreg` under `$sday`, `$eday`, `$stime` and `$etime` rather
+     * than in the configuration, so a script can change it without a restart.
+     * The panel reads those rather than reporting the configured schedule as
+     * though it were authoritative.
+     *
+     * A server that does not use this convention has no such rows, which is
+     * reported as an empty schedule rather than an error.
+     */
+    public function customSiegeSchedule(): JsonResponse
+    {
+        $server = $this->servers->currentCharMapServer();
+        $connection = $this->connections->connection($server->connectionName());
+
+        if (! $connection->getSchemaBuilder()->hasTable('mapreg')) {
+            return response()->json([
+                'data' => [],
+                'meta' => [
+                    'available' => false,
+                    'reason' => 'This server does not keep a script-controlled siege schedule.',
+                ],
+            ]);
+        }
+
+        /*
+         * The four variables are parallel arrays sharing an index, which is
+         * how rAthena stores a script array. Read separately and matched up
+         * here rather than with a four-way self-join.
+         */
+        $values = [];
+
+        foreach (['$sday', '$eday', '$stime', '$etime'] as $variable) {
+            $values[$variable] = $connection->table('mapreg')
+                ->where('varname', $variable)
+                ->pluck('value', 'index');
+        }
+
+        $days = WoeWindow::dayNames();
+        $windows = [];
+
+        foreach ($values['$sday'] as $index => $startDay) {
+            $endDay = $values['$eday'][$index] ?? $startDay;
+
+            $windows[] = [
+                'starts' => [
+                    'day' => $days[(int) $startDay] ?? 'Unknown',
+                    'time' => $this->formatScriptTime($values['$stime'][$index] ?? null),
+                ],
+                'ends' => [
+                    'day' => $days[(int) $endDay] ?? 'Unknown',
+                    'time' => $this->formatScriptTime($values['$etime'][$index] ?? null),
+                ],
+            ];
+        }
+
+        return response()->json([
+            'data' => $windows,
+            'meta' => [
+                'available' => true,
+                'timezone' => $server->timezone()->getName(),
+                'server_time' => $server->serverTime()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * A script-stored hour as a time.
+     *
+     * These are written as plain integers -- 20 for eight in the evening --
+     * so they are rendered rather than passed through, which would show "20"
+     * next to a schedule that elsewhere reads "20:00".
+     */
+    private function formatScriptTime(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $raw = (string) $value;
+
+        // Already a time.
+        if (str_contains($raw, ':')) {
+            return $raw;
+        }
+
+        return sprintf('%02d:00', (int) $raw);
     }
 
     /**

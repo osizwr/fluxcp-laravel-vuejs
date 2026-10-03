@@ -852,3 +852,46 @@ either, and it should not: an administrator helping somebody locked out
 triggers a reset rather than choosing a credential they then know. The columns
 the emulator records — `logincount`, `lastlogin`, `last_ip` — are not editable
 either, because rewriting them is falsifying an audit trail.
+
+---
+
+## D23 — Web commands need an allow-list
+
+**Legacy behaviour.** `modules/webcommands/index.php`, in full:
+
+```php
+$sql = "INSERT INTO {$server->charMapDatabase}.$tbl (command, issuer, account_id) VALUES (?, ?, ?)";
+$sth->execute(array($_POST['command'], $session->account->userid, $session->account->account_id));
+```
+
+The submitted string went into `cp_commands` unchanged. That table is polled by
+an rAthena script which executes what it finds **with game-master powers** —
+that is the point of the feature; it is how a website button runs `@refresh`
+for a stuck player.
+
+**Why that is the most dangerous write in the panel.** There is no validation
+and no allow-list, so anyone who can reach the page can queue anything the
+script will run. `@item 501 30000`, `@zeny 2000000000`, `@adjgroup 99`. The
+permission map holds the action at `NORMAL`, so that is every signed-in player.
+
+The damage is not even bounded by the panel's own permissions, because the
+script runs as staff regardless of who queued the row.
+
+**Decision.** Off unless the operator turns it on, and a command is queued only
+if it matches one of the patterns they configured. Patterns are shell globs, so
+`@refresh` is one command and `@storage*` a family.
+
+**An empty allow-list accepts nothing.** Turning the feature on without
+configuring it leaves it inert rather than open — the opposite of the usual
+"empty means unrestricted" convention, chosen because the failure mode of
+getting this wrong is a player with administrator powers in the game.
+
+The issuer and account id come from the session rather than the body, as
+everywhere else in this port, so the audit row cannot name somebody else.
+
+**Also capped here:** credit transfers between players. FluxCP allowed any
+amount, which makes the panel a laundering route — buy credits on one account,
+move them to another, and the trail of who paid is broken.
+`PANEL_CREDIT_TRANSFER_MAX` is a brake, and `enabled` turns the feature off
+entirely. Transfers to your own account are refused, which the legacy did not
+check.

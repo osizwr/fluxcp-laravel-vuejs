@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\AccountAdminController;
+use App\Http\Controllers\Api\AccountCreditsController;
 use App\Http\Controllers\Api\AccountHistoryController;
 use App\Http\Controllers\Api\AdminSearchController;
 use App\Http\Controllers\Api\AuthController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\Api\ServerStatusController;
 use App\Http\Controllers\Api\ServerStatusXmlController;
 use App\Http\Controllers\Api\ServiceDeskController;
 use App\Http\Controllers\Api\StaticPageController;
+use App\Http\Controllers\Api\WebCommandController;
 use App\Http\Controllers\Api\WorldController;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
@@ -360,6 +362,36 @@ Route::middleware('permission')->group(function (): void {
      */
     Route::get('world/castles', [WorldController::class, 'castles'])->name('castle.index');
     Route::get('world/siege-schedule', [WorldController::class, 'siegeSchedule'])->name('woe.index');
+
+    /*
+     * Some servers keep the siege window in script variables rather than in
+     * configuration, so a script can change it without a restart. Reported
+     * separately rather than presenting the configured schedule as
+     * authoritative on a server that overrides it.
+     */
+    Route::get('world/siege-schedule/custom', [WorldController::class, 'customSiegeSchedule'])
+        ->name('woe.custom');
+
+    /*
+     * Gender change, credit transfer and its history.
+     */
+    Route::post('account/gender', [AccountCreditsController::class, 'changeGender'])
+        ->name('account.changesex');
+    Route::post('account/credits/transfer', [AccountCreditsController::class, 'transfer'])
+        ->name('account.transfer');
+    Route::get('account/credits/transfers', [AccountCreditsController::class, 'transferHistory'])
+        ->name('account.xferlog');
+
+    /*
+     * Commands queued for the game server. Off unless the operator turns them
+     * on, and only commands matching their allow-list are accepted: the table
+     * is read by a script with game-master powers, and the legacy inserted
+     * whatever was submitted. See docs/MIGRATION_DECISIONS.md (D23).
+     */
+    Route::get('account/commands', [WebCommandController::class, 'index'])
+        ->name('webcommands.index');
+    Route::post('account/commands', [WebCommandController::class, 'store'])
+        ->name('webcommands.queue');
 
     /*
      * Player shops. Vending stalls and buying stores share an implementation

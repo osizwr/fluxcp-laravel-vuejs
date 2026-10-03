@@ -310,6 +310,17 @@ final class RathenaTestSchema
             $table->index('txn_id');
         });
 
+        $schema->create('cp_xferlog', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('from_account_id')->default(0);
+            $table->unsignedInteger('target_account_id')->default(0);
+            $table->unsignedInteger('target_char_id')->default(0);
+            $table->unsignedInteger('amount')->default(0);
+            $table->unsignedTinyInteger('for_free')->default(0);
+            $table->dateTime('transfer_date')->nullable();
+            $table->index('from_account_id');
+        });
+
         $schema->create('cp_trusted', function (Blueprint $table): void {
             $table->increments('id');
             $table->unsignedInteger('account_id')->default(0);
@@ -654,6 +665,30 @@ final class RathenaTestSchema
          * rAthena keeps these two beside the character data rather than in the
          * logs database.
          */
+        /*
+         * rAthena's script variable store. Some servers keep the siege
+         * schedule here so a script can change it without a restart.
+         */
+        /*
+         * Commands queued for the game server to run, and the credit transfer
+         * log. rAthena keeps both beside the character data.
+         */
+        $schema->create('cp_commands', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->string('command', 128)->default('');
+            $table->string('issuer', 32)->default('');
+            $table->integer('account_id')->default(0);
+            $table->integer('done')->default(0);
+            $table->timestamp('timestamp')->useCurrent();
+        });
+
+        $schema->create('mapreg', function (Blueprint $table): void {
+            $table->string('varname', 32)->default('');
+            $table->unsignedInteger('index')->default(0);
+            $table->string('value', 255)->default('');
+            $table->primary(['varname', 'index']);
+        });
+
         $schema->create('charlog', function (Blueprint $table): void {
             $table->dateTime('time')->useCurrent();
             $table->string('char_msg', 255)->default('char select');

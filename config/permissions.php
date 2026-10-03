@@ -270,6 +270,8 @@ return [
 
         // webcommands
         'webcommands.index' => AccountLevel::Administrator,
+        // Queueing is its own route; the legacy folded it into `index`.
+        'webcommands.queue' => AccountLevel::Player,
 
         // woe
         'woe.custom' => AccountLevel::Anyone,
