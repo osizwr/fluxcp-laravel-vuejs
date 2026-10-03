@@ -350,7 +350,7 @@ concerns are tracked in their own tables below.
 | `Flux_TemporaryTable` | Destructive item/mob table merge | Dedicated merge service (D6) | `NOT_STARTED` |
 | `Flux_Paginator` | Sortable/filterable SQL pagination | Laravel pagination + validated sort allow-list | `NOT_STARTED` |
 | `Flux_Installer*` | File-ledger schema installer (4 classes) | `panel:install-schema` command (D4) | `VERIFIED` |
-| `Flux_Captcha` | GD CAPTCHA generator | CAPTCHA service, reCAPTCHA retained | `NOT_STARTED` |
+| `Flux_Captcha` | GD CAPTCHA generator | `ChallengesHumanity` with native and reCAPTCHA drivers | `VERIFIED` |
 | `Flux_EmblemExporter` | Guild emblem BMP/GIF conversion | Emblem service | `NOT_STARTED` |
 | `Flux_ItemShop / Flux_ItemShop_Cart` | Credit shop + session cart | Shop + cart services | `NOT_STARTED` |
 | `Flux_PaymentNotifyRequest` | PayPal IPN verification and crediting | Queued IPN job (D-pending) | `NOT_STARTED` |
@@ -376,11 +376,11 @@ concerns are tracked in their own tables below.
 | Themes | PHP template inheritance, 3 themes | `VERIFIED` | Design tokens plus file-resolution overrides for pages, layouts and components, selected by APP_THEME (D7). Two themes ship. Covered by 28 tests, including that the API is byte-identical whichever theme is active and that no theme file fetches data. |
 | Add-ons | `addons/` loader, 1 example | `NOT_STARTED` | Laravel packages (D8). |
 | Game branding | Hardcoded strings + SiteName config | `VERIFIED` | config/game.php consumed through useGame(). A test fails if any .vue file hardcodes the game name. |
-| Localisation | 4 languages, `Flux::message()` | `NOT_STARTED` | Laravel translations + client catalogue. |
+| Localisation | 4 languages, `Flux::message()` | `IMPLEMENTING` | `lang/en` covers the authentication and account messages; before it, every `trans()` in the sign-in path returned its own key to the visitor. The other three upstream languages are not ported, and most interface copy is still inline in the Vue components. |
 | Mail | Bundled PHPMailer 5.x | `IMPLEMENTING` | Four account mailables with HTML and text parts, sent through `AccountMailer`. Inline by default, queued behind `PANEL_QUEUE_MAIL`. The admin `mail/index` broadcast tool is not built. |
 | Realtime | None (XML status feed, page refresh) | `VERIFIED` | Reverb broadcasting with a polling fallback (D14). Verified end to end with a WebSocket client. |
-| Queues/scheduling | Inline in `preprocess` on every request | `IMPLEMENTING` | Status measurement is scheduled. Account pruning and credit release are not built. |
+| Queues/scheduling | Inline in `preprocess` on every request | `IMPLEMENTING` | Status measurement and unconfirmed-account pruning are scheduled commands. Credit release is not built. |
 | Server status | `fsockopen` per request | `VERIFIED` | Cached probe behind a contract, measured on a schedule and broadcast. |
 | Pagination/sorting | `Flux_Paginator`, column names from request | `NOT_STARTED` | Validated sort allow-list (SQL-injection surface in legacy). |
-| Automated tests | None in repository | `IMPLEMENTING` | 97 PHPUnit tests, 213 assertions. Integration tests run against a real MariaDB schema. |
+| Automated tests | None in repository | `IMPLEMENTING` | 349 PHPUnit tests, 1,247 assertions, across 26 files. Integration tests run against a real MariaDB schema. No frontend tests exist. |
 
