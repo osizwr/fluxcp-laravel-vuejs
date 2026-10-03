@@ -25,9 +25,9 @@ concerns are tracked in their own tables below.
 | Status | Actions | Share |
 | --- | --: | --: |
 | `IMPLEMENTING` | 3 | 2% |
-| `INTENTIONALLY_REPLACED` | 9 | 6% |
-| `NOT_STARTED` | 111 | 80% |
-| `VERIFIED` | 16 | 12% |
+| `INTENTIONALLY_REPLACED` | 10 | 7% |
+| `NOT_STARTED` | 77 | 55% |
+| `VERIFIED` | 49 | 35% |
 | **Total** | **139** | |
 
 ## Module actions
@@ -65,8 +65,8 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `index` | `modules/buyingstore/index.php` | `UNLISTED` | `NOT_STARTED` |  |
-| `viewshop` | `modules/buyingstore/viewshop.php` | `UNLISTED` | `NOT_STARTED` |  |
+| `index` | `modules/buyingstore/index.php` | `UNLISTED` | `VERIFIED` | Shares the vending implementation; the two differ only in which tables they read. |
+| `viewshop` | `modules/buyingstore/viewshop.php` | `UNLISTED` | `VERIFIED` | A buying store holds no stock, so its items are on the line with no cart to join through. 16 tests cover shops and the world endpoints. |
 
 ### `captcha`
 
@@ -78,21 +78,21 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `index` | `modules/castle/index.php` | `ANYONE` | `NOT_STARTED` |  |
+| `index` | `modules/castle/index.php` | `ANYONE` | `VERIFIED` | Castle ownership. An absent row and a `guild_id` of 0 both render as unowned, which is most castles on a young server. |
 
 ### `character`
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `changeslot` | `modules/character/changeslot.php` | `NORMAL` | `NOT_STARTED` |  |
-| `divorce` | `modules/character/divorce.php` | `NORMAL` | `NOT_STARTED` |  |
+| `changeslot` | `modules/character/changeslot.php` | `NORMAL` | `VERIFIED` | Swaps with the occupant, in one transaction — the legacy used two statements, and half a swap leaves two characters in one slot. Refuses while either is online. |
+| `divorce` | `modules/character/divorce.php` | `NORMAL` | `VERIFIED` | Clears both sides, and the child and rings per configuration. The rings are found by reconstructing rAthena's split of the partner id across two signed card columns. |
 | `index` | `modules/character/index.php` | `LOWGM` | `NOT_STARTED` |  |
-| `mapstats` | `modules/character/mapstats.php` | `ANYONE` | `NOT_STARTED` |  |
+| `mapstats` | `modules/character/mapstats.php` | `ANYONE` | `VERIFIED` | Players per map. Characters who hid their map are left out entirely rather than counted, because a count of one locates them by elimination. 27 tests cover the character module. |
 | `online` | `modules/character/online.php` | `ANYONE` | `VERIFIED` | Paginated and searchable. Location withheld without `ViewOnlinePosition`, hidden characters withheld without `IgnoreHiddenPref`, listing refused during WoE. 7 tests. |
-| `prefs` | `modules/character/prefs.php` | `NORMAL` | `NOT_STARTED` |  |
-| `resetlook` | `modules/character/resetlook.php` | `NORMAL` | `NOT_STARTED` |  |
-| `resetpos` | `modules/character/resetpos.php` | `NORMAL` | `NOT_STARTED` |  |
-| `view` | `modules/character/view.php` | `NORMAL` | `NOT_STARTED` |  |
+| `prefs` | `modules/character/prefs.php` | `NORMAL` | `VERIFIED` | Read and write the three per-character preferences. Hiding from the zeny ladder needs its own ability and is dropped from the submission rather than refusing the rest. |
+| `resetlook` | `modules/character/resetlook.php` | `NORMAL` | `VERIFIED` | Unequips everything and clears the appearance. `body` is set to the class, not zero, matching the legacy statement. |
+| `resetpos` | `modules/character/resetpos.php` | `NORMAL` | `VERIFIED` | Returns the character to their save point. The operator's deny list is matched without the `.gat` extension, which rAthena writes inconsistently. |
+| `view` | `modules/character/view.php` | `NORMAL` | `VERIFIED` | `GET /api/characters/{id}` plus `/characters/{id}`. Own character always; somebody else's needs ViewCharacter. |
 
 ### `cplog`
 
@@ -143,21 +143,21 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `emblem` | `modules/guild/emblem.php` | `ANYONE` | `NOT_STARTED` |  |
-| `export` | `modules/guild/export.php` | `ADMIN` | `NOT_STARTED` |  |
-| `index` | `modules/guild/index.php` | `LOWGM` | `NOT_STARTED` |  |
-| `view` | `modules/guild/view.php` | `NORMAL` | `NOT_STARTED` |  |
+| `emblem` | `modules/guild/emblem.php` | `ANYONE` | `VERIFIED` | Decodes rAthena's gzip-compressed BMP, stored as hex, to PNG with magenta turned into transparency. PHP's own `imagecreatefrombmp` replaces FluxCP's hand-written decoder. Malformed data is a 404, not an error — the column holds whatever the client uploaded. 17 tests. |
+| `export` | `modules/guild/export.php` | `ADMIN` | `VERIFIED` | Streamed CSV, capped. |
+| `index` | `modules/guild/index.php` | `LOWGM` | `VERIFIED` | Directory with member counts, searchable and sortable. LOWGM, as in the legacy map. |
+| `view` | `modules/guild/view.php` | `NORMAL` | `VERIFIED` | Roster, allies, enemies and castles. |
 
 ### `history`
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `cplogin` | `modules/history/cplogin.php` | `NORMAL` | `NOT_STARTED` |  |
-| `emailchange` | `modules/history/emailchange.php` | `NORMAL` | `NOT_STARTED` |  |
-| `gamelogin` | `modules/history/gamelogin.php` | `NORMAL` | `NOT_STARTED` |  |
-| `index` | `modules/history/index.php` | `NORMAL` | `NOT_STARTED` |  |
-| `passchange` | `modules/history/passchange.php` | `NORMAL` | `NOT_STARTED` |  |
-| `passreset` | `modules/history/passreset.php` | `NORMAL` | `NOT_STARTED` |  |
+| `cplogin` | `modules/history/cplogin.php` | `NORMAL` | `VERIFIED` | `cp_loginlog.error_code` holds FluxCP's Flux_LoginError integers, which LoginFailure preserves. An unmodelled code reports as "Refused" rather than being guessed at. |
+| `emailchange` | `modules/history/emailchange.php` | `NORMAL` | `VERIFIED` | 13 tests cover the history module. |
+| `gamelogin` | `modules/history/gamelogin.php` | `NORMAL` | `VERIFIED` | rAthena's `loginlog` has no account id and records the name typed, so the match follows the login server's case sensitivity. Both directions are tested. |
+| `index` | `modules/history/index.php` | `NORMAL` | `INTENTIONALLY_REPLACED` | A menu with no data of its own in the legacy panel; a client route here. |
+| `passchange` | `modules/history/passchange.php` | `NORMAL` | `VERIFIED` | Scoped to the session, never to an id from the request. |
+| `passreset` | `modules/history/passreset.php` | `NORMAL` | `VERIFIED` | Nothing from `cp_resetpass.code` reaches the response, and a test asserts it. |
 
 ### `install`
 
@@ -180,9 +180,9 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `index` | `modules/item/index.php` | `ANYONE` | `NOT_STARTED` |  |
-| `iteminfo` | `modules/item/iteminfo.php` | `ADMIN` | `NOT_STARTED` |  |
-| `view` | `modules/item/view.php` | `ANYONE` | `NOT_STARTED` |  |
+| `index` | `modules/item/index.php` | `ANYONE` | `VERIFIED` | `GET /api/items` plus `/items`. Reads through the merge (D6), so the server's own `item_db2` entries appear with their custom stats. Legacy filters preserved — name, type, equip location, job, class, numeric comparisons, refineable, stock-versus-custom — but operators arrive named (`gt`, not `>`) and column names come from the configured maps, so no part of a request becomes SQL. 23 tests. |
+| `iteminfo` | `modules/item/iteminfo.php` | `ADMIN` | `VERIFIED` | `GET /api/items/vocabulary`. The filter vocabulary, so the client keeps no copy of the item types and equip locations. ADMIN, as in the legacy access map. |
+| `view` | `modules/item/view.php` | `ANYONE` | `VERIFIED` | `GET /api/items/{id}` plus `/items/{id}`. rAthena's ~100 boolean attribute columns are decoded into labelled lists by AttributeDecoder; `job_all` collapses rather than listing 26 jobs. The item script is sent only here, not in the listing. |
 
 ### `itemshop`
 
@@ -229,8 +229,8 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `index` | `modules/monster/index.php` | `ANYONE` | `NOT_STARTED` |  |
-| `view` | `modules/monster/view.php` | `ANYONE` | `NOT_STARTED` |  |
+| `index` | `modules/monster/index.php` | `ANYONE` | `VERIFIED` | Merged (D6). Column names are resolved per server rather than hardcoded: rAthena has shipped `ID`/`iName`/`LV` and `id`/`name_english`/`level`, and assuming one renders an empty listing against the other. 10 tests. |
+| `view` | `modules/monster/view.php` | `ANYONE` | `VERIFIED` | Modes decoded from the per-mode boolean columns. |
 
 ### `news`
 
@@ -269,13 +269,13 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `alchemist` | `modules/ranking/alchemist.php` | `UNLISTED` | `NOT_STARTED` | Needs the alchemist job-class list and the fame column. |
-| `blacksmith` | `modules/ranking/blacksmith.php` | `UNLISTED` | `NOT_STARTED` | Needs the blacksmith job-class list and the fame column. |
+| `alchemist` | `modules/ranking/alchemist.php` | `UNLISTED` | `VERIFIED` | Fame ladder. Includes the rebirth, baby and third-class ids — a ladder matching only class 18 is empty on a mature server. |
+| `blacksmith` | `modules/ranking/blacksmith.php` | `UNLISTED` | `VERIFIED` | As alchemist, with the blacksmith branch ids. |
 | `character` | `modules/ranking/character.php` | `ANYONE` | `VERIFIED` | Level ladder with the ban, staff, deletion and inactivity filters. Handles the login/char cross-database join the legacy panel assumed was always possible. 12 tests shared with the zeny ladder. |
-| `death` | `modules/ranking/death.php` | `ANYONE` | `NOT_STARTED` |  |
-| `guild` | `modules/ranking/guild.php` | `ANYONE` | `NOT_STARTED` |  |
-| `homunculus` | `modules/ranking/homunculus.php` | `UNLISTED` | `NOT_STARTED` | Needs the homunculus table and class names, which are ported in config/rathena_reference.php. |
-| `mvp` | `modules/ranking/mvp.php` | `ANYONE` | `NOT_STARTED` |  |
+| `death` | `modules/ranking/death.php` | `ANYONE` | `VERIFIED` | The count lives in `char_reg_num` under `PC_DIE_COUNTER`, not as a column. Left join coalescing to zero, so a character who has never died is still listed — an inner join would drop them. |
+| `guild` | `modules/ranking/guild.php` | `ANYONE` | `VERIFIED` | Takes the greater of `guild.exp` and the sum of its members, as the legacy did: some scripts credit members without updating the column. |
+| `homunculus` | `modules/ranking/homunculus.php` | `UNLISTED` | `VERIFIED` | Ranks homunculi, joining back for the owner. Excludes released ones, which stay in the table with `alive = 0`. |
+| `mvp` | `modules/ranking/mvp.php` | `ANYONE` | `VERIFIED` | Assembled across the logs, char/map and reference connections rather than joined — `mvplog` is commonly on another host, where a cross-database join would not run. Over-fetches before removing staff kills so the ladder is not left short. 20 tests cover all six ladders. |
 | `zeny` | `modules/ranking/zeny.php` | `ANYONE` | `VERIFIED` | As above, plus the per-character HideFromZenyRanking opt-out. |
 
 ### `server`
@@ -315,8 +315,8 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `index` | `modules/vending/index.php` | `ANYONE` | `NOT_STARTED` |  |
-| `viewshop` | `modules/vending/viewshop.php` | `ANYONE` | `NOT_STARTED` |  |
+| `index` | `modules/vending/index.php` | `ANYONE` | `VERIFIED` | Open stalls, searchable by title and map. |
+| `viewshop` | `modules/vending/viewshop.php` | `ANYONE` | `VERIFIED` | Stock read through the seller's cart, where the item id, refine and cards live. Item names come from the merge. |
 
 ### `webcommands`
 
@@ -329,7 +329,7 @@ concerns are tracked in their own tables below.
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
 | `custom` | `modules/woe/custom.php` | `UNLISTED` | `NOT_STARTED` |  |
-| `index` | `modules/woe/index.php` | `ANYONE` | `NOT_STARTED` |  |
+| `index` | `modules/woe/index.php` | `ANYONE` | `VERIFIED` | The siege schedule per world, with its timezone and the next absolute start. |
 
 ## Core libraries (`legacy/lib/Flux/`)
 
@@ -347,11 +347,11 @@ concerns are tracked in their own tables below.
 | `Flux_LoginServer` | Auth, registration, bans, credits, prefs | Split into auth, ban, credit and preference services | `IMPLEMENTING` |
 | `Flux_CharServer / Flux_MapServer / Flux_BaseServer` | TCP reachability probe via `fsockopen` | Server status service + cached probe | `VERIFIED` |
 | `Flux_Athena / Flux_LoginAthenaGroup` | Server-group containers | Server-group registry (D5) | `VERIFIED` |
-| `Flux_TemporaryTable` | Destructive item/mob table merge | Dedicated merge service (D6) | `NOT_STARTED` |
-| `Flux_Paginator` | Sortable/filterable SQL pagination | Laravel pagination + validated sort allow-list | `NOT_STARTED` |
+| `Flux_TemporaryTable` | Destructive item/mob table merge | Derived-table merge, no DDL (D6) | `INTENTIONALLY_REPLACED` |
+| `Flux_Paginator` | Sortable/filterable SQL pagination | `ListQuery` plus Laravel pagination; the client renders its own controls | `VERIFIED` |
 | `Flux_Installer*` | File-ledger schema installer (4 classes) | `panel:install-schema` command (D4) | `VERIFIED` |
 | `Flux_Captcha` | GD CAPTCHA generator | `ChallengesHumanity` with native and reCAPTCHA drivers | `VERIFIED` |
-| `Flux_EmblemExporter` | Guild emblem BMP/GIF conversion | Emblem service | `NOT_STARTED` |
+| `Flux_EmblemExporter` | Guild emblem BMP/GIF conversion | `GuildEmblemService` | `VERIFIED` |
 | `Flux_ItemShop / Flux_ItemShop_Cart` | Credit shop + session cart | Shop + cart services | `NOT_STARTED` |
 | `Flux_PaymentNotifyRequest` | PayPal IPN verification and crediting | Queued IPN job (D-pending) | `NOT_STARTED` |
 | `Flux_Mailer` | PHPMailer wrapper | Laravel Mail mailables via `AccountMailer` | `INTENTIONALLY_REPLACED` |
@@ -360,7 +360,7 @@ concerns are tracked in their own tables below.
 | `Flux_Error and 6 error subclasses` | Exception hierarchy | Typed exceptions + handler | `NOT_STARTED` |
 | `lib/functions/discordwebhook` | Discord webhook notifications | Notification channel | `NOT_STARTED` |
 | `lib/functions/getReposVersion` | Upstream version check | Dropped (phones home) | `INTENTIONALLY_REPLACED` |
-| `lib/functions/imagecreatefrombmpstring` | BMP decoding for emblems | Emblem service helper | `NOT_STARTED` |
+| `lib/functions/imagecreatefrombmpstring` | BMP decoding for emblems | PHP's own `imagecreatefrombmp` (7.2+) | `INTENTIONALLY_REPLACED` |
 | `lib/phpmailer (49 files)` | Bundled PHPMailer 5.x | Laravel Mail (Symfony Mailer) | `INTENTIONALLY_REPLACED` |
 
 ## Cross-cutting concerns

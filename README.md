@@ -9,9 +9,9 @@ pointed at an existing install without migrating data.
 
 > ### Status: in progress, not production ready
 >
-> The migration is partial. Of FluxCP's 139 module actions, **16 are complete and
-> covered by tests**, 9 are deliberately replaced rather than ported, 3 are
-> partially built, and **111 have not been started**.
+> The migration is partial. Of FluxCP's 139 module actions, **49 are complete and
+> covered by tests**, 10 are deliberately replaced rather than ported, 3 are
+> partially built, and **77 have not been started**.
 >
 > [`docs/FLUXCP_MIGRATION_MATRIX.md`](docs/FLUXCP_MIGRATION_MATRIX.md) is the
 > authority on what works. Nothing in this README claims more than it shows.
@@ -20,7 +20,7 @@ pointed at an existing install without migrating data.
 > FluxCP's sign-in behaviour step for step, the account credential flows fix
 > nine defects in the legacy originals rather than carrying them over, and the
 > schema installer has been compared column by column against the legacy schema.
-> 349 tests, 1,247 assertions.
+> 507 tests, 1,748 assertions.
 
 ---
 
@@ -37,7 +37,13 @@ pointed at an existing install without migrating data.
 | Account overview | Own account only |
 | Own character list | Complete |
 | Who's online | Paginated, searchable, permission-filtered, closed during WoE |
-| Rankings | Level and zeny ladders with the legacy exclusion filters |
+| Rankings | Eight ladders: level, zeny, alchemist, blacksmith, deaths, MVP, homunculus, guilds |
+| Items and monsters | Searchable databases, with the server's own custom entries merged in |
+| Characters | Detail, slot change, appearance and position reset, divorce, privacy preferences |
+| Guilds | Directory, guild pages, emblems, roster export |
+| Account history | Website and game sign-ins, password and e-mail changes |
+| Player shops | Vending stalls and buying stores, with their stock |
+| World | Castle ownership and the siege schedule, per world and timezone |
 | Server status | Per-process reachability, live and peak players, realtime |
 | Multi-server | Several server groups, several char/map pairs per group |
 | Authorisation | All 133 route permissions and 47 abilities, deny by default |
@@ -47,10 +53,10 @@ pointed at an existing install without migrating data.
 | News | Public listing and article view, from the legacy CMS table |
 | Statistics | Account, character and guild counts; class distribution |
 
-Not built yet, among much else: character detail and management, the item shop
-and its cart, donations, guild pages, the item and monster databases, the admin
-half of the news CMS and all of the static-page CMS, the support desk, the
-admin tools, and the game log browsers.
+Not built yet, among much else: the item shop and its cart, donations, the
+support desk, the admin half of the news CMS and all of the static-page CMS,
+IP bans, the account admin screens, and the control-panel and game log
+browsers.
 
 ## Requirements
 

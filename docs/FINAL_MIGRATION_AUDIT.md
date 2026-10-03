@@ -3,8 +3,8 @@
 An honest account of what was discovered, what was built, and what was not.
 
 The headline is simple: **the audit is complete, the foundation is complete, and
-the feature migration is about 18% done**. 25 of FluxCP's 139 module actions are
-finished — 16 ported and tested, 9 deliberately replaced — and 111 have not been
+the feature migration is about 42% done**. 59 of FluxCP's 139 module actions are
+finished — 49 ported and tested, 10 deliberately replaced — and 77 have not been
 started. Nothing here is rounded up; the counts come from
 [FLUXCP_MIGRATION_MATRIX.md](FLUXCP_MIGRATION_MATRIX.md), which is the
 authority, and this file must not claim more than it shows.
@@ -105,14 +105,14 @@ COMPATIBILITY_REPORT.md section 1.5.
 
 | | |
 | --- | --- |
-| PHP files | 107 |
+| PHP files | 124 |
 | Configuration | 18 files (2,883 lines) |
 | Vue components | 49 (11 core blocks, 8 fantasy blocks, pages, layouts, UI) |
 | TypeScript modules | 20 |
 | Migrations | 4 |
 | Factories | 4 |
-| Tests | 26 files, **349 tests, 1,247 assertions** |
-| API endpoints | 21 |
+| Tests | 35 files, **507 tests, 1,748 assertions** |
+| API endpoints | 52 |
 | Documentation | 9 documents |
 
 ### Complete and tested
@@ -174,41 +174,47 @@ COMPATIBILITY_REPORT.md section 1.5.
 
 ## 3. What was not built
 
-**111 of 139 actions.** The matrix lists each one; grouped by area:
+**77 of 139 actions.** The matrix lists each one; grouped by area:
 
 | Area | Actions | Includes |
 | --- | --: | --- |
 | Game logs (`logdata`) | 13 | Pick, zeny, MVP, chat, command, branch, feeding, cash |
 | Admin logs (`cplog`) | 10 | Every control-panel audit view |
-| News and pages CMS | 9 | The admin half of news (add, edit, delete, manage) and all of the static-page CMS. Public news listing and article views are done |
-| Character | 8 | Detail view, slot change, look and position reset, divorce, map statistics, preferences |
 | Support desk | 8 | Player and staff ticket flows, categories, settings |
 | Item shop (`purchase`) | 7 | Browse, cart, checkout, pending delivery |
-| Account | 6 | Sex change, credit transfer and its log, the item-shop cart, and the admin search and edit screens |
+| Account | 6 | Sex change, credit transfer and its log, the item-shop cart, the admin search and edit screens |
 | Donations | 6 | PayPal flow, IPN, history, trusted donors |
-| History | 6 | Self-service account history |
-| Rankings | 6 | Alchemist, blacksmith, death, guild, homunculus, MVP |
-| IP bans | 5 | |
-| Guild | 4 | Browse, detail, emblem rendering, CSV export |
-| Item shop admin | 4 | |
-| Vending / buying stores | 4 | |
-| Item database | 3 | Depends on the temporary-table merge (D6) |
-| Monster database | 2 | Same |
-| Other | 10 | Castle ownership, the WoE schedule and its custom variant, the admin mail tool, web commands, ToS, `server/status-xml`, the `unauthorized` page, `main/page_not_found` and the global `preprocess` hook |
+| IP bans | 5 |  |
+| Static page CMS | 5 | All of it; the public news listing and article views are done |
+| Item shop admin | 4 |  |
+| News admin | 4 | Add, edit, delete, manage. Public reading is done |
+| Front page and hook | 2 | `main/index` is partly built; `page_not_found` and the global `preprocess` hook are not |
+| Character | 1 | `character/index`, the staff search screen |
+| Admin mail | 1 | The broadcast tool |
+| Server | 1 | `status-xml`, the legacy machine-readable feed |
+| Terms of service | 1 |  |
+| Unauthorised page | 1 |  |
+| Web commands | 1 |  |
+| WoE | 1 | `woe/custom` |
 
-The rows sum to 111, which is the figure in
-[FLUXCP_MIGRATION_MATRIX.md](FLUXCP_MIGRATION_MATRIX.md). Two rows were wrong in
-the previous revision of this file — rankings was understated as 3 and "other"
-overstated as 13 — and the table is now generated from the matrix rather than
-maintained by hand.
+The rows sum to 77, which is the figure in
+[FLUXCP_MIGRATION_MATRIX.md](FLUXCP_MIGRATION_MATRIX.md). This table is
+generated from the matrix rather than maintained by hand, after an earlier
+revision of it summed to one less than it claimed.
 
 ### Cross-cutting work outstanding
 
-- **The item/monster temporary-table merge (D6).** Eleven actions need it. A port
-  that queries `item_db` directly looks correct on a vanilla install and silently
-  serves pre-renewal stats while ignoring every custom item on a real server.
-- **Pagination with sortable columns.** Needed by roughly fifteen listings and
-  every admin page.
+- ~~**The item/monster temporary-table merge (D6).**~~ Done. `MergedTable` and
+  `ReferenceTables` replace `Flux_TemporaryTable` with a derived-table union
+  that needs no DDL privilege, holds no per-connection state, and composes with
+  pagination. Thirteen actions depended on it; the item, monster, shop and MVP
+  pages now read through it.
+- ~~**Pagination with sortable columns.**~~ Done. `ListQuery` declares a sort
+  allow-list per endpoint, maps public names onto columns so the schema stays
+  out of the URL, caps `per_page`, and puts nulls last on an ascending sort as
+  the legacy did. In use by eleven listings.
+
+  A correction to an earlier revision of this document, which claimed
 
   A correction to an earlier revision of this document, which claimed
   `Flux_Paginator` took column names from the request and was therefore an
@@ -224,8 +230,13 @@ maintained by hand.
   needed everywhere and that doing it afterwards means retrofitting every
   listing.
 - **The 57 `Flux_Template` view helpers**, which encode a large amount of
-  game-domain formatting: job names, equip slots, item flags, monster modes,
-  trade restrictions. Two are ported (`jobs`, `homunculus`).
+  game-domain formatting. The formatting the item, monster and character pages
+  needed is now ported, as data rather than as methods: job names, homunculus
+  names, item types, equip locations, equip jobs and classes, trade
+  restrictions, item flags, monster modes, fame-ladder classes and castle names
+  — 342 entries in `config/rathena_reference.php`, decoded by
+  `AttributeDecoder`. What remains is the formatting the unbuilt pages need,
+  chiefly around the item shop, the logs and the admin screens.
 - **Localisation.** `lang/en` now covers the authentication and account
   messages, which fixed a real defect: there was no `lang/` directory at all, so
   every `trans()` call in the sign-in path returned its own key and a failed
@@ -249,7 +260,7 @@ maintained by hand.
   `config/panel.php` and needs a deploy to change.
 - **A worked add-on package** (D8). The permission registry is designed for
   third-party contribution, but no example exists.
-- **Frontend tests.** The backend has 349; the Vue layer has none.
+- **Frontend tests.** The backend has 507; the Vue layer has none. This is now the largest single gap in the verification story, and it grew with every page added this round.
 
 ---
 
@@ -259,7 +270,7 @@ Every command below was run, and these are its real results.
 
 | Command | Result |
 | --- | --- |
-| `composer test` | **349 passed**, 1,247 assertions, 0 failures, 18s |
+| `composer test` | **507 passed**, 1,748 assertions, 0 failures, 64s |
 | `composer lint` (Pint) | **passed** |
 | `npm run lint` (ESLint + `vue-tsc`) | **passed**, 0 errors, 0 warnings |
 | `npm run build` | **passed**, 16 chunks, 41.7 kB gzipped entry |
@@ -403,9 +414,9 @@ Against the project's own checklist:
 | ✅ | Realtime architecture implemented and verified |
 | ✅ | Reverb configured |
 | ✅ | Queues configured |
-| 🟨 | API implemented — **21 endpoints** |
+| 🟨 | API implemented — **52 endpoints** |
 | 🟨 | Security review — **applied to what exists; no review of unbuilt code** |
-| ✅ | Automated tests created — 349 |
+| ✅ | Automated tests created — 507 |
 | 🟨 | Legacy/new compatibility testing — **for what is built** |
 | ✅ | Production build succeeds |
 | ✅ | No placeholder functionality |
@@ -416,7 +427,7 @@ Against the project's own checklist:
 | ✅ | Final audit completed |
 
 **This is not a 100% migration and is not presented as one.** The audit,
-architecture and verification method are finished; the feature work is 18% done.
+architecture and verification method are finished; the feature work is 42% done.
 
 ### Suggested order for the remaining work
 
