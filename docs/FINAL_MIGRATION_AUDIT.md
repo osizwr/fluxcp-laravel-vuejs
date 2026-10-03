@@ -185,21 +185,49 @@ What is outstanding is not features — it is the things that sit around them.
 
 ### The interface lags the API
 
-Roughly a third of what the server now does has no page in front of it. The
-endpoints are built and tested; the Vue layer covers the player-facing side
-(sign-in and registration, account and security, characters, items, monsters,
-rankings, guilds, history, shops, the world pages) and almost none of the
-administrative side.
+This is the real state of the project, and an earlier revision of this section
+understated it by claiming the Vue layer "covers the player-facing side". It
+does not. Counted properly: **63 of 108 named API routes have no page in front
+of them**, and the gap is not only administrative.
 
-Specifically without an interface: the log browsers, the staff search and
-account editor, IP bans, the news and page editors, the support desk's staff
-queue, the shop administration, the donation screens, and the broadcast mailer.
-Each is reachable and usable over the API, which is how the tests exercise
-them, but an operator cannot do any of it from the panel yet.
+**Player-facing areas with a tested API and no page:**
 
-This is the honest reading of "the migration is complete": complete as a port
-of behaviour, not as a replacement an operator could run their server from
-without touching the API directly.
+| Area | Endpoints |
+| --- | --- |
+| Guilds — directory, guild page, emblem | `guild.*` |
+| The credit shop — browse, cart, checkout, pending | `purchase.*` |
+| Support desk — my tickets, open one, reply | `servicedesk.index/create/view/reply` |
+| Donations — donate, history, trusted addresses | `donate.index/history/trusted/complete` |
+| Player shops — vending stalls and buying stores | `vending.*` |
+| Castles and the siege schedule | `castle.index`, `woe.index`, `woe.custom` |
+| Account — gender change, credit transfer and its history | `account.changesex/transfer/xferlog` |
+| Static pages and the terms of service | `pages.content`, `service.tos` |
+| Web commands | `webcommands.*` |
+
+**Administrative areas with a tested API and no page:**
+
+| Area | Endpoints |
+| --- | --- |
+| The 20 log browsers | `logdata.index/view` |
+| Staff account search, detail and editing | `account.index/viewone/edit` |
+| Staff character search | `character.index` |
+| IP bans | `ipban.*` |
+| The news editor | `news.manage/add/edit/update/delete` |
+| The static page editor | `pages.index/add/edit/delete` |
+| Support desk staff queue, settings and categories | `servicedesk.staff*`, `catcontrol` |
+| Shop administration | `itemshop.*` |
+| The broadcast mailer | `mail.index` |
+
+A handful of the 63 are not meant to have a page at all — `donate.notify` is a
+provider call-back, `guild.emblem` is an image an `<img>` points at, and
+`server.status-xml` is a machine feed. Most of the rest are actions that belong
+*inside* one of the pages above rather than needing their own.
+
+**What this means in practice.** Every one of these is built, tested and
+reachable; the tests drive them over HTTP exactly as a page would. But an
+operator cannot run their server from this panel yet, and a player cannot buy
+from the shop or open a support ticket in a browser. Calling the migration
+"complete" is true of the port of behaviour and false of the product.
 
 ### Cross-cutting work outstanding
 
@@ -431,16 +459,21 @@ architecture and verification method are finished, and every module action is po
    none cover the client, and the client is about to be worked on — which is
    exactly the moment that matters, because a redesign with no tests is
    verified by nothing but somebody's eye.
-2. **The administrative interface.** Every endpoint listed above exists and is
-   tested; what they need is pages. The log browsers already publish their own
-   column definitions, so one table component renders all twenty.
-3. **Database-backed admin settings (D12).** Policy lives in `config/panel.php`
+2. **The player-facing pages**, before the administrative ones. Guilds, the
+   credit shop, the support desk, donations and player shops are what a player
+   would notice missing, and three of them are the ones a server earns money
+   or keeps goodwill through.
+3. **The administrative interface.** Every endpoint exists and is tested; what
+   they need is pages. The log browsers already publish their own column
+   definitions, so one table component renders all twenty, and the listings
+   already report which columns they can sort by.
+4. **Database-backed admin settings (D12).** Policy lives in `config/panel.php`
    and needs a deploy to change. Now that the policy surface has stopped
    moving, this is worth doing.
-4. **Localisation.** `lang/en` covers the server's messages; the other three
+5. **Localisation.** `lang/en` covers the server's messages; the other three
    upstream languages are not ported, and most interface copy is still inline
    in the components. Worth doing after the interface settles, not before.
-5. **A worked add-on package (D8).** The permission registry is designed for
+6. **A worked add-on package (D8).** The permission registry is designed for
    third-party contribution and there is still no example of one.
-6. **Discord webhooks**, the one legacy library deliberately left for last
+7. **Discord webhooks**, the one legacy library deliberately left for last
    because nothing depends on it.

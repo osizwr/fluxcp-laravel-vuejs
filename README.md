@@ -12,9 +12,11 @@ pointed at an existing install without migrating data.
 > Every one of FluxCP's 139 module actions is accounted for: **119 ported with
 > passing tests** and 20 deliberately replaced, each with its reason recorded.
 >
-> That is not the same as finished. There are **no frontend tests**, several
-> admin screens have an API but no interface yet, and localisation covers
-> English only. Those are listed in
+> That is not the same as finished. **63 of the 108 API endpoints have no page
+> in front of them** — including player-facing ones: guilds, the credit shop,
+> the support desk, donations and player shops are all built and tested but
+> cannot be used from a browser. There are also **no frontend tests**, and
+> localisation covers English only. All of it is listed in
 > [`docs/FINAL_MIGRATION_AUDIT.md`](docs/FINAL_MIGRATION_AUDIT.md) §3.
 >
 > [`docs/FLUXCP_MIGRATION_MATRIX.md`](docs/FLUXCP_MIGRATION_MATRIX.md) is the
@@ -44,10 +46,10 @@ pointed at an existing install without migrating data.
 | Rankings | Eight ladders: level, zeny, alchemist, blacksmith, deaths, MVP, homunculus, guilds |
 | Items and monsters | Searchable databases, with the server's own custom entries merged in |
 | Characters | Detail, slot change, appearance and position reset, divorce, privacy preferences |
-| Guilds | Directory, guild pages, emblems, roster export |
+| Guilds | Directory, guild pages, emblems, roster export — **API only, no page yet** |
 | Account history | Website and game sign-ins, password and e-mail changes |
-| Player shops | Vending stalls and buying stores, with their stock |
-| World | Castle ownership and the siege schedule, per world and timezone |
+| Player shops | Vending stalls and buying stores, with their stock — **API only** |
+| World | Castle ownership and the siege schedule, per world and timezone — **API only** |
 | Server status | Per-process reachability, live and peak players, realtime |
 | Multi-server | Several server groups, several char/map pairs per group |
 | Authorisation | All 133 route permissions and 47 abilities, deny by default |

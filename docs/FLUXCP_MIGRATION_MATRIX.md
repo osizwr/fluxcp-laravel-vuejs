@@ -340,12 +340,12 @@ still outstanding outside the module actions.
 
 | Legacy class | Responsibility | Replacement | Status |
 | --- | --- | --- | --- |
-| `Flux` | Static config/registry god-object + helpers | Laravel config + dedicated services | `NOT_STARTED` |
+| `Flux` | Static config/registry god-object + helpers | Laravel config + dedicated services | `IMPLEMENTING` |
 | `Flux_Config` | Dot-notation array wrapper | `Illuminate\Config` / typed value objects | `INTENTIONALLY_REPLACED` |
 | `Flux_Connection` | Multi-database PDO wrapper (main/logs/web) | Runtime-registered Laravel connections (D5) | `VERIFIED` |
 | `Flux_Connection_Statement` | PDO statement wrapper with encoding conversion | Query builder / PDO via Laravel | `INTENTIONALLY_REPLACED` |
 | `Flux_Dispatcher` | module/action router + auth gate | Laravel router + permission middleware | `VERIFIED` |
-| `Flux_Template` | View renderer **and** 57 view helpers | Blade shell + Vue components + API resources | `NOT_STARTED` |
+| `Flux_Template` | View renderer **and** 57 view helpers | Blade shell + Vue components + API resources | `IMPLEMENTING` |
 | `Flux_Authorization` | Access-level checks, `allowedTo*` magic getters | Permission registry + Gates/Policies (D3) | `VERIFIED` |
 | `Flux_SessionData` | Session state (account, server, theme, messages) | Laravel session + authenticated user | `IMPLEMENTING` |
 | `Flux_DataObject` | Array-to-object row wrapper | Eloquent models | `INTENTIONALLY_REPLACED` |
@@ -386,6 +386,6 @@ still outstanding outside the module actions.
 | Realtime | None (XML status feed, page refresh) | `VERIFIED` | Reverb broadcasting with a polling fallback (D14). Verified end to end with a WebSocket client. |
 | Queues/scheduling | Inline in `preprocess` on every request | `VERIFIED` | Three scheduled commands: status measurement, unconfirmed-account pruning, and the donation hold queue. None of the three is reachable over HTTP, which two of them were. |
 | Server status | `fsockopen` per request | `VERIFIED` | Cached probe behind a contract, measured on a schedule and broadcast. |
-| Pagination/sorting | `Flux_Paginator`, allow-listed columns, direction from request | `NOT_STARTED` | Laravel pagination plus a validated sort allow-list. Not a security fix: the legacy allow-list was always hardcoded by the calling module. |
-| Automated tests | None in repository | `IMPLEMENTING` | 349 PHPUnit tests, 1,247 assertions, across 26 files. Integration tests run against a real MariaDB schema. No frontend tests exist. |
+| Pagination/sorting | `Flux_Paginator`, allow-listed columns, direction from request | `VERIFIED` | `ListQuery`: an allow-list per endpoint mapping public names onto columns, a capped `per_page`, and nulls last on an ascending sort as the legacy did. In use by every listing. Not a security fix — the legacy allow-list was always hardcoded by the calling module. |
+| Automated tests | None in repository | `IMPLEMENTING` | 678 PHPUnit tests, 2,348 assertions, across 44 files. Integration tests run against a real MariaDB schema. **No frontend tests exist**, which is the largest gap in the project. |
 
