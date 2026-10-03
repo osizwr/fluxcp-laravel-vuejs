@@ -207,9 +207,22 @@ maintained by hand.
 - **The item/monster temporary-table merge (D6).** Eleven actions need it. A port
   that queries `item_db` directly looks correct on a vanilla install and silently
   serves pre-renewal stats while ignoring every custom item on a real server.
-- **Pagination with sortable columns.** `Flux_Paginator` took column names from
-  the request. The replacement must validate them against an allow-list; the
-  legacy behaviour is an injection surface.
+- **Pagination with sortable columns.** Needed by roughly fifteen listings and
+  every admin page.
+
+  A correction to an earlier revision of this document, which claimed
+  `Flux_Paginator` took column names from the request and was therefore an
+  injection surface. Re-reading it, that is wrong: `getSQL()` iterates
+  `$this->sortableColumns`, an allow-list every calling module passes as a
+  hardcoded array, and the request supplies only the sort *direction*, checked
+  against `ASC`/`DESC`/`NONE`. The page number is interpolated into `LIMIT`
+  only after arithmetic has coerced it to a number. No module was found
+  passing request data to `setSortableColumns()`.
+
+  So the replacement needs an allow-list because that is the right design, not
+  because it closes a hole. The real reasons to do it early are that it is
+  needed everywhere and that doing it afterwards means retrofitting every
+  listing.
 - **The 57 `Flux_Template` view helpers**, which encode a large amount of
   game-domain formatting: job names, equip slots, item flags, monster modes,
   trade restrictions. Two are ported (`jobs`, `homunculus`).
@@ -411,9 +424,8 @@ architecture and verification method are finished; the feature work is 18% done.
    until it exists none of them can be written correctly: a port that queries
    `item_db` directly looks right on a vanilla install and silently serves
    pre-renewal stats while ignoring every custom item on a real server.
-2. **Validated sortable pagination.** Needed by every listing and admin page, and
-   closes an injection surface rather than reproducing it. Doing it before the
-   listings means not retrofitting fifteen of them.
+2. **Validated sortable pagination.** Needed by every listing and admin page.
+   Doing it before the listings means not retrofitting fifteen of them.
 3. **Character detail and management**, which is the largest remaining
    player-facing area now that the credential flows are done.
 4. **The remaining `Flux_Template` helpers**, as the pages that need them arrive.

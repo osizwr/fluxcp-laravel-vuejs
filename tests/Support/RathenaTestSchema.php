@@ -289,6 +289,8 @@ final class RathenaTestSchema
     {
         $schema = Schema::connection($connection);
 
+        self::createReferenceTables($connection);
+
         /*
          * A subset of rAthena's 80-column `char` table: the columns the panel
          * reads. `char` is a reserved word and must stay quoted.
@@ -410,5 +412,63 @@ final class RathenaTestSchema
             $table->integer('amount')->default(0);
             $table->string('map', 11)->default('');
         });
+    }
+
+    /**
+     * rAthena's item and monster reference tables, base and override.
+     *
+     * A representative subset of the real columns rather than all of them:
+     * `item_db_re` has around forty and the panel reads a dozen.
+     *
+     * The two use different primary key spellings on purpose. rAthena has
+     * shipped both `id` and `ID` for these across versions, and the merge
+     * detects the key rather than assuming it -- a wrong guess joins nothing
+     * and silently returns every row twice.
+     */
+    private static function createReferenceTables(string $connection): void
+    {
+        $schema = Schema::connection($connection);
+
+        foreach (['item_db_re', 'item_db2_re'] as $table) {
+            $schema->create($table, function (Blueprint $table): void {
+                $table->unsignedInteger('id')->primary();
+                $table->string('name_aegis', 50)->default('');
+                $table->string('name_english', 50)->default('');
+                $table->string('type', 20)->nullable();
+                $table->string('subtype', 20)->nullable();
+                $table->unsignedInteger('price_buy')->nullable();
+                $table->unsignedInteger('price_sell')->nullable();
+                $table->unsignedInteger('weight')->nullable();
+                $table->unsignedSmallInteger('attack')->nullable();
+                $table->unsignedSmallInteger('defense')->nullable();
+                $table->unsignedTinyInteger('range')->nullable();
+                $table->unsignedTinyInteger('slots')->nullable();
+                $table->unsignedSmallInteger('equip_level_min')->nullable();
+                $table->unsignedInteger('equip_locations')->nullable();
+                $table->boolean('refineable')->default(false);
+                $table->unsignedSmallInteger('view')->nullable();
+                $table->text('script')->nullable();
+            });
+        }
+
+        foreach (['mob_db_re', 'mob_db2_re'] as $table) {
+            $schema->create($table, function (Blueprint $table): void {
+                // Capitalised on purpose; see the method comment.
+                $table->unsignedInteger('ID')->primary();
+                $table->string('Sprite', 50)->default('');
+                $table->string('kName', 50)->default('');
+                $table->string('iName', 50)->default('');
+                $table->unsignedSmallInteger('LV')->default(1);
+                $table->unsignedInteger('HP')->default(1);
+                $table->unsignedInteger('SP')->default(0);
+                $table->unsignedInteger('EXP')->default(0);
+                $table->unsignedInteger('JEXP')->default(0);
+                $table->unsignedSmallInteger('ATK1')->default(0);
+                $table->unsignedSmallInteger('ATK2')->default(0);
+                $table->unsignedSmallInteger('DEF')->default(0);
+                $table->unsignedSmallInteger('MDEF')->default(0);
+                $table->unsignedTinyInteger('MEXP')->default(0);
+            });
+        }
     }
 }

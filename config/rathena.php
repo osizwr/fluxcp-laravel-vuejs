@@ -58,6 +58,50 @@ return [
         'engine' => null,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Reference tables
+    |--------------------------------------------------------------------------
+    |
+    | rAthena ships the item and monster data in a base table and leaves a
+    | second table for the server owner's own entries. A row in the override
+    | table replaces the row with the same id in the base one, which is what
+    | makes a custom item appear with its custom stats rather than the stock
+    | ones.
+    |
+    | Which pair applies depends on the char/map server's `renewal` flag, so a
+    | group running a pre-renewal and a renewal world reads each from the right
+    | tables instead of from one global setting.
+    |
+    | The override entry may name a table that does not exist. That is the
+    | normal state of a server with no custom entries, and the base table alone
+    | is then the correct answer -- the merge does not treat it as an error.
+    |
+    | See docs/MIGRATION_DECISIONS.md (D6).
+    |
+    */
+
+    'reference_tables' => [
+
+        'items' => [
+            'renewal' => ['base' => 'item_db_re', 'override' => 'item_db2_re'],
+            'pre_renewal' => ['base' => 'item_db', 'override' => 'item_db2'],
+            /*
+             * The name the merged result is addressable by. Matches FluxCP's
+             * temporary table, so conditions ported from the legacy modules
+             * still read the same.
+             */
+            'alias' => 'items',
+        ],
+
+        'monsters' => [
+            'renewal' => ['base' => 'mob_db_re', 'override' => 'mob_db2_re'],
+            'pre_renewal' => ['base' => 'mob_db', 'override' => 'mob_db2'],
+            'alias' => 'monsters',
+        ],
+
+    ],
+
     'groups' => [
 
         'main' => [

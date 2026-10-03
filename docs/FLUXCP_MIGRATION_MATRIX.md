@@ -381,6 +381,6 @@ concerns are tracked in their own tables below.
 | Realtime | None (XML status feed, page refresh) | `VERIFIED` | Reverb broadcasting with a polling fallback (D14). Verified end to end with a WebSocket client. |
 | Queues/scheduling | Inline in `preprocess` on every request | `IMPLEMENTING` | Status measurement and unconfirmed-account pruning are scheduled commands. Credit release is not built. |
 | Server status | `fsockopen` per request | `VERIFIED` | Cached probe behind a contract, measured on a schedule and broadcast. |
-| Pagination/sorting | `Flux_Paginator`, column names from request | `NOT_STARTED` | Validated sort allow-list (SQL-injection surface in legacy). |
+| Pagination/sorting | `Flux_Paginator`, allow-listed columns, direction from request | `NOT_STARTED` | Laravel pagination plus a validated sort allow-list. Not a security fix: the legacy allow-list was always hardcoded by the calling module. |
 | Automated tests | None in repository | `IMPLEMENTING` | 349 PHPUnit tests, 1,247 assertions, across 26 files. Integration tests run against a real MariaDB schema. No frontend tests exist. |
 
