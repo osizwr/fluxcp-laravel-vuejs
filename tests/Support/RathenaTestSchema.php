@@ -300,6 +300,52 @@ final class RathenaTestSchema
             $table->dateTime('modified')->nullable();
         });
 
+        $schema->create('cp_servicedesk', function (Blueprint $table): void {
+            $table->increments('ticket_id');
+            $table->integer('account_id')->default(0);
+            $table->integer('category')->default(0);
+            $table->string('status', 12)->default('Pending');
+            $table->text('char_id');
+            $table->timestamp('timestamp')->useCurrent();
+            $table->text('sslink')->nullable();
+            $table->text('chatlink')->nullable();
+            $table->text('videolink')->nullable();
+            $table->string('subject', 64)->default('');
+            $table->text('text');
+            $table->string('ip', 39)->default('');
+            $table->integer('team')->default(1);
+            $table->text('curemail')->nullable();
+            $table->string('lastreply', 24)->default('0');
+            $table->index('account_id');
+        });
+
+        $schema->create('cp_servicedeska', function (Blueprint $table): void {
+            $table->increments('action_id');
+            $table->integer('ticket_id')->default(0);
+            $table->string('author', 32)->default('');
+            $table->text('text');
+            $table->text('action')->nullable();
+            $table->timestamp('timestamp')->useCurrent();
+            $table->string('ip', 39)->default('');
+            $table->integer('isstaff')->default(0);
+            $table->index('ticket_id');
+        });
+
+        $schema->create('cp_servicedeskcat', function (Blueprint $table): void {
+            $table->increments('cat_id');
+            $table->string('name', 32)->default('');
+            $table->integer('display')->default(1);
+        });
+
+        $schema->create('cp_servicedesksettings', function (Blueprint $table): void {
+            $table->integer('account_id')->primary();
+            $table->string('account_name', 32)->default('');
+            $table->string('prefered_name', 32)->default('');
+            $table->integer('team')->default(1);
+            $table->integer('emailalerts')->default(0);
+            $table->timestamp('timestamp')->useCurrent();
+        });
+
         $schema->create('cp_cmspages', function (Blueprint $table): void {
             $table->increments('id');
             $table->string('path', 100);

@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\RegistrationController;
 use App\Http\Controllers\Api\ServerStatisticsController;
 use App\Http\Controllers\Api\ServerStatusController;
 use App\Http\Controllers\Api\ServerStatusXmlController;
+use App\Http\Controllers\Api\ServiceDeskController;
 use App\Http\Controllers\Api\StaticPageController;
 use App\Http\Controllers\Api\WorldController;
 use Illuminate\Support\Facades\Route;
@@ -193,6 +194,52 @@ Route::middleware('permission')->group(function (): void {
     Route::get('pages/{path}', [StaticPageController::class, 'show'])
         ->where('path', '[A-Za-z0-9][A-Za-z0-9\-\/]*')
         ->name('pages.content');
+
+    /*
+     * Support tickets.
+     *
+     * A player sees their own and nobody else's: every player-facing query is
+     * scoped to the session, and reading one by id checks ownership first. A
+     * ticket contains whatever somebody typed while frustrated, which is often
+     * more than they would say publicly.
+     */
+    Route::get('support/tickets', [ServiceDeskController::class, 'index'])
+        ->name('servicedesk.index');
+    Route::post('support/tickets', [ServiceDeskController::class, 'store'])
+        ->name('servicedesk.create');
+    Route::get('support/tickets/{ticket}', [ServiceDeskController::class, 'show'])
+        ->whereNumber('ticket')
+        ->name('servicedesk.view');
+    Route::post('support/tickets/{ticket}/replies', [ServiceDeskController::class, 'reply'])
+        ->whereNumber('ticket')
+        ->name('servicedesk.reply');
+
+    /*
+     * The staff side.
+     */
+    Route::get('support/queue', [ServiceDeskController::class, 'staffIndex'])
+        ->name('servicedesk.staffindex');
+
+    /*
+     * The closed queue is the same listing with `closed` forced on, rather
+     * than a second implementation. It keeps its own route and permission key
+     * so an operator can withhold the archive from junior staff without
+     * withholding the live queue.
+     */
+    Route::get('support/queue/closed', [ServiceDeskController::class, 'staffIndex'])
+        ->defaults('closed', true)
+        ->name('servicedesk.staffviewclosed');
+
+    Route::get('support/queue/{ticket}', [ServiceDeskController::class, 'staffShow'])
+        ->whereNumber('ticket')
+        ->name('servicedesk.staffview');
+    Route::post('support/queue/{ticket}/replies', [ServiceDeskController::class, 'staffReply'])
+        ->whereNumber('ticket')
+        ->name('servicedesk.staffreply');
+    Route::match(['get', 'put'], 'support/settings', [ServiceDeskController::class, 'settings'])
+        ->name('servicedesk.staffsettings');
+    Route::match(['get', 'post'], 'support/categories', [ServiceDeskController::class, 'categories'])
+        ->name('servicedesk.catcontrol');
 
     /*
      * Staff search and account editing.

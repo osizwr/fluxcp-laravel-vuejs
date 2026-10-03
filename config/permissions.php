@@ -245,9 +245,21 @@ return [
         'servicedesk.index' => AccountLevel::Player,
         'servicedesk.staffindex' => AccountLevel::JuniorGameMaster,
         'servicedesk.staffsettings' => AccountLevel::JuniorGameMaster,
+        /*
+         * Replying as staff was folded into `staffview` in the legacy, which
+         * both rendered the form and handled its submission. Split here, and
+         * kept at the level it came from.
+         */
+        'servicedesk.staffreply' => AccountLevel::JuniorGameMaster,
         'servicedesk.staffview' => AccountLevel::JuniorGameMaster,
         'servicedesk.staffviewclosed' => AccountLevel::JuniorGameMaster,
         'servicedesk.view' => AccountLevel::Player,
+        /*
+         * Replying is its own route here; the legacy folded it into `view` and
+         * `staffview`, which both rendered a form and handled its submission.
+         * Each keeps the level of the action it was split from.
+         */
+        'servicedesk.reply' => AccountLevel::Player,
 
         // unauthorized
         'unauthorized.index' => AccountLevel::Anyone,
