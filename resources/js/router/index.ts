@@ -27,6 +27,70 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Sign in', guestOnly: true, layout: 'auth' },
     },
     {
+        path: '/register',
+        name: 'register',
+        component: themedRoute('register', 'RegisterPage', () => import('../pages/RegisterPage.vue')),
+        meta: { title: 'Create an account', guestOnly: true, layout: 'auth' },
+    },
+    {
+        /*
+         * Reached from an e-mail, so it has to work for somebody who is not
+         * signed in -- an account awaiting confirmation cannot sign in, which
+         * is the whole point of the state.
+         */
+        path: '/confirm-account',
+        name: 'confirm-account',
+        component: themedRoute('confirm-account', 'ConfirmAccountPage', () =>
+            import('../pages/ConfirmAccountPage.vue'),
+        ),
+        meta: { title: 'Confirm your account', layout: 'auth' },
+    },
+    {
+        path: '/resend-confirmation',
+        name: 'resend-confirmation',
+        component: themedRoute('resend-confirmation', 'ResendConfirmationPage', () =>
+            import('../pages/ResendConfirmationPage.vue'),
+        ),
+        meta: { title: 'Resend confirmation', layout: 'auth' },
+    },
+    {
+        path: '/forgot-password',
+        name: 'forgot-password',
+        component: themedRoute('forgot-password', 'ForgotPasswordPage', () =>
+            import('../pages/ForgotPasswordPage.vue'),
+        ),
+        meta: { title: 'Forgot your password', guestOnly: true, layout: 'auth' },
+    },
+    {
+        path: '/reset-password',
+        name: 'reset-password',
+        component: themedRoute('reset-password', 'ResetPasswordPage', () =>
+            import('../pages/ResetPasswordPage.vue'),
+        ),
+        meta: { title: 'Choose a new password', guestOnly: true, layout: 'auth' },
+    },
+    {
+        /*
+         * Needs a session: the confirmation is keyed on the signed-in account
+         * as well as the token, so somebody following this link while signed
+         * out is sent to sign in first and returned here afterwards.
+         */
+        path: '/confirm-email',
+        name: 'confirm-email',
+        component: themedRoute('confirm-email', 'ConfirmEmailPage', () =>
+            import('../pages/ConfirmEmailPage.vue'),
+        ),
+        meta: { title: 'Confirm your e-mail address', requiresAuth: true, layout: 'auth' },
+    },
+    {
+        path: '/account/security',
+        name: 'account-security',
+        component: themedRoute('account-security', 'AccountSecurityPage', () =>
+            import('../pages/AccountSecurityPage.vue'),
+        ),
+        meta: { title: 'Security', requiresAuth: true },
+    },
+    {
         path: '/account',
         name: 'account',
         component: themedRoute('account', 'AccountPage', () => import('../pages/AccountPage.vue')),

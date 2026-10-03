@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AlertMessage from '../components/ui/AlertMessage.vue'
+import AppButton from '../components/ui/AppButton.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import StatTile from '../components/ui/StatTile.vue'
 import StatusPill from '../components/ui/StatusPill.vue'
@@ -93,7 +94,15 @@ function formatDate(value: string | null): string {
                     <dt class="text-[0.8125rem] text-[var(--text-muted)]">Birthdate</dt>
                     <dd class="font-medium">{{ account.birthdate ?? '—' }}</dd>
                 </div>
+                <div>
+                    <dt class="text-[0.8125rem] text-[var(--text-muted)]">E-mail address</dt>
+                    <dd class="font-medium break-all">{{ account.email }}</dd>
+                </div>
             </dl>
+
+            <div class="mt-5 border-t border-[var(--border-subtle)] pt-4">
+                <AppButton to="/account/security">Change password or e-mail</AppButton>
+            </div>
         </section>
     </div>
 </template>

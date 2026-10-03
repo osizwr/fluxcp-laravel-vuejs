@@ -4,8 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import AlertMessage from '../components/ui/AlertMessage.vue'
 import AppButton from '../components/ui/AppButton.vue'
 import FormField from '../components/ui/FormField.vue'
+import { useAccounts } from '../composables/useAccounts'
 import { ApiError } from '../services/api'
 import { useAuthStore } from '../stores/auth'
+
+// Only offer what the operator has actually enabled, so neither link leads to
+// a page that refuses it.
+const { registrationEnabled, passwordResetEnabled } = useAccounts()
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -100,6 +105,29 @@ async function submit(): Promise<void> {
             <AppButton type="submit" variant="primary" block :loading="submitting">
                 Sign in
             </AppButton>
+
+            <p v-if="passwordResetEnabled" class="text-center text-sm">
+                <RouterLink
+                    to="/forgot-password"
+                    class="text-[var(--text-secondary)] underline underline-offset-2 hover:text-[var(--text-primary)]"
+                >
+                    Forgot your password?
+                </RouterLink>
+            </p>
         </form>
+
+        <p v-if="registrationEnabled" class="mt-4 text-center text-sm text-[var(--text-secondary)]">
+            Need an account?
+            <RouterLink to="/register" class="underline underline-offset-2">
+                Create one
+            </RouterLink>
+        </p>
+
+        <p class="mt-2 text-center text-[0.8125rem] text-[var(--text-muted)]">
+            Waiting on a confirmation e-mail?
+            <RouterLink to="/resend-confirmation" class="underline underline-offset-2">
+                Send it again
+            </RouterLink>
+        </p>
     </div>
 </template>

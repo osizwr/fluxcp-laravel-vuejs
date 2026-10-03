@@ -33,6 +33,35 @@ const FALLBACK: PanelBootstrap = {
     broadcasting: null,
     announcement: null,
     features: [],
+    /*
+     * Everything off. A payload that failed to arrive must not leave the
+     * account forms guessing: offering registration that the server then
+     * refuses is worse than not offering it, and a password hint invented here
+     * would describe a policy nobody configured.
+     */
+    accounts: {
+        registrationEnabled: false,
+        passwordResetEnabled: false,
+        emailChangeRequiresConfirmation: true,
+        registrationRequiresConfirmation: false,
+        minimumAge: 0,
+        username: { minLength: 4, maxLength: 23 },
+        password: {
+            minLength: 8,
+            maxLength: 31,
+            minUppercase: 0,
+            minLowercase: 0,
+            minNumbers: 0,
+            minSymbols: 0,
+            allowUsernameInside: false,
+        },
+        captcha: {
+            onRegistration: false,
+            onLogin: false,
+            selfHosted: true,
+            siteKey: null,
+        },
+    },
 }
 
 let cached: PanelBootstrap | null = null
@@ -57,6 +86,7 @@ export function bootstrap(): PanelBootstrap {
             broadcasting: parsed.broadcasting ?? null,
             announcement: parsed.announcement ?? null,
             features: parsed.features ?? [],
+            accounts: { ...FALLBACK.accounts, ...(parsed.accounts ?? {}) },
         }
     } catch {
         cached = FALLBACK

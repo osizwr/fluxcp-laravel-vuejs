@@ -1,0 +1,111 @@
+<script setup lang="ts">
+import { reactive, ref } from 'vue'
+import AlertMessage from '../components/ui/AlertMessage.vue'
+import AppButton from '../components/ui/AppButton.vue'
+import FormField from '../components/ui/FormField.vue'
+import { useAccounts } from '../composables/useAccounts'
+import { useFormSubmit } from '../composables/useFormSubmit'
+import { api } from '../services/api'
+
+/**
+ * Asking for a password reset link.
+ *
+ * Note that this page cannot tell you whether an account exists, because the
+ * endpoint answers identically either way. That is the point: a form that says
+ * "no such account" is a form that tells you which accounts exist.
+ */
+const { passwordResetEnabled } = useAccounts()
+const { errors, error, submitting, submit } = useFormSubmit()
+
+const form = reactive({ username: '', email: '' })
+const sentMessage = ref<string | null>(null)
+
+async function request(): Promise<void> {
+    await submit(async () => {
+        const response = await api.post<{ message: string }>('auth/password/forgot', { ...form })
+
+        sentMessage.value = response.message
+    })
+}
+</script>
+
+<template>
+    <div class="mx-auto max-w-sm py-6">
+        <template v-if="!passwordResetEnabled">
+            <h1 class="text-xl font-semibold tracking-tight">Password reset is unavailable</h1>
+            <p class="mt-1 text-sm text-[var(--text-secondary)]">
+                Contact an administrator to recover your account.
+            </p>
+            <AppButton to="/sign-in" class="mt-4">Back to sign in</AppButton>
+        </template>
+
+        <template v-else-if="sentMessage">
+            <h1 class="text-xl font-semibold tracking-tight">Check your e-mail</h1>
+
+            <AlertMessage tone="success" class="mt-4">{{ sentMessage }}</AlertMessage>
+
+            <p class="mt-4 text-sm text-[var(--text-secondary)]">
+                The link can be used once, and expires. Your current password keeps working until
+                you choose a new one.
+            </p>
+
+            <AppButton to="/sign-in" class="mt-4">Back to sign in</AppButton>
+        </template>
+
+        <template v-else>
+            <h1 class="text-xl font-semibold tracking-tight">Forgot your password?</h1>
+            <p class="mt-0.5 mb-5 text-sm text-[var(--text-secondary)]">
+                Give the account name and the e-mail address on it, and we will send a link to
+                choose a new password.
+            </p>
+
+            <AlertMessage v-if="error" tone="error" class="mb-4">{{ error }}</AlertMessage>
+
+            <form class="panel space-y-4 p-4" novalidate @submit.prevent="request">
+                <FormField label="Account name" :error="errors.username">
+                    <template #default="{ id, invalid, describedBy }">
+                        <input
+                            :id="id"
+                            v-model.trim="form.username"
+                            class="field-input"
+                            type="text"
+                            name="username"
+                            autocomplete="username"
+                            maxlength="23"
+                            required
+                            :aria-invalid="invalid || undefined"
+                            :aria-describedby="describedBy"
+                        />
+                    </template>
+                </FormField>
+
+                <FormField label="E-mail address" :error="errors.email">
+                    <template #default="{ id, invalid, describedBy }">
+                        <input
+                            :id="id"
+                            v-model.trim="form.email"
+                            class="field-input"
+                            type="email"
+                            name="email"
+                            autocomplete="email"
+                            maxlength="39"
+                            required
+                            :aria-invalid="invalid || undefined"
+                            :aria-describedby="describedBy"
+                        />
+                    </template>
+                </FormField>
+
+                <AppButton type="submit" variant="primary" block :loading="submitting">
+                    Send reset link
+                </AppButton>
+            </form>
+
+            <p class="mt-4 text-center text-sm text-[var(--text-secondary)]">
+                <RouterLink to="/sign-in" class="underline underline-offset-2">
+                    Back to sign in
+                </RouterLink>
+            </p>
+        </template>
+    </div>
+</template>

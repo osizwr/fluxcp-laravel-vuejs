@@ -73,6 +73,43 @@ export interface FeatureConfig {
     url: string | null
 }
 
+export interface PasswordPolicy {
+    minLength: number
+    maxLength: number
+    minUppercase: number
+    minLowercase: number
+    minNumbers: number
+    minSymbols: number
+    allowUsernameInside: boolean
+}
+
+export interface CaptchaConfig {
+    onRegistration: boolean
+    onLogin: boolean
+    /** True when the image comes from this application rather than a third party. */
+    selfHosted: boolean
+    /** reCAPTCHA's public site key, or null when the challenge is self-hosted. */
+    siteKey: string | null
+}
+
+/**
+ * What the account forms need before they render.
+ *
+ * The password policy is published on purpose, so a form can state the rules
+ * up front instead of rejecting a password afterwards. It is enforced on the
+ * server regardless -- this copy is for the interface only.
+ */
+export interface AccountsConfig {
+    registrationEnabled: boolean
+    passwordResetEnabled: boolean
+    emailChangeRequiresConfirmation: boolean
+    registrationRequiresConfirmation: boolean
+    minimumAge: number
+    username: { minLength: number; maxLength: number }
+    password: PasswordPolicy
+    captcha: CaptchaConfig
+}
+
 export interface PanelBootstrap {
     game: GameConfig
     theme: ThemeConfig
@@ -80,4 +117,5 @@ export interface PanelBootstrap {
     broadcasting: BroadcastingConfig | null
     announcement: AnnouncementConfig | null
     features: FeatureConfig[]
+    accounts: AccountsConfig
 }

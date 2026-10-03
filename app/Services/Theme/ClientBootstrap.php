@@ -48,6 +48,7 @@ final readonly class ClientBootstrap
             'broadcasting' => $this->broadcasting(),
             'announcement' => $this->announcement(),
             'features' => $this->features(),
+            'accounts' => $this->accounts(),
         ];
     }
 
@@ -90,6 +91,90 @@ final readonly class ClientBootstrap
              * array where it expects an object.
              */
             'links' => (object) $links,
+        ];
+    }
+
+    /**
+     * What the account forms need to know before they render.
+     *
+     * Three kinds of thing, and it is worth being clear why each is safe to
+     * publish:
+     *
+     *   - Which flows are open. The client uses this to decide whether to show
+     *     a "create an account" link at all, rather than rendering one that
+     *     leads to a 403. An operator's answer to "is registration open" is
+     *     already visible from trying it.
+     *
+     *   - The password policy. Deliberately published, so the form can state
+     *     the rules before somebody submits rather than rejecting them
+     *     afterwards. A password policy is not a secret: it is discoverable by
+     *     anyone willing to submit the form twice, and keeping it hidden only
+     *     costs legitimate users attempts.
+     *
+     *   - The CAPTCHA arrangement, including reCAPTCHA's *site* key, which is
+     *     the public half of the pair and is meant to appear in page source.
+     *     The secret key is read only by the server.
+     *
+     * @return array<string, mixed>
+     */
+    private function accounts(): array
+    {
+        $password = (array) $this->config->get('panel.registration.password', []);
+        $captcha = $this->captchaGate();
+
+        return [
+            'registrationEnabled' => $this->config->get('panel.registration.enabled') === true,
+            'passwordResetEnabled' => $this->config->get('panel.password_reset.enabled') === true,
+            'emailChangeRequiresConfirmation' => $this->config->get('panel.email_change.require_confirmation') === true,
+            'registrationRequiresConfirmation' => $this->config->get('panel.registration.require_email_confirmation') === true,
+
+            'minimumAge' => (int) $this->config->get('panel.registration.minimum_age', 0),
+
+            'username' => [
+                'minLength' => (int) $this->config->get('panel.registration.username.min_length', 4),
+                // rAthena's login.userid is varchar(23), not a preference.
+                'maxLength' => 23,
+            ],
+
+            'password' => [
+                'minLength' => (int) ($password['min_length'] ?? 8),
+                'maxLength' => (int) ($password['max_length'] ?? 31),
+                'minUppercase' => (int) ($password['min_uppercase'] ?? 0),
+                'minLowercase' => (int) ($password['min_lowercase'] ?? 0),
+                'minNumbers' => (int) ($password['min_numbers'] ?? 0),
+                'minSymbols' => (int) ($password['min_symbols'] ?? 0),
+                'allowUsernameInside' => ($password['allow_username_inside'] ?? false) === true,
+            ],
+
+            'captcha' => [
+                'onRegistration' => $captcha['on_registration'],
+                'onLogin' => $captcha['on_login'],
+                'selfHosted' => $captcha['self_hosted'],
+                // Public by design. The secret key never leaves the server.
+                'siteKey' => $captcha['site_key'],
+            ],
+        ];
+    }
+
+    /**
+     * The CAPTCHA facts, read from config rather than by resolving the driver.
+     *
+     * Resolving it would construct a driver on every page render -- and, with
+     * an unrecognised driver name, throw while rendering the shell rather than
+     * when a form is submitted.
+     *
+     * @return array{on_registration: bool, on_login: bool, self_hosted: bool, site_key: string|null}
+     */
+    private function captchaGate(): array
+    {
+        $selfHosted = $this->config->get('panel.captcha.driver', 'native') !== 'recaptcha';
+        $siteKey = (string) $this->config->get('panel.captcha.recaptcha.site_key', '');
+
+        return [
+            'on_registration' => $this->config->get('panel.captcha.on_registration') === true,
+            'on_login' => $this->config->get('panel.captcha.on_login') === true,
+            'self_hosted' => $selfHosted,
+            'site_key' => $selfHosted || $siteKey === '' ? null : $siteKey,
         ];
     }
 

@@ -1,5 +1,6 @@
 import { computed, onMounted, type ComputedRef } from 'vue'
 import { useGame } from '../composables/useGame'
+import { useAccounts } from '../composables/useAccounts'
 import { api } from '../services/api'
 import { bootstrap } from '../theme/bootstrap'
 import { useAuthStore } from '../stores/auth'
@@ -90,23 +91,28 @@ export function useHeroData(props: HeroProps = {}): ComputedRef<HeroData> {
     const { game } = useGame()
     const servers = useServerStore()
     const auth = useAuthStore()
+    const { registrationEnabled } = useAccounts()
 
     return computed<HeroData>(() => {
         const links = game.value.links
 
         /*
-         * Actions point only at routes and links that exist. Registration has
-         * no page yet, so the primary action is sign-in rather than a "create
-         * account" button that would 404 -- a dead call to action is worse than
-         * a modest one.
+         * Actions point only at routes and links that exist, and only at ones
+         * the operator has enabled: "create an account" appears when
+         * registration is open, and is replaced by sign-in when it is closed,
+         * rather than leading to a page that refuses it.
          */
         const primaryAction: BlockAction | null = auth.isAuthenticated
             ? { label: 'My account', to: '/account' }
-            : { label: 'Sign in', to: '/sign-in' }
+            : registrationEnabled.value
+              ? { label: 'Create an account', to: '/register' }
+              : { label: 'Sign in', to: '/sign-in' }
 
-        const secondaryAction: BlockAction | null = links.downloads
-            ? { label: 'Download', href: links.downloads }
-            : { label: 'View rankings', to: '/rankings/level' }
+        const secondaryAction: BlockAction | null = auth.isAuthenticated
+            ? links.downloads
+                ? { label: 'Download', href: links.downloads }
+                : { label: 'View rankings', to: '/rankings/level' }
+            : { label: 'Sign in', to: '/sign-in' }
 
         return {
             title: props.title ?? game.value.name,
@@ -314,18 +320,21 @@ export function useCallToActionData(heading?: string, description?: string): Com
 > {
     const { game } = useGame()
     const auth = useAuthStore()
+    const { registrationEnabled } = useAccounts()
 
     return computed<CallToActionData>(() => {
         const links = game.value.links
 
         /*
-         * As with the hero: every action here points somewhere that exists.
-         * There is no "create account" button because registration has no page
-         * yet, and a call to action that 404s is worse than none.
+         * As with the hero: every action points somewhere that exists and is
+         * enabled. A call to action that 404s, or that leads to a form the
+         * server refuses, is worse than none.
          */
         const action: BlockAction | null = auth.isAuthenticated
             ? { label: 'My characters', to: '/characters' }
-            : { label: 'Sign in', to: '/sign-in' }
+            : registrationEnabled.value
+              ? { label: 'Create an account', to: '/register' }
+              : { label: 'Sign in', to: '/sign-in' }
 
         const secondaryAction: BlockAction | null = links.downloads
             ? { label: 'Download the client', href: links.downloads }
@@ -339,7 +348,9 @@ export function useCallToActionData(heading?: string, description?: string): Com
                 description ??
                 (auth.isAuthenticated
                     ? `Your characters are waiting in ${game.value.name}.`
-                    : `Sign in to manage your account in ${game.value.name}.`),
+                    : registrationEnabled.value
+                      ? `Create an account and start playing ${game.value.name}.`
+                      : `Sign in to manage your account in ${game.value.name}.`),
             action,
             secondaryAction,
         }
