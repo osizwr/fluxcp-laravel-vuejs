@@ -212,4 +212,44 @@ final class AuthEndpointTest extends TestCase
         // Pinned to Noone, so nobody holds it -- not even an administrator.
         $this->assertNotContains('SeeAccountPassword', $permissions);
     }
+    /*
+    |--------------------------------------------------------------------------
+    | The credits field
+    |--------------------------------------------------------------------------
+    */
+
+    #[Test]
+    public function credits_are_zero_for_an_account_with_no_credit_row(): void
+    {
+        /*
+         * The common case: cp_credits gets a row on first donation, not with
+         * the account. The client declares this field as a number and calls
+         * .toLocaleString() on it, so a null is a TypeError on the account
+         * page rather than a blank figure.
+         *
+         * Laravel's whenLoaded() looks like it covers this and does not — a
+         * relation that is loaded but null returns null, not the default.
+         */
+        $account = Account::factory()->named('nocredits')->withPassword('Zeny4Days!')->create();
+
+        $this->actingAs($account)
+            ->getJson('/api/account')
+            ->assertOk()
+            ->assertJsonPath('data.credits', 0);
+    }
+
+    #[Test]
+    public function credits_are_reported_when_the_account_has_a_balance(): void
+    {
+        $account = Account::factory()->named('hascredits')->withPassword('Zeny4Days!')->create();
+
+        DB::connection($this->serverGroup()->loginConnection())
+            ->table('cp_credits')
+            ->insert(['account_id' => $account->account_id, 'balance' => 1234]);
+
+        $this->actingAs($account)
+            ->getJson('/api/account')
+            ->assertOk()
+            ->assertJsonPath('data.credits', 1234);
+    }
 }

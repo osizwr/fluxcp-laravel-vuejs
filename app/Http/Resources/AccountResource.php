@@ -53,11 +53,23 @@ final class AccountResource extends JsonResource
             'last_login_at' => $this->lastlogin?->toIso8601String(),
             'birthdate' => $this->birthdate?->toDateString(),
 
-            'credits' => $this->whenLoaded(
-                'credit',
-                fn (): int => (int) ($this->credit?->balance ?? 0),
-                0,
-            ),
+            /*
+             * Always an integer, never null.
+             *
+             * `whenLoaded` looks like it handles this and does not: when a
+             * relation is loaded but resolves to null it returns null, not the
+             * default — the default only covers the relation not being loaded
+             * at all. An account with no `cp_credits` row is exactly that
+             * case, and it is the common one, because the row is created on
+             * first donation rather than with the account.
+             *
+             * The client declares this field as `number` and calls
+             * `.toLocaleString()` on it, so a null here is a TypeError on the
+             * account page rather than a missing figure.
+             */
+            'credits' => $this->relationLoaded('credit')
+                ? (int) ($this->credit?->balance ?? 0)
+                : 0,
 
             'characters' => CharacterResource::collection($this->whenLoaded('characters')),
         ];
