@@ -24,10 +24,10 @@ concerns are tracked in their own tables below.
 
 | Status | Actions | Share |
 | --- | --: | --: |
-| `IMPLEMENTING` | 5 | 4% |
-| `INTENTIONALLY_REPLACED` | 7 | 5% |
-| `NOT_STARTED` | 119 | 86% |
-| `VERIFIED` | 8 | 6% |
+| `IMPLEMENTING` | 3 | 2% |
+| `INTENTIONALLY_REPLACED` | 9 | 6% |
+| `NOT_STARTED` | 111 | 80% |
+| `VERIFIED` | 16 | 12% |
 | **Total** | **139** | |
 
 ## Module actions
@@ -37,20 +37,20 @@ concerns are tracked in their own tables below.
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
 | `cart` | `modules/account/cart.php` | `NORMAL` | `NOT_STARTED` |  |
-| `changemail` | `modules/account/changemail.php` | `NORMAL` | `NOT_STARTED` |  |
-| `changepass` | `modules/account/changepass.php` | `NORMAL` | `IMPLEMENTING` | RathenaAccountService::changePassword() updates rAthena's column and the panel hash together, audited without passwords. No HTTP endpoint yet. |
+| `changemail` | `modules/account/changemail.php` | `NORMAL` | `VERIFIED` | `PUT /api/account/email` plus `/account/security`. Honours `RequireChangeConfirm`; with it on the address does not move until the new one is proven reachable. Requires the current password, which the legacy form did not ask for. 18 tests cover this and `confirmemail`. |
+| `changepass` | `modules/account/changepass.php` | `NORMAL` | `VERIFIED` | `PUT /api/account/password` plus `/account/security`. Updates rAthena's column and the panel hash together, audited without passwords (D2). Fixes the inverted staff password policy (D17) and reverses the session handling: the account holder keeps their session and every other one ends (D18). 14 tests. |
 | `changesex` | `modules/account/changesex.php` | `NORMAL` | `NOT_STARTED` |  |
-| `confirm` | `modules/account/confirm.php` | `UNAUTH` | `NOT_STARTED` |  |
-| `confirmemail` | `modules/account/confirmemail.php` | `NORMAL` | `NOT_STARTED` |  |
-| `create` | `modules/account/create.php` | `UNAUTH` | `IMPLEMENTING` | **Credential handling complete and tested; the web flow is not.** RathenaAccountService creates accounts storing `login.user_pass` in the emulator's own format (D1), writes the `cp_createlog` audit without the password (D2), and is reachable from `panel:create-account`. Still missing: the HTTP endpoint, CAPTCHA, and e-mail confirmation, which needs mail. |
+| `confirm` | `modules/account/confirm.php` | `UNAUTH` | `VERIFIED` | `POST /api/auth/confirm` plus `/confirm-account`. Clears the hold and records the lift in `cp_banlog`. Fixes the legacy bug that made confirmation impossible at the default setting: `confirm_expire` was written only when `EmailConfirmExpire` was set, while the lookup always required `confirm_expire > NOW()`. 14 tests cover this and `resend`. |
+| `confirmemail` | `modules/account/confirmemail.php` | `NORMAL` | `VERIFIED` | `POST /api/account/email/confirm` plus `/confirm-email`. Keyed on the signed-in account as well as the token, as the legacy action was. Adds the expiry the legacy lookup omitted, and re-checks that the address is still free. |
+| `create` | `modules/account/create.php` | `UNAUTH` | `VERIFIED` | `POST /api/auth/register` plus `/register`. Credentials per D1, audit without the password per D2. CAPTCHA, the age gate, duplicate-name and duplicate-e-mail policy, and optional e-mail confirmation all present. Registration and the confirmation hold are one transaction, closing a legacy window in which a part-failed registration left a usable unconfirmed account. Signs the account in when no confirmation is required, as the legacy flow did. 21 tests. |
 | `edit` | `modules/account/edit.php` | `ADMIN` | `NOT_STARTED` |  |
 | `index` | `modules/account/index.php` | `LOWGM` | `NOT_STARTED` |  |
 | `login` | `modules/account/login.php` | `UNAUTH` | `VERIFIED` | Full legacy flow including the order of its checks and all eight refusal reasons. Credentials handled per D1, audit per D2. Adds throttling. 33 tests. |
 | `logout` | `modules/account/logout.php` | `NORMAL` | `VERIFIED` | Session invalidated and token regenerated. Tested. |
-| `prune` | `modules/account/prune.php` | `ANYONE` | `NOT_STARTED` |  |
-| `resend` | `modules/account/resend.php` | `UNAUTH` | `NOT_STARTED` |  |
-| `resetpass` | `modules/account/resetpass.php` | `UNAUTH` | `NOT_STARTED` |  |
-| `resetpw` | `modules/account/resetpw.php` | `UNAUTH` | `NOT_STARTED` |  |
+| `prune` | `modules/account/prune.php` | `ANYONE` | `INTENTIONALLY_REPLACED` | `panel:prune-unconfirmed`, scheduled daily. Deleting accounts is no longer reachable over HTTP: the legacy action was a public endpoint guarded by comparing a query parameter against the installer password. Requires three conditions the legacy `DELETE` did not — still held, owns no characters, not staff — and has `--dry-run`. 12 tests. |
+| `resend` | `modules/account/resend.php` | `UNAUTH` | `VERIFIED` | `POST /api/auth/confirm/resend` plus `/resend-confirmation`. Issues a new token rather than re-sending the old one, so a lapsed request can be renewed — the legacy action required an unexpired code and so refused the one case that needs it. Answers identically whether or not an account matched. |
+| `resetpass` | `modules/account/resetpass.php` | `UNAUTH` | `VERIFIED` | `POST /api/auth/password/forgot` plus `/forgot-password`. Keeps the legacy restrictions: both account name and address required, state 0 only, no server accounts, and `NoResetPassGroupLevel`. Answers identically in every case, so the form cannot be used to find out which addresses are registered or which accounts are staff. 20 tests cover this and `resetpw`. |
+| `resetpw` | `modules/account/resetpw.php` | `UNAUTH` | `INTENTIONALLY_REPLACED` | `POST /api/auth/password/reset` plus `/reset-password`. The legacy action generated a password and e-mailed it in cleartext; this one lets the account holder choose their own and sends no password at all (D16). Tokens are digests, expire, and are single use (D15) — the legacy flow never read `request_date`. |
 | `transfer` | `modules/account/transfer.php` | `NORMAL` | `NOT_STARTED` |  |
 | `view` | `modules/account/view.php` | `NORMAL` | `IMPLEMENTING` | **Own account only.** Viewing another account (the `ViewAccount` ability), the admin search of `account/index`, and the credit/ban panels are not built. |
 | `xferlog` | `modules/account/xferlog.php` | `NORMAL` | `NOT_STARTED` |  |
@@ -72,7 +72,7 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `index` | `modules/captcha/index.php` | `ANYONE` | `NOT_STARTED` | GD CAPTCHA image endpoint. Port keeps a server-rendered challenge plus the existing reCAPTCHA option. |
+| `index` | `modules/captcha/index.php` | `ANYONE` | `VERIFIED` | `GET /api/captcha`. Two drivers behind one contract (D19). The self-hosted one needs no font file, stores a digest of the answer rather than the answer, expires, and is consumed on a wrong answer as well as a right one — the legacy challenge was never cleared and could be replayed for the life of the session. 16 tests. |
 
 ### `castle`
 
@@ -354,7 +354,7 @@ concerns are tracked in their own tables below.
 | `Flux_EmblemExporter` | Guild emblem BMP/GIF conversion | Emblem service | `NOT_STARTED` |
 | `Flux_ItemShop / Flux_ItemShop_Cart` | Credit shop + session cart | Shop + cart services | `NOT_STARTED` |
 | `Flux_PaymentNotifyRequest` | PayPal IPN verification and crediting | Queued IPN job (D-pending) | `NOT_STARTED` |
-| `Flux_Mailer` | PHPMailer wrapper | Laravel Mail + queued mailables | `NOT_STARTED` |
+| `Flux_Mailer` | PHPMailer wrapper | Laravel Mail mailables via `AccountMailer` | `INTENTIONALLY_REPLACED` |
 | `Flux_LogFile` | Plain-text file logger | Laravel logging channels | `INTENTIONALLY_REPLACED` |
 | `Flux_Addon` | Add-on discovery and config merge | Laravel packages (D8) | `INTENTIONALLY_REPLACED` |
 | `Flux_Error and 6 error subclasses` | Exception hierarchy | Typed exceptions + handler | `NOT_STARTED` |
@@ -377,7 +377,7 @@ concerns are tracked in their own tables below.
 | Add-ons | `addons/` loader, 1 example | `NOT_STARTED` | Laravel packages (D8). |
 | Game branding | Hardcoded strings + SiteName config | `VERIFIED` | config/game.php consumed through useGame(). A test fails if any .vue file hardcodes the game name. |
 | Localisation | 4 languages, `Flux::message()` | `NOT_STARTED` | Laravel translations + client catalogue. |
-| Mail | Bundled PHPMailer 5.x | `NOT_STARTED` | Queued mailables. |
+| Mail | Bundled PHPMailer 5.x | `IMPLEMENTING` | Four account mailables with HTML and text parts, sent through `AccountMailer`. Inline by default, queued behind `PANEL_QUEUE_MAIL`. The admin `mail/index` broadcast tool is not built. |
 | Realtime | None (XML status feed, page refresh) | `VERIFIED` | Reverb broadcasting with a polling fallback (D14). Verified end to end with a WebSocket client. |
 | Queues/scheduling | Inline in `preprocess` on every request | `IMPLEMENTING` | Status measurement is scheduled. Account pruning and credit release are not built. |
 | Server status | `fsockopen` per request | `VERIFIED` | Cached probe behind a contract, measured on a schedule and broadcast. |

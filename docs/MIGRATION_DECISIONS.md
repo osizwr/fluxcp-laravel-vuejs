@@ -491,3 +491,208 @@ per visitor.
 **Verified end to end**, not assumed: a WebSocket client connected to a running
 Reverb server, subscribed to `server-status`, and received the dispatched event
 with the expected payload.
+
+---
+
+## D15 — Recovery tokens are stored as digests, not as themselves
+
+**Legacy behaviour.** All three recovery flows generated their code the same
+way and stored it verbatim:
+
+```php
+$code = md5(rand());                        // create.php
+$code = md5(rand() + $row->account_id);     // resetpass.php, changemail.php
+```
+
+That code then went into `cp_createlog.confirm_code`, `cp_resetpass.code` or
+`cp_emailchange.code` exactly as it had been e-mailed.
+
+**Two separate problems.** `rand()` is not a cryptographic generator, and the
+account id it was added to is public, so the value was derivable rather than
+guessed — a handful of observed codes narrows the seed. And because the stored
+value *was* the e-mailed value, read access to those tables was equivalent to
+the ability to reset any password and activate any account. A database dump, a
+backup on a shared host, a read-only reporting user, a SQL injection anywhere
+else in the application: each becomes account takeover.
+
+**Decision.** `App\Support\Tokens\SecureToken` mints 256 bits from
+`random_bytes()` and stores a digest. The e-mailed value is 64 hex characters;
+the stored value is the first 32 characters of its SHA-256.
+
+**Why truncated.** The three columns are all `varchar(32)`. Widening them would
+break an existing FluxCP installation reading the same tables, which is the
+same constraint as D1: the schema belongs to rAthena and FluxCP, and this panel
+works within it rather than around it. 128 bits of a SHA-256 is far beyond what
+a preimage attack reaches, so truncating costs nothing an attacker can use,
+while storing the token itself costs everything.
+
+**What this changes operationally.** Nothing can print a working link from the
+database. Support staff cannot read somebody's confirmation code out of
+`cp_createlog` and read it to them over the phone — they resend it instead.
+That is the intended trade.
+
+The token is also cleared, not merely flagged, once used, so a spent row does
+not stay matchable.
+
+---
+
+## D16 — A password is never sent by e-mail
+
+**Legacy behaviour.** `resetpw.php` generated a password, wrote it to the
+account, and e-mailed it:
+
+```php
+$newPassword .= $characters[array_rand($characters)];   // alphanumerics only
+...
+$mail->send($acc->email, 'Password Has Been Reset', 'newpass',
+    array('AccountUsername' => $acc->userid, 'NewPassword' => $unhashedNewPassword));
+```
+
+**Three things wrong with it.** The account's working credential existed as
+readable text in a mailbox, in the sending server's queue, and in every relay
+in between — indefinitely, because nobody deletes those mails. The password was
+one the account holder never chose, so it was either kept (a server-generated
+password in a mailbox) or changed immediately (making the mail pointless). And
+the generated alphabet was alphanumeric only, so the result was weaker than the
+policy the registration form enforces.
+
+**Decision.** The reset link lets somebody choose their own password, and no
+password appears in any outbound mail. The legacy `newpass` template is
+replaced by `PasswordChangedMail`, which reports *that* the password changed,
+with the time and originating address, and names nothing secret.
+
+That replacement is not merely a removal. A notice is the only thing that makes
+an unnoticed account takeover noticeable: somebody who did not make the change
+finds out from it. It is sent to the address on the account rather than to
+anything supplied with the request, so whoever made the change cannot also
+decide who hears about it.
+
+Tests assert that no mailable's rendered body contains the password.
+
+---
+
+## D17 — The staff password policy applies to staff
+
+**Legacy behaviour.** `changepass.php` chose which policy to enforce like this:
+
+```php
+$useGMPassSecurity = $session->account->group_level < Flux::config('EnableGMPassSecurity');
+$passwordMinLength = $useGMPassSecurity ? Flux::config('GMMinPasswordLength') : Flux::config('MinPasswordLength');
+```
+
+`EnableGMPassSecurity` is a group level. The comparison is `<`, so
+`$useGMPassSecurity` is true when the account is **below** the staff threshold
+— and the `GM*` settings were then applied to ordinary players, while game
+masters got the ordinary ones. The setting did the opposite of what its name
+says, in the direction that matters.
+
+The same file then mixed the two sets when checking:
+
+```php
+elseif (Flux::config('PasswordMinUpper') > 0 && preg_match_all(...) < $passwordMinUpper)
+```
+
+The decision to enforce reads the player setting; the threshold compared
+against is the GM one. With `PasswordMinUpper` at 0 and `GMPasswordMinUpper` at
+2, the requirement is silently skipped.
+
+**Decision.** `panel.registration.password.staff` is merged over the player
+policy for accounts at or above `applies_at_or_above_level`, so an operator
+states only what differs, and the stricter set goes to the more privileged
+accounts. One resolver (`RathenaAccountService::passwordPolicy()`) decides it,
+and the same policy applies on registration, on a password change and on a
+reset.
+
+This is recorded as a decision rather than a bug fix because reversing it
+changes behaviour an operator may have come to rely on: on a legacy install,
+players were held to the GM rules. Anyone migrating a customised
+`application.php` should expect their player policy to loosen and their staff
+policy to tighten — both toward what the settings claim.
+
+---
+
+## D18 — A password change ends other sessions, not your own
+
+**Legacy behaviour.** `changepass.php` finished like this:
+
+```php
+$session->setMessageData(Flux::message('PasswordHasBeenChanged'));
+$session->logout();
+$this->redirect($this->url('account', 'login'));
+```
+
+It signed the account holder out of the session they were using, and did
+nothing about any other session.
+
+**Why that is backwards.** A password change is most often a response to
+suspecting somebody else has access. The legacy behaviour inconveniences the
+one person it should not and leaves the attacker's session running until it
+expires on its own — so the change achieves nothing against the case that
+prompted it.
+
+**Decision.** The account holder keeps the session they are using, with its id
+regenerated, and every other session for that account is deleted.
+`SessionRegistry` does it by removing rows from the session table.
+
+A completed password *reset* passes no exception, so every session ends:
+whoever is signed in as that account at that moment is the problem the reset is
+solving.
+
+**The limitation is reported, not hidden.** This works with the `database`
+session driver, the default. With `file` or `cookie` there is nothing to query,
+so `SessionRegistry` returns false and the endpoint says
+`other_sessions_revoked: false`. Claiming otherwise would be a false
+reassurance to somebody who has just changed their password because they think
+it was stolen.
+
+---
+
+## D19 — Two CAPTCHA drivers, and neither loads a third-party script by default
+
+**Legacy behaviour.** Two booleans, `UseCaptcha` and `EnableReCaptcha`,
+encoding one three-way choice. The native path used GD with a TrueType font;
+the reCAPTCHA path did this:
+
+```php
+$response = file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret=".
+    Flux::config('ReCaptchaPrivateKey')."&response=".$_POST['g-recaptcha-response']."&remoteip=".$_SERVER['REMOTE_ADDR']);
+$responseKeys = json_decode($response, true);
+if (intval($responseKeys["success"]) !== 1) { ... }
+```
+
+No timeout, so a slow reply hung the request for however long PHP's socket
+default was. No error handling, so a network failure was a warning followed by
+`json_decode(false)` returning null. And the secret and the user's response
+token both went into a URL, where they land in proxy and server logs.
+
+**Decision.** One `ChallengesHumanity` contract with two implementations,
+selected by `PANEL_CAPTCHA_DRIVER`. An unrecognised name throws at resolution
+rather than falling back — falling back to "no challenge" would turn a typo in
+`.env` into open registration.
+
+**The self-hosted driver** draws with GD's built-in fonts rather than a
+TrueType file, so there is no font to ship, licence or lose; the distortion
+comes from per-glyph rotation and scaling. Its alphabet excludes `0/O/1/I/L`,
+because a challenge somebody cannot read stops registrations rather than
+robots. The answer is stored in the session as a SHA-256 — the session store is
+a database table here, and a table of readable CAPTCHA answers is a thing worth
+not having. A challenge expires, and is consumed when checked **including on a
+wrong answer**, so one image cannot be brute-forced. The legacy challenge sat
+in the session indefinitely and was not cleared on use, so a solved image could
+be replayed for the life of the session.
+
+**The reCAPTCHA driver** posts its parameters instead of interpolating them
+into a URL, sets a connect and a total timeout, and **fails closed**. Treating
+"cannot reach the verifier" as "human" would turn an outage at Google into open
+registration here.
+
+**The stated limit.** The panel does not load third-party scripts on its own
+account, so with `recaptcha` selected the client cannot render the widget;
+`CaptchaField` says so rather than drawing a box that cannot be answered. An
+operator who wants reCAPTCHA has to add its script themselves. This is a
+deliberate limit of the port, written down rather than discovered.
+
+**Honest about what it is worth.** Any hand-rolled image CAPTCHA is solvable
+with off-the-shelf OCR. The self-hosted driver exists to stop casual scripted
+registration, and the class comment says so. Rate limiting, which the legacy
+panel had none of, is the control that actually bounds abuse here.

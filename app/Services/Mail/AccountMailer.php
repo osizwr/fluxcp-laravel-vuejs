@@ -134,12 +134,28 @@ final readonly class AccountMailer
             return false;
         }
 
+        $queued = config('panel.mail.queue') === true;
+
         try {
             $pending = $this->mailer->to($recipient);
 
-            config('panel.mail.queue') === true
-                ? $pending->queue($mail)
-                : $pending->send($mail);
+            $queued ? $pending->queue($mail) : $pending->send($mail);
+
+            /*
+             * Logged so an operator investigating "players say they never get
+             * the e-mail" can tell whether the panel handed it off at all.
+             * Flux_Mailer wrote its own log for the same reason.
+             *
+             * The recipient is deliberately not recorded. The legacy log line
+             * included it, which over time builds a file mapping account
+             * activity to e-mail addresses -- and this log is read by anyone
+             * who can read the application's logs. The mailable class and the
+             * timestamp answer the diagnostic question without that.
+             */
+            Log::info('An account e-mail was handed off.', [
+                'mailable' => $mail::class,
+                'queued' => $queued,
+            ]);
 
             return true;
         } catch (Throwable $e) {

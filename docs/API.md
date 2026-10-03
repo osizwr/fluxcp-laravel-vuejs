@@ -151,6 +151,270 @@ enforced again on the server; hiding a control is never what stops an action.
 
 ---
 
+## Registration and confirmation
+
+### `POST /api/auth/register`
+
+Route name `account.create`. Access: **guests only**.
+
+```json
+{
+  "username": "merchant",
+  "password": "…",
+  "password_confirmation": "…",
+  "email": "player@example.com",
+  "email_confirmation": "player@example.com",
+  "gender": "M",
+  "birthdate": "1995-04-12",
+  "server": "main",
+  "captcha": "ABCDE"
+}
+```
+
+| Field | Rules |
+| --- | --- |
+| `username` | required. Length and character rules come from `panel.registration.username`; the maximum is 23, the width of `login.userid` |
+| `password` | required, must match `password_confirmation`. Policy from `panel.registration.password`; the maximum is capped at 32 by `login.user_pass` regardless of the setting |
+| `email` | required, valid, max 39 — the width of `login.email` — and must match `email_confirmation` |
+| `gender` | required, `M` or `F`. `S` is rAthena's server-account marker and is refused |
+| `birthdate` | required, `YYYY-MM-DD`, in the past, and at least `panel.registration.minimum_age` years ago |
+| `server` | optional, defaults to the configured default group |
+| `captcha` | required when `panel.captcha.on_registration` is on |
+
+**`201`**, when no confirmation is required, returns the account and signs it
+in — the legacy flow did the same. The response carries `message`.
+
+**`201`**, when confirmation is required, returns no account:
+
+```json
+{
+  "message": "Your account has been created. Check player@example.com for the link that activates it.",
+  "requires_confirmation": true,
+  "confirmation_sent": true
+}
+```
+
+`confirmation_sent` is reported honestly. A `false` means the account exists
+but the e-mail did not go out, and the person should ask for another rather
+than wait for one that is not coming.
+
+**`403`** when `panel.registration.enabled` is off, with a message rather than
+an authorisation error — registration being closed is an operator's decision
+the visitor should be told about.
+
+**`422`** for any validation failure, field-keyed.
+
+**`429`** after 5 registrations from one address in 10 minutes.
+
+Side effects: the account and its `cp_createlog` row are written in one
+transaction, the latter **without the password** (D2); the panel's own hash is
+stored (D1); and when confirmation is required the account is held in rAthena
+state 5 with a `cp_banlog` row that does **not** contain the token.
+
+### `POST /api/auth/confirm`
+
+Route name `account.confirm`. Access: **guests only** — an account awaiting
+confirmation cannot sign in, so whoever follows the link is a guest.
+
+```json
+{ "token": "…64 hex characters…", "server": "main" }
+```
+
+**`200`** on success. The account leaves state 5, the registration row is
+marked confirmed, its token is cleared, and the lift is recorded in
+`cp_banlog`.
+
+**`422`** for an unknown, expired, already-used token, with one message for all
+three. Distinguishing them would tell the holder of a stale link which case
+they have, and none is actionable differently.
+
+**`429`** after 10 attempts from one address in 15 minutes.
+
+### `POST /api/auth/confirm/resend`
+
+Route name `account.resend`. Access: **guests only**.
+
+```json
+{ "username": "merchant", "email": "player@example.com", "server": "main" }
+```
+
+Both fields are required and must match the account, so this cannot be used to
+mail a confirmation link to an address somebody merely typed in.
+
+**`200`** always, with the same message whether or not anything matched.
+
+A new token is issued rather than the old one re-sent, which retires the
+previous link and lets a lapsed request be renewed.
+
+**`429`** after 5 attempts per address or 3 per account in 15 minutes.
+
+---
+
+## Password reset
+
+### `POST /api/auth/password/forgot`
+
+Route name `account.resetpass`. Access: **guests only**.
+
+```json
+{ "username": "merchant", "email": "player@example.com", "server": "main" }
+```
+
+**`200`** always, with the same message in every case — including when the
+account does not exist, when the address does not match, and when the account
+is staff that `panel.password_reset.blocked_at_or_above_level` protects. The
+form therefore cannot be used to discover which addresses are registered or
+which accounts belong to game masters.
+
+Accounts not in state 0, and rAthena's server accounts, are silently excluded.
+
+**`403`** when `panel.password_reset.enabled` is off.
+
+**`429`** after 5 attempts per address or 3 per account in 15 minutes.
+
+Side effects: any earlier outstanding request is retired, so only the newest
+link works; the new row stores a **digest** of the token and empty password
+columns (D2, D15).
+
+### `POST /api/auth/password/reset`
+
+Route name `account.resetpw`. Access: **guests only**.
+
+```json
+{
+  "token": "…64 hex characters…",
+  "password": "…",
+  "password_confirmation": "…",
+  "server": "main"
+}
+```
+
+The token is the only thing the link carries. No account name or id, because
+nothing else in it is a secret.
+
+**`200`** on success. The password is written to rAthena's column in the
+emulator's format and to the panel's hash (D1), **every** session for the
+account is ended (D18), and a notice goes to the address on the account.
+
+**`422`** for an invalid or expired token, or a password that fails the policy.
+A rejected password leaves the link usable, so a typo does not cost a new link.
+
+**`429`** after 10 attempts from one address in 15 minutes.
+
+No password is ever e-mailed by this endpoint or any other (D16).
+
+---
+
+## Account credentials
+
+### `PUT /api/account/password`
+
+Route name `account.changepass`. Access: **signed in**.
+
+```json
+{
+  "current_password": "…",
+  "password": "…",
+  "password_confirmation": "…"
+}
+```
+
+**`200`**:
+
+```json
+{ "message": "Your password has been changed.", "other_sessions_revoked": true }
+```
+
+The current session survives with a regenerated id; every other session for
+the account is ended. `other_sessions_revoked` is `false` when the session
+driver cannot be queried — with `file` or `cookie` there is nothing to delete,
+and claiming otherwise would be a false reassurance (D18).
+
+Staff accounts are held to the stricter policy in
+`panel.registration.password.staff` (D17).
+
+**`422`** for a wrong current password, a mismatch, a reused password, or a
+policy failure.
+
+**`429`** after 10 attempts in 15 minutes.
+
+### `PUT /api/account/email`
+
+Route name `account.changemail`. Access: **signed in**.
+
+```json
+{
+  "current_password": "…",
+  "email": "new@example.com",
+  "email_confirmation": "new@example.com"
+}
+```
+
+The current password is required. The legacy form asked for nothing, which made
+a stolen session cookie enough to move the address — and the address is what
+password reset trusts.
+
+**`200`** with `panel.email_change.require_confirmation` on:
+
+```json
+{
+  "message": "Check new@example.com for the link that confirms the change. …",
+  "email": "old@example.com",
+  "requires_confirmation": true,
+  "confirmation_sent": true
+}
+```
+
+`email` is still the **current** address, because it does not move until the
+link is followed. With confirmation off, the change is applied immediately and
+`email` is the new address.
+
+**`422`** for a wrong current password, the address already being the
+account's, an address another account holds (unless
+`panel.registration.allow_duplicate_emails`), or a mismatch.
+
+**`429`** after 5 attempts in 15 minutes.
+
+### `POST /api/account/email/confirm`
+
+Route name `account.confirmemail`. Access: **signed in**.
+
+```json
+{ "token": "…64 hex characters…" }
+```
+
+Requires a session, and the request must belong to the signed-in account — so a
+token read out of somebody's mailbox is not on its own enough to move their
+address. This is the legacy behaviour, kept.
+
+**`200`** returns the address now on the account.
+
+**`422`** for an invalid or expired token, or when the address has been taken
+since the request was made.
+
+---
+
+## CAPTCHA
+
+### `GET /api/captcha`
+
+Route name `captcha.index`. Access: **everyone**.
+
+Returns `image/png` with `Cache-Control: no-store, …, private`. A cached
+challenge is one image answered many times.
+
+Each request replaces any outstanding challenge, so only the most recently
+issued image is accepted. A challenge expires after
+`panel.captcha.native.expires_after_seconds` and is consumed when checked —
+including on a wrong answer, so one image cannot be brute-forced.
+
+**`404`** when `PANEL_CAPTCHA_DRIVER=recaptcha`: there is no image to serve.
+
+The answer is compared case-insensitively, and the session stores a SHA-256 of
+it rather than the answer itself.
+
+---
+
 ## Characters
 
 ### `GET /api/characters/mine`

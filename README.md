@@ -9,16 +9,18 @@ pointed at an existing install without migrating data.
 
 > ### Status: in progress, not production ready
 >
-> The migration is partial. Of FluxCP's 139 module actions, **6 are complete and
-> covered by tests**, 2 are partially built, 7 are deliberately not being ported,
-> and **124 have not been started**.
+> The migration is partial. Of FluxCP's 139 module actions, **16 are complete and
+> covered by tests**, 9 are deliberately replaced rather than ported, 3 are
+> partially built, and **111 have not been started**.
 >
 > [`docs/FLUXCP_MIGRATION_MATRIX.md`](docs/FLUXCP_MIGRATION_MATRIX.md) is the
 > authority on what works. Nothing in this README claims more than it shows.
 >
 > What does work is complete rather than sketched: authentication reproduces
-> FluxCP's sign-in behaviour step for step, and the schema installer has been
-> compared column by column against the legacy schema.
+> FluxCP's sign-in behaviour step for step, the account credential flows fix
+> nine defects in the legacy originals rather than carrying them over, and the
+> schema installer has been compared column by column against the legacy schema.
+> 328 tests, 1,134 assertions.
 
 ---
 
@@ -27,6 +29,11 @@ pointed at an existing install without migrating data.
 | Area | State |
 | --- | --- |
 | Sign in and out | Full legacy flow, all eight refusal reasons, rate limited |
+| Registration | With CAPTCHA, an age gate, and optional e-mail confirmation |
+| E-mail confirmation | Confirm, resend, and a scheduled prune of lapsed registrations |
+| Password reset | By e-mail. The link lets you choose a password; none is ever e-mailed |
+| Password change | Updates the game and the website together; ends other sessions |
+| E-mail change | Confirmed at the new address before it replaces the old one |
 | Account overview | Own account only |
 | Own character list | Complete |
 | Who's online | Paginated, searchable, permission-filtered, closed during WoE |
@@ -40,10 +47,10 @@ pointed at an existing install without migrating data.
 | News | Public listing and article view, from the legacy CMS table |
 | Statistics | Account, character and guild counts; class distribution |
 
-Not built yet, among much else: registration, password reset, e-mail changes,
-the item shop and its cart, donations, guild pages, the item and monster
-databases, the news and page CMS, the support desk, the admin tools, and the
-game log browsers.
+Not built yet, among much else: character detail and management, the item shop
+and its cart, donations, guild pages, the item and monster databases, the admin
+half of the news CMS and all of the static-page CMS, the support desk, the
+admin tools, and the game log browsers.
 
 ## Requirements
 
@@ -173,6 +180,46 @@ php artisan queue:work        # broadcasts are queued
 
 In production, run the scheduler from cron and the worker under a supervisor.
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+## Mail
+
+Registration confirmation, password reset and e-mail change all send mail, so
+the panel needs a working mailer before those flows do anything useful.
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_USERNAME=panel@example.com
+MAIL_PASSWORD=…
+MAIL_FROM_ADDRESS="noreply@example.com"
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+`MAIL_MAILER=log`, the default, writes messages to `storage/logs` instead of
+sending them. That is right for development and wrong for production: without a
+real mailer nobody can confirm a registration or reset a password.
+
+Use a from-address on a domain whose SPF and DKIM records allow this server to
+send. Account mail that lands in spam is, for the recipient, account mail that
+never arrived.
+
+Mail is sent **inline** by default rather than queued:
+
+```env
+PANEL_QUEUE_MAIL=false
+```
+
+That is deliberately the opposite of the usual Laravel advice. A queued message
+on a server with no worker running is a message that is never sent, and the
+people affected are the ones who cannot finish registering or get back into
+their account — so they cannot report it either. Turn it on once
+`php artisan queue:work` is running under a supervisor, and registration stops
+waiting on your mail server.
+
+Nothing the panel sends contains a password. The reset link lets somebody choose
+their own; see [`docs/MIGRATION_DECISIONS.md`](docs/MIGRATION_DECISIONS.md)
+(D16).
 
 ## Theming
 
@@ -339,10 +386,30 @@ Changes from the legacy panel, with the reasoning in
 - **Unknown routes are denied.** FluxCP served ten shipped actions to anyone,
   because its check returned `-1` and its dispatcher only blocked on a strict
   `false` (D3).
+- **Recovery tokens are stored as digests**, not as themselves. FluxCP's
+  confirmation and reset codes were `md5(rand())` written to the database
+  verbatim, so read access to `cp_resetpass` was the ability to reset any
+  password (D15).
+- **No password is ever e-mailed.** FluxCP's reset generated one and sent it in
+  cleartext (D16).
+- **The staff password policy applies to staff.** FluxCP's comparison was
+  inverted, so players got the strict rules and game masters the loose ones
+  (D17).
+- **Changing a password ends other sessions** and keeps your own. FluxCP did the
+  reverse, which leaves the attacker signed in (D18).
+- **Changing the e-mail address requires the password.** FluxCP asked for
+  nothing, so a stolen session cookie was enough to take an account permanently.
+- **Deleting unconfirmed accounts is no longer reachable over HTTP.** FluxCP's
+  `account/prune` was a public endpoint guarded by a query parameter.
 - Session auth with CSRF, no token in JavaScript (D11).
 - The session id is regenerated on sign-in; sign-in is rate limited.
+- Registration, resend and reset requests are rate limited per address and per
+  account. FluxCP limited none of them, which made each an endpoint for sending
+  mail to an address an anonymous caller chose.
 - Credential comparisons use `hash_equals`, and a non-existent account still
   costs one hash verification so the endpoint is not an enumeration oracle.
+- The reset and resend forms answer identically whether or not an account
+  matched, so neither can be used to discover which addresses are registered.
 
 ### What this cannot fix
 

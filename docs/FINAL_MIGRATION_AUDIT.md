@@ -3,8 +3,11 @@
 An honest account of what was discovered, what was built, and what was not.
 
 The headline is simple: **the audit is complete, the foundation is complete, and
-the feature migration is about 4% done**. 6 of FluxCP's 139 module actions are
-finished and tested. Nothing here is rounded up.
+the feature migration is about 18% done**. 25 of FluxCP's 139 module actions are
+finished — 16 ported and tested, 9 deliberately replaced — and 111 have not been
+started. Nothing here is rounded up; the counts come from
+[FLUXCP_MIGRATION_MATRIX.md](FLUXCP_MIGRATION_MATRIX.md), which is the
+authority, and this file must not claim more than it shows.
 
 ---
 
@@ -102,14 +105,14 @@ COMPATIBILITY_REPORT.md section 1.5.
 
 | | |
 | --- | --- |
-| PHP files | 71 (7,465 lines) |
-| Configuration | 18 files (2,676 lines) |
-| Vue components | 41 (11 core blocks, 8 fantasy blocks, pages, layouts, UI) |
-| TypeScript modules | 18 |
-| Frontend | 5,965 lines (incl. themes) |
+| PHP files | 107 |
+| Configuration | 18 files (2,883 lines) |
+| Vue components | 49 (11 core blocks, 8 fantasy blocks, pages, layouts, UI) |
+| TypeScript modules | 20 |
 | Migrations | 4 |
 | Factories | 4 |
-| Tests | 19 files, **197 tests, 580 assertions** |
+| Tests | 25 files, **328 tests, 1,134 assertions** |
+| API endpoints | 21 |
 | Documentation | 9 documents |
 
 ### Complete and tested
@@ -118,6 +121,16 @@ COMPATIBILITY_REPORT.md section 1.5.
 | --- | --- |
 | `account/login` | All eight refusal reasons, in the legacy order. Credential handling per D1, audit per D2. Adds throttling, which the legacy panel had none of |
 | `account/logout` | Session invalidated, token regenerated |
+| `account/create` | Registration with CAPTCHA, the age gate, and optional e-mail confirmation. The account and its audit row are written in one transaction |
+| `account/confirm` | Clears the hold, records the lift. Fixes the legacy bug that made confirmation impossible at the default setting |
+| `account/resend` | Issues a new token rather than re-sending the old one, so a lapsed request can be renewed |
+| `account/resetpass` | Both account name and address required; state, server-account and staff-level restrictions preserved; one answer in every case |
+| `account/resetpw` | **Replaced** (D16): the link lets somebody choose a password instead of e-mailing one |
+| `account/changepass` | Both credential stores updated together. Fixes the inverted staff policy (D17) and the backwards session handling (D18) |
+| `account/changemail` | Honours `RequireChangeConfirm`; additionally requires the current password |
+| `account/confirmemail` | Keyed on the signed-in account as well as the token, with the expiry the legacy lookup omitted |
+| `account/prune` | **Replaced**: a scheduled command rather than a public HTTP endpoint, with three safety conditions the legacy `DELETE` lacked |
+| `captcha/index` | Two drivers behind one contract (D19). Single use, expiring, digest-stored answer |
 | `server/status` | Per-process reachability, live and peak players, WoE state. Measurement moved off the request path and broadcast over Reverb |
 | `ranking/character` | Level ladder with every legacy exclusion filter |
 | `ranking/zeny` | Plus the per-character opt-out |
@@ -138,6 +151,9 @@ COMPATIBILITY_REPORT.md section 1.5.
 | Block system | 11 core blocks, overridable per theme with fallback to core. `fantasy` overrides 8 and inherits 3. |
 | Page composition | A theme declares a page as an ordered list of blocks in `theme.json`; reordering a page is configuration, not code. |
 | Site data | Statistics, class distribution and news endpoints, so the front-page blocks have real data rather than decoration. |
+| Account credentials | Registration, e-mail confirmation, password reset, password change and e-mail change, with nine legacy defects fixed rather than carried over (D15–D19). |
+| Mail | Four account mailables with HTML and text parts, sent through one service that decides the link format, the queueing and the failure behaviour. |
+| Localisation | `lang/en` for the authentication and account messages. Before this, every `trans()` call in the sign-in path returned its own key to the visitor. |
 | Game branding | `config/game.php`, consumed through `useGame()`; no component hardcodes the game name |
 
 ### Deliberately not ported
@@ -158,27 +174,33 @@ COMPATIBILITY_REPORT.md section 1.5.
 
 ## 3. What was not built
 
-**124 of 139 actions.** The matrix lists each one; grouped by area:
+**111 of 139 actions.** The matrix lists each one; grouped by area:
 
 | Area | Actions | Includes |
 | --- | --: | --- |
-| Account | 14 | Password reset, e-mail change and confirmation, sex change, credit transfer, admin search and edit. Registration and password *change* now have tested credential handling but no web flow |
-| Admin logs (`cplog`) | 10 | Every control-panel audit view |
 | Game logs (`logdata`) | 13 | Pick, zeny, MVP, chat, command, branch, feeding, cash |
+| Admin logs (`cplog`) | 10 | Every control-panel audit view |
+| News and pages CMS | 9 | The admin half of news (add, edit, delete, manage) and all of the static-page CMS. Public news listing and article views are done |
+| Character | 8 | Detail view, slot change, look and position reset, divorce, map statistics, preferences |
 | Support desk | 8 | Player and staff ticket flows, categories, settings |
 | Item shop (`purchase`) | 7 | Browse, cart, checkout, pending delivery |
+| Account | 6 | Sex change, credit transfer and its log, the item-shop cart, and the admin search and edit screens |
 | Donations | 6 | PayPal flow, IPN, history, trusted donors |
-| Character | 8 | Detail view, slot change, look and position reset, divorce, map statistics, preferences |
 | History | 6 | Self-service account history |
-| News and pages CMS | 9 | The admin half of news, and all of the static-page CMS. Public news listing and article views are done. |
+| Rankings | 6 | Alchemist, blacksmith, death, guild, homunculus, MVP |
 | IP bans | 5 | |
-| Item database | 3 | Depends on the temporary-table merge (D6) |
-| Monster database | 2 | Same |
 | Guild | 4 | Browse, detail, emblem rendering, CSV export |
 | Item shop admin | 4 | |
-| Rankings | 3 | Alchemist, blacksmith, homunculus |
 | Vending / buying stores | 4 | |
-| Other | 14 | Castles, WoE schedule, mail, web commands, CAPTCHA, ToS, server info, the global preprocess hook |
+| Item database | 3 | Depends on the temporary-table merge (D6) |
+| Monster database | 2 | Same |
+| Other | 10 | Castle ownership, the WoE schedule and its custom variant, the admin mail tool, web commands, ToS, `server/status-xml`, the `unauthorized` page, `main/page_not_found` and the global `preprocess` hook |
+
+The rows sum to 111, which is the figure in
+[FLUXCP_MIGRATION_MATRIX.md](FLUXCP_MIGRATION_MATRIX.md). Two rows were wrong in
+the previous revision of this file — rankings was understated as 3 and "other"
+overstated as 13 — and the table is now generated from the matrix rather than
+maintained by hand.
 
 ### Cross-cutting work outstanding
 
@@ -191,14 +213,30 @@ COMPATIBILITY_REPORT.md section 1.5.
 - **The 57 `Flux_Template` view helpers**, which encode a large amount of
   game-domain formatting: job names, equip slots, item flags, monster modes,
   trade restrictions. Two are ported (`jobs`, `homunculus`).
-- **Localisation.** 4 languages exist upstream; none are ported.
-- **Mail.** No mailable is written, so nothing that depends on e-mail —
-  registration confirmation, password reset, e-mail change — can work.
+- **Localisation.** `lang/en` now covers the authentication and account
+  messages, which fixed a real defect: there was no `lang/` directory at all, so
+  every `trans()` call in the sign-in path returned its own key and a failed
+  sign-in showed the visitor the literal string
+  `auth.failure.invalid_credentials`. The other three upstream languages are not
+  ported, and most interface copy is still inline in the Vue components.
+- **Mail beyond the account flows.** `Flux_Mailer` shipped nine templates. Four
+  are ported or replaced — `confirm`, `resetpass`, `changemail`, and `newpass`
+  which became a change *notice* rather than a password (D16). The remaining
+  four are not, because the features that send them are not built:
+  `contactform`, `newticket` and `ticketreply` belong to the support desk, and
+  `marketing1` to the admin broadcast tool (`mail/index`).
+
+  Two deliberate differences from `Flux_Mailer`: no mailable is queued by
+  default (see `PANEL_QUEUE_MAIL` and the reasoning in `config/panel.php`), and
+  the success log line records the mailable class but **not** the recipient.
+  The legacy log included the address, which over time builds a file mapping
+  account activity to e-mail addresses, readable by anyone who can read the
+  application's logs.
 - **Database-backed admin-editable settings** (D12). Policy currently lives in
   `config/panel.php` and needs a deploy to change.
 - **A worked add-on package** (D8). The permission registry is designed for
   third-party contribution, but no example exists.
-- **Frontend tests.** The backend has 97; the Vue layer has none.
+- **Frontend tests.** The backend has 328; the Vue layer has none.
 
 ---
 
@@ -208,7 +246,7 @@ Every command below was run, and these are its real results.
 
 | Command | Result |
 | --- | --- |
-| `composer test` | **197 passed**, 580 assertions, 0 failures, 10s |
+| `composer test` | **328 passed**, 1,134 assertions, 0 failures, 18s |
 | `composer lint` (Pint) | **passed** |
 | `npm run lint` (ESLint + `vue-tsc`) | **passed**, 0 errors, 0 warnings |
 | `npm run build` | **passed**, 16 chunks, 41.7 kB gzipped entry |
@@ -352,9 +390,9 @@ Against the project's own checklist:
 | ✅ | Realtime architecture implemented and verified |
 | ✅ | Reverb configured |
 | ✅ | Queues configured |
-| 🟨 | API implemented — **8 endpoints** |
+| 🟨 | API implemented — **21 endpoints** |
 | 🟨 | Security review — **applied to what exists; no review of unbuilt code** |
-| ✅ | Automated tests created — 197 |
+| ✅ | Automated tests created — 328 |
 | 🟨 | Legacy/new compatibility testing — **for what is built** |
 | ✅ | Production build succeeds |
 | ✅ | No placeholder functionality |
@@ -365,22 +403,35 @@ Against the project's own checklist:
 | ✅ | Final audit completed |
 
 **This is not a 100% migration and is not presented as one.** The audit,
-architecture and verification method are finished; the feature work is 4% done.
+architecture and verification method are finished; the feature work is 18% done.
 
 ### Suggested order for the remaining work
 
-1. **Registration and password reset.** The credential half is done and tested
-   (`RathenaAccountService`); what remains is the web flow, which needs mail.
-   Mail is the highest-value unblocking step, since several other features wait
-   on it.
-2. **The item/monster merge service (D6).** Thirteen actions depend on it.
-3. **Validated sortable pagination.** Needed by every listing and admin page, and
-   closes an injection surface rather than reproducing it.
-4. **Account management**: e-mail change, password change, preferences.
-5. **Character detail and management.**
-6. **Guilds**, including emblem conversion.
-7. **The remaining `Flux_Template` helpers**, as the pages that need them arrive.
-8. **Admin**: bans, IP bans, account search and edit, the log browsers.
-9. **Item shop and donations**, together — the credit flow spans both.
-10. **Support desk.**
-11. **Localisation**, once the string surface has stopped moving.
+1. **The item/monster merge service (D6).** Thirteen actions depend on it, and
+   until it exists none of them can be written correctly: a port that queries
+   `item_db` directly looks right on a vanilla install and silently serves
+   pre-renewal stats while ignoring every custom item on a real server.
+2. **Validated sortable pagination.** Needed by every listing and admin page, and
+   closes an injection surface rather than reproducing it. Doing it before the
+   listings means not retrofitting fifteen of them.
+3. **Character detail and management**, which is the largest remaining
+   player-facing area now that the credential flows are done.
+4. **The remaining `Flux_Template` helpers**, as the pages that need them arrive.
+   55 of 57 are still unported, and they encode most of the game-domain
+   formatting the item, monster and character pages need.
+5. **Guilds**, including emblem conversion.
+6. **Admin**: bans, IP bans, account search and edit, the log browsers.
+7. **Item shop and donations**, together — the credit flow spans both.
+8. **Support desk.**
+9. **Frontend tests.** Worth starting before the Vue surface grows further; the
+   account pages added for the credential flows are the first substantial
+   interactive forms and are currently covered only through the API.
+10. **Database-backed admin settings (D12)**, once the policy surface has stopped
+    moving.
+11. **Localisation**, last, once the string surface has stopped moving. Most
+    interface copy is still inline in the components.
+
+Registration and password reset headed this list in the previous revision and
+are now done, together with confirmation, resend, password change, e-mail change
+and pruning. Mail was the unblocking step named there; it exists for the account
+flows, and the admin broadcast tool is the only mail-dependent feature left.
