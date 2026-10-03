@@ -74,6 +74,25 @@ export default tseslint.config(
         },
     },
 
+    {
+        /*
+         * Build and verification scripts run in Node, not the browser, and
+         * their console output is the whole point of them -- `no-console`
+         * would be telling a CLI tool not to speak.
+         */
+        files: ['scripts/**/*.mjs', '*.config.{js,ts}'],
+        languageOptions: {
+            globals: {
+                console: 'readonly',
+                process: 'readonly',
+                __dirname: 'readonly',
+            },
+        },
+        rules: {
+            'no-console': 'off',
+        },
+    },
+
     // Must come last so it can turn off rules that conflict with formatting.
     prettier,
 )

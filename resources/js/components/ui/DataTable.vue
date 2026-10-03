@@ -63,7 +63,11 @@ const props = withDefaults(
 
         <div v-else class="overflow-x-auto">
             <table class="w-full border-collapse text-sm">
-                <caption v-if="props.caption" class="sr-only">{{ props.caption }}</caption>
+                <caption v-if="props.caption" class="sr-only">
+                    {{
+                        props.caption
+                    }}
+                </caption>
 
                 <thead>
                     <tr class="border-b border-[var(--border-subtle)] bg-[var(--surface-sunken)]">

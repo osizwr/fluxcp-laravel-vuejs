@@ -59,7 +59,10 @@ onMounted(load)
 
             <template #[`cell:name`]="{ row }">
                 <span class="font-medium">{{ row.name }}</span>
-                <span v-if="row.guild?.name" class="block text-[0.8125rem] text-[var(--text-muted)]">
+                <span
+                    v-if="row.guild?.name"
+                    class="block text-[0.8125rem] text-[var(--text-muted)]"
+                >
                     {{ row.guild.name }}
                 </span>
             </template>
@@ -81,12 +84,12 @@ onMounted(load)
                     rAthena finalises it, so the pending state is shown rather
                     than the row being hidden.
                 -->
+                <StatusPill v-if="row.pending_deletion" state="warn" label="Deleting" />
                 <StatusPill
-                    v-if="row.pending_deletion"
-                    state="warn"
-                    label="Deleting"
+                    v-else
+                    :state="row.online ? 'up' : 'down'"
+                    :label="row.online ? 'Online' : 'Offline'"
                 />
-                <StatusPill v-else :state="row.online ? 'up' : 'down'" :label="row.online ? 'Online' : 'Offline'" />
             </template>
         </DataTable>
     </div>

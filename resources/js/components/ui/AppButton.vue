@@ -17,7 +17,14 @@ const props = withDefaults(
         to?: string
         block?: boolean
     }>(),
-    { variant: 'secondary', size: 'md', type: 'button', disabled: false, loading: false, block: false },
+    {
+        variant: 'secondary',
+        size: 'md',
+        type: 'button',
+        disabled: false,
+        loading: false,
+        block: false,
+    },
 )
 
 const variantClasses = {

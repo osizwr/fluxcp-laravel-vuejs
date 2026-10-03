@@ -27,7 +27,10 @@ const props = withDefaults(
             aria-hidden="true"
         />
 
-        <p class="text-sm font-medium" :class="props.variant === 'error' ? 'text-[var(--color-down)]' : ''">
+        <p
+            class="text-sm font-medium"
+            :class="props.variant === 'error' ? 'text-[var(--color-down)]' : ''"
+        >
             {{ props.title }}
         </p>
 

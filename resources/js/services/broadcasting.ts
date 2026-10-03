@@ -1,5 +1,6 @@
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
+import { bootstrap } from '../theme/bootstrap'
 
 /**
  * The broadcasting connection, when one is configured.
@@ -12,40 +13,8 @@ import Pusher from 'pusher-js'
 
 type EchoInstance = Echo<'reverb'>
 
-interface ReverbSettings {
-    key: string
-    host: string
-    port: number
-    scheme: 'http' | 'https'
-}
-
 let echo: EchoInstance | null = null
 let initialised = false
-
-/**
- * Read the settings the Blade shell put on the document.
- *
- * They are passed as data attributes rather than compiled into the bundle, so
- * one build can be deployed to several environments. Only the public app key is
- * exposed; the Reverb secret stays on the server.
- */
-function readSettings(): ReverbSettings | null {
-    const element = document.documentElement
-    const key = element.dataset.reverbKey
-
-    if (!key) {
-        return null
-    }
-
-    const scheme = element.dataset.reverbScheme === 'https' ? 'https' : 'http'
-
-    return {
-        key,
-        host: element.dataset.reverbHost || window.location.hostname,
-        port: Number(element.dataset.reverbPort || (scheme === 'https' ? 443 : 8080)),
-        scheme,
-    }
-}
 
 function connection(): EchoInstance | null {
     if (initialised) {
@@ -54,7 +23,12 @@ function connection(): EchoInstance | null {
 
     initialised = true
 
-    const settings = readSettings()
+    /*
+     * Null when the server did not configure broadcasting, which is a
+     * supported state: the caller falls back to polling rather than
+     * attempting a connection that cannot succeed.
+     */
+    const settings = bootstrap().broadcasting
 
     if (settings === null) {
         return null
@@ -67,7 +41,7 @@ function connection(): EchoInstance | null {
         echo = new Echo({
             broadcaster: 'reverb',
             key: settings.key,
-            wsHost: settings.host,
+            wsHost: settings.host || window.location.hostname,
             wsPort: settings.port,
             wssPort: settings.port,
             forceTLS: settings.scheme === 'https',

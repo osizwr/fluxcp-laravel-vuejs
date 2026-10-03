@@ -33,7 +33,9 @@ function buildColumns(): void {
         { key: 'name', label: 'Character' },
         { key: 'job', label: 'Job', secondary: true },
         { key: 'level', label: 'Level', numeric: true },
-        ...(auth.can('ViewOnlinePosition') ? [{ key: 'map', label: 'Location', secondary: true }] : []),
+        ...(auth.can('ViewOnlinePosition')
+            ? [{ key: 'map', label: 'Location', secondary: true }]
+            : []),
         { key: 'guild', label: 'Guild', secondary: true },
     ]
 }
@@ -96,7 +98,9 @@ function goToPage(next: number): void {
     <div>
         <PageHeader
             title="Who's online"
-            :description="total > 0 ? `${total.toLocaleString()} characters in the world.` : undefined"
+            :description="
+                total > 0 ? `${total.toLocaleString()} characters in the world.` : undefined
+            "
         >
             <template #actions>
                 <label class="sr-only" for="online-search">Search by character name</label>

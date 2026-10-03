@@ -3,10 +3,9 @@
  * An inline message. Uses role="alert" for errors so it is announced, and a
  * quieter role for informational notes so it is not.
  */
-const props = withDefaults(
-    defineProps<{ tone?: 'info' | 'error' | 'warning'; title?: string }>(),
-    { tone: 'info' },
-)
+const props = withDefaults(defineProps<{ tone?: 'info' | 'error' | 'warning'; title?: string }>(), {
+    tone: 'info',
+})
 
 const toneClasses = {
     info: 'border-[var(--border-strong)] bg-[var(--surface-sunken)]',

@@ -1,57 +1,31 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import AppButton from '../components/ui/AppButton.vue'
 import StatusPill from '../components/ui/StatusPill.vue'
 import { useAuthStore } from '../stores/auth'
 import { useServerStore } from '../stores/server'
-import { useTheme } from '../composables/useTheme'
+import { useAppearance } from '../composables/useAppearance'
+import { useGame } from '../composables/useGame'
+import { useShell } from '../composables/useShell'
 
 /**
  * The application shell: masthead, navigation, content, footer.
  *
- * This is the component a theme replaces. The legacy `bootstrap` theme did
- * exactly this, overriding only header, footer and navbar against the default
- * theme's 144 files, so the shell is the natural seam to keep.
+ * The core default. A theme replaces it by providing
+ * resources/themes/<slug>/layouts/AppLayout.vue, which is the seam the legacy
+ * `bootstrap` theme used too -- it overrode only header, footer and navbar
+ * against the default theme's 144 files.
+ *
+ * Branding comes from useGame() and navigation behaviour from useShell(), so
+ * this file is presentation only -- which is what lets a theme replace it
+ * without reimplementing how sign-out or active-route matching works.
  */
 const auth = useAuthStore()
 const servers = useServerStore()
-const route = useRoute()
-const router = useRouter()
-const { theme, toggleTheme } = useTheme()
+const { appearance, toggleAppearance } = useAppearance()
+const { game, title: siteTitle, links: externalLinks } = useGame()
 
-const menuOpen = ref(false)
-const signingOut = ref(false)
-
-const siteName = computed(() => document.documentElement.dataset.siteName ?? 'Control Panel')
-
-const links = computed(() => [
-    { to: '/', label: 'Status' },
-    { to: '/rankings/level', label: 'Rankings' },
-    { to: '/who-is-online', label: "Who's online" },
-    ...(auth.isAuthenticated
-        ? [
-              { to: '/characters', label: 'Characters' },
-              { to: '/account', label: 'Account' },
-          ]
-        : []),
-])
-
-function isActive(to: string): boolean {
-    return to === '/' ? route.path === '/' : route.path.startsWith(to.split('/').slice(0, 2).join('/'))
-}
-
-async function signOut(): Promise<void> {
-    signingOut.value = true
-
-    try {
-        await auth.logout()
-        await router.push({ name: 'home' })
-    } finally {
-        signingOut.value = false
-        menuOpen.value = false
-    }
-}
+const { links, isActive, menuOpen, signingOut, signOut } = useShell()
 </script>
 
 <template>
@@ -75,9 +49,9 @@ async function signOut(): Promise<void> {
                         class="grid size-6 place-items-center rounded bg-[var(--color-accent-600)] text-[0.7rem] font-bold text-white"
                         aria-hidden="true"
                     >
-                        {{ siteName.slice(0, 1).toUpperCase() }}
+                        {{ game.shortName.slice(0, 2).toUpperCase() }}
                     </span>
-                    <span class="hidden sm:inline">{{ siteName }}</span>
+                    <span class="hidden sm:inline">{{ siteTitle }}</span>
                 </RouterLink>
 
                 <!--
@@ -115,12 +89,17 @@ async function signOut(): Promise<void> {
                     <button
                         type="button"
                         class="rounded-[var(--radius-panel)] p-1.5 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                        :aria-label="`Switch to ${theme === 'dark' ? 'light' : 'dark'} appearance`"
-                        @click="toggleTheme"
+                        :aria-label="`Switch to ${appearance === 'dark' ? 'light' : 'dark'} appearance`"
+                        @click="toggleAppearance"
                     >
-                        <svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <svg
+                            class="size-4"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                        >
                             <path
-                                v-if="theme === 'dark'"
+                                v-if="appearance === 'dark'"
                                 d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm0 12a4 4 0 100-8 4 4 0 000 8zm7-4a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zm10.07-5.07a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM6.05 13.95a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zm8.485 2.121a1 1 0 01-1.414 0l-.707-.707a1 1 0 111.414-1.414l.707.707a1 1 0 010 1.414zM6.757 6.757a1 1 0 01-1.414 0l-.707-.707A1 1 0 016.05 4.636l.707.707a1 1 0 010 1.414zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1z"
                             />
                             <path
@@ -139,7 +118,9 @@ async function signOut(): Promise<void> {
                                 Sign out
                             </AppButton>
                         </template>
-                        <AppButton v-else variant="primary" size="sm" to="/sign-in">Sign in</AppButton>
+                        <AppButton v-else variant="primary" size="sm" to="/sign-in"
+                            >Sign in</AppButton
+                        >
                     </div>
 
                     <button
@@ -150,7 +131,12 @@ async function signOut(): Promise<void> {
                         aria-label="Menu"
                         @click="menuOpen = !menuOpen"
                     >
-                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <svg
+                            class="size-5"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                        >
                             <path
                                 fill-rule="evenodd"
                                 d="M3 5.75A.75.75 0 013.75 5h12.5a.75.75 0 010 1.5H3.75A.75.75 0 013 5.75zm0 4.5A.75.75 0 013.75 9.5h12.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75zm0 4.5a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z"
@@ -183,10 +169,21 @@ async function signOut(): Promise<void> {
                 </RouterLink>
 
                 <div class="mt-2 border-t border-[var(--border-subtle)] pt-2">
-                    <AppButton v-if="auth.isAuthenticated" block :loading="signingOut" @click="signOut">
+                    <AppButton
+                        v-if="auth.isAuthenticated"
+                        block
+                        :loading="signingOut"
+                        @click="signOut"
+                    >
                         Sign out
                     </AppButton>
-                    <AppButton v-else variant="primary" block to="/sign-in" @click="menuOpen = false">
+                    <AppButton
+                        v-else
+                        variant="primary"
+                        block
+                        to="/sign-in"
+                        @click="menuOpen = false"
+                    >
                         Sign in
                     </AppButton>
                 </div>
@@ -201,7 +198,29 @@ async function signOut(): Promise<void> {
             <div
                 class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 text-[0.8125rem] text-[var(--text-muted)]"
             >
-                <p>{{ siteName }}</p>
+                <p>{{ siteTitle }}</p>
+
+                <!--
+                    Only links the operator configured in config/game.php are
+                    rendered, so the footer never carries a dead item.
+                -->
+                <nav
+                    v-if="externalLinks.length > 0"
+                    aria-label="Elsewhere"
+                    class="flex flex-wrap gap-3"
+                >
+                    <a
+                        v-for="[key, url] in externalLinks"
+                        :key="key"
+                        :href="url"
+                        rel="noreferrer noopener"
+                        target="_blank"
+                        class="capitalize underline hover:text-[var(--text-secondary)]"
+                    >
+                        {{ key }}
+                    </a>
+                </nav>
+
                 <p>
                     A control panel for
                     <a

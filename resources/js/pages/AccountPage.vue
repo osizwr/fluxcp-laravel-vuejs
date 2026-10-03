@@ -42,7 +42,11 @@ function formatDate(value: string | null): string {
         </AlertMessage>
 
         <div class="grid gap-3 sm:grid-cols-3">
-            <StatTile label="Credits" :value="account.credits.toLocaleString()" context="Item shop balance" />
+            <StatTile
+                label="Credits"
+                :value="account.credits.toLocaleString()"
+                context="Item shop balance"
+            />
             <StatTile label="Sign-ins" :value="account.login_count.toLocaleString()" />
             <StatTile label="Character slots" :value="account.character_slots" />
         </div>

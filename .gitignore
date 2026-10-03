@@ -28,3 +28,5 @@ Thumbs.db
 
 # Legacy FluxCP reference checkout (upstream repo, kept locally for migration reference)
 /legacy
+# Theme assets published by `php artisan theme:publish`
+/public/themes

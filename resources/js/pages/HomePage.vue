@@ -49,7 +49,11 @@ function processState(up: boolean): 'up' | 'down' {
             </template>
         </PageHeader>
 
-        <AlertMessage v-if="servers.woeInProgress" tone="warning" title="War of Emperium in progress">
+        <AlertMessage
+            v-if="servers.woeInProgress"
+            tone="warning"
+            title="War of Emperium in progress"
+        >
             Some pages are unavailable until the siege ends.
         </AlertMessage>
 
@@ -122,7 +126,9 @@ function processState(up: boolean): 'up' | 'down' {
                             up state, because which one is down tells a player
                             whether to wait or to report it.
                         -->
-                        <dl class="mt-3 grid grid-cols-3 gap-2 border-t border-[var(--border-subtle)] pt-3">
+                        <dl
+                            class="mt-3 grid grid-cols-3 gap-2 border-t border-[var(--border-subtle)] pt-3"
+                        >
                             <div>
                                 <dt class="text-[0.75rem] text-[var(--text-muted)]">Login</dt>
                                 <dd class="mt-0.5">

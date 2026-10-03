@@ -34,7 +34,11 @@ const chipBackground = {
         class="inline-flex items-center gap-1.5 text-[0.8125rem] font-medium whitespace-nowrap"
         :class="props.bare ? '' : ['rounded-full px-2 py-0.5', chipBackground[props.state]]"
     >
-        <span class="size-1.5 shrink-0 rounded-full" :class="dotColor[props.state]" aria-hidden="true" />
+        <span
+            class="size-1.5 shrink-0 rounded-full"
+            :class="dotColor[props.state]"
+            aria-hidden="true"
+        />
         {{ props.label }}
     </span>
 </template>

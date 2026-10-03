@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { bootstrap } from '../theme/bootstrap'
+import { themedPage } from '../theme/resolve'
 
 /**
  * Client routes.
@@ -13,43 +15,43 @@ const routes: RouteRecordRaw[] = [
     {
         path: '/',
         name: 'home',
-        component: () => import('../pages/HomePage.vue'),
+        component: themedPage('HomePage', () => import('../pages/HomePage.vue')),
         meta: { title: 'Server status' },
     },
     {
         path: '/sign-in',
         name: 'login',
-        component: () => import('../pages/LoginPage.vue'),
-        meta: { title: 'Sign in', guestOnly: true },
+        component: themedPage('LoginPage', () => import('../pages/LoginPage.vue')),
+        meta: { title: 'Sign in', guestOnly: true, layout: 'AuthLayout' },
     },
     {
         path: '/account',
         name: 'account',
-        component: () => import('../pages/AccountPage.vue'),
+        component: themedPage('AccountPage', () => import('../pages/AccountPage.vue')),
         meta: { title: 'My account', requiresAuth: true },
     },
     {
         path: '/characters',
         name: 'characters',
-        component: () => import('../pages/CharactersPage.vue'),
+        component: themedPage('CharactersPage', () => import('../pages/CharactersPage.vue')),
         meta: { title: 'My characters', requiresAuth: true },
     },
     {
         path: '/who-is-online',
         name: 'online',
-        component: () => import('../pages/OnlinePage.vue'),
+        component: themedPage('OnlinePage', () => import('../pages/OnlinePage.vue')),
         meta: { title: "Who's online" },
     },
     {
         path: '/rankings/:ladder(level|zeny)',
         name: 'rankings',
-        component: () => import('../pages/RankingsPage.vue'),
+        component: themedPage('RankingsPage', () => import('../pages/RankingsPage.vue')),
         meta: { title: 'Rankings' },
     },
     {
         path: '/:pathMatch(.*)*',
         name: 'not-found',
-        component: () => import('../pages/NotFoundPage.vue'),
+        component: themedPage('NotFoundPage', () => import('../pages/NotFoundPage.vue')),
         meta: { title: 'Page not found' },
     },
 ]
@@ -84,7 +86,7 @@ router.beforeEach(async (to) => {
 
 router.afterEach((to) => {
     const title = typeof to.meta.title === 'string' ? to.meta.title : null
-    const site = document.documentElement.dataset.siteName ?? 'Control Panel'
+    const site = bootstrap().game.name
 
     document.title = title ? `${title} — ${site}` : site
 })

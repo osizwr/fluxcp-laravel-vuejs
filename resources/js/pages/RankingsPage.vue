@@ -106,7 +106,9 @@ watch(ladder, load, { immediate: true })
             </template>
 
             <template #[`cell:guild`]="{ row }">
-                <span v-if="row.guild" class="text-[var(--text-secondary)]">{{ row.guild.name }}</span>
+                <span v-if="row.guild" class="text-[var(--text-secondary)]">{{
+                    row.guild.name
+                }}</span>
                 <span v-else class="text-[var(--text-muted)]">—</span>
             </template>
         </DataTable>

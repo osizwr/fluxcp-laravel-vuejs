@@ -26,10 +26,18 @@ const hintId = `${id}-hint`
         <slot
             :id="id"
             :invalid="Boolean(props.error)"
-            :described-by="[props.error ? errorId : null, props.hint ? hintId : null].filter(Boolean).join(' ') || undefined"
+            :described-by="
+                [props.error ? errorId : null, props.hint ? hintId : null]
+                    .filter(Boolean)
+                    .join(' ') || undefined
+            "
         />
 
-        <p v-if="props.hint && !props.error" :id="hintId" class="mt-1 text-[0.8125rem] text-[var(--text-muted)]">
+        <p
+            v-if="props.hint && !props.error"
+            :id="hintId"
+            class="mt-1 text-[0.8125rem] text-[var(--text-muted)]"
+        >
             {{ props.hint }}
         </p>
 
