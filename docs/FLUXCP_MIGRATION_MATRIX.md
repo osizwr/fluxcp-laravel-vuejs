@@ -24,10 +24,10 @@ concerns are tracked in their own tables below.
 
 | Status | Actions | Share |
 | --- | --: | --: |
-| `IMPLEMENTING` | 4 | 3% |
+| `IMPLEMENTING` | 5 | 4% |
 | `INTENTIONALLY_REPLACED` | 7 | 5% |
-| `NOT_STARTED` | 122 | 88% |
-| `VERIFIED` | 6 | 4% |
+| `NOT_STARTED` | 119 | 86% |
+| `VERIFIED` | 8 | 6% |
 | **Total** | **139** | |
 
 ## Module actions
@@ -239,9 +239,9 @@ concerns are tracked in their own tables below.
 | `add` | `modules/news/add.php` | `ADMIN` | `NOT_STARTED` |  |
 | `delete` | `modules/news/delete.php` | `ADMIN` | `NOT_STARTED` |  |
 | `edit` | `modules/news/edit.php` | `ADMIN` | `NOT_STARTED` |  |
-| `index` | `modules/news/index.php` | `ANYONE` | `NOT_STARTED` |  |
+| `index` | `modules/news/index.php` | `ANYONE` | `VERIFIED` | Public listing from `cp_cmsnews`, newest first, paginated. Excerpts are derived with tags stripped; the stored rich text is returned only for a single article. No category or thumbnail, because the legacy schema has neither. 16 tests shared with the other site-data endpoints. |
 | `manage` | `modules/news/manage.php` | `ADMIN` | `NOT_STARTED` |  |
-| `view` | `modules/news/view.php` | `ANYONE` | `NOT_STARTED` |  |
+| `view` | `modules/news/view.php` | `ANYONE` | `VERIFIED` | Single article including its body. |
 
 ### `pages`
 
@@ -282,7 +282,7 @@ concerns are tracked in their own tables below.
 
 | Action | Legacy file | Access | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `info` | `modules/server/info.php` | `ANYONE` | `NOT_STARTED` |  |
+| `info` | `modules/server/info.php` | `ANYONE` | `IMPLEMENTING` | `server.statistics` provides the aggregate counts the statistics block needs (accounts, characters, guilds, players online). The legacy page also listed rates and WoE times, which are configured rather than queried and are not yet surfaced. |
 | `status` | `modules/server/status.php` | `ANYONE` | `VERIFIED` | Per-process reachability, live and peak player counts, WoE state. Measurement moved off the request path and broadcast over Reverb (D14). Peak now read from the correct database. 5 tests. |
 | `status-xml` | `modules/server/status-xml.php` | `ANYONE` | `NOT_STARTED` |  |
 

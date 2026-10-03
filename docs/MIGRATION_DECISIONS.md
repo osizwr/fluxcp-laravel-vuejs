@@ -185,15 +185,22 @@ and silently serves pre-renewal stats while ignoring every custom item on a real
 add-ons when a file is absent. The shipped `bootstrap` theme uses this to override only
 `header.php`, `footer.php`, `main/navbar.php` and CSS — 4 files against the default theme's 144.
 
-**Decision.** Two mechanisms, in this order of preference:
+**Decision.** Three mechanisms, in increasing order of how much a theme takes over:
 
 1. **Design tokens.** Core components read semantic CSS custom properties rather than a
    palette, so a theme shipping nothing but `variables.css` restyles the whole application.
    The `slate` theme is exactly that and nothing more.
-2. **File-resolution overrides.** A theme may replace any core page, layout or component by
-   putting a file of the same name in `resources/themes/<slug>/{pages,layouts,components}/`.
-   Resolution is a glob lookup in `resources/js/theme/resolve.ts` with fallback to the core
-   file — the same "override one file, inherit the rest" shape the legacy system had.
+2. **Block overrides.** A page is built from named sections — hero, navbar, server status,
+   rankings, news, footer. Eleven ship in `resources/js/blocks/`, and a theme replaces one by
+   putting a file of the same name in `resources/themes/<slug>/blocks/`. `fantasy` overrides
+   eight and inherits three, so the fallback is exercised in production rather than only in a
+   test.
+3. **Page composition.** A theme declares a page in `theme.json` as a layout plus an ordered
+   list of block names. Reordering the page is editing that list; adding or removing a section
+   touches no component. `resources/js/pages/ComposedPage.vue` renders it and is a loop.
+
+Whole pages, layouts and components can still be overridden by file resolution, which is the
+same "override one file, inherit the rest" shape the legacy system had.
 
 ### This revises an earlier version of this decision
 
@@ -211,20 +218,36 @@ restructure a masthead or lay a dashboard out differently, and that is precisely
 legacy mechanism was for. Dropping it would have meant a theme could change a panel's colours
 but not its shape.
 
-**What the token-first ordering still buys.** A derivative skin needs no overrides, so it
-cannot drift from the core as pages change. Overrides are for structural difference, and a
-theme that overrides a page has opted into maintaining it.
+**Why the ordering matters.** Each layer costs more maintenance than the one above it. A
+palette cannot drift from the core as pages change; an overridden block drifts only if that
+section changes; an overridden page is a fork of that page. Preferring the cheapest layer that
+does the job is what keeps themes maintainable rather than abandoned.
+
+**Why composition rather than only overrides.** Overriding a page to reorder its sections means
+copying the whole page, and then the copy stops receiving improvements. A composition expresses
+the same intent — these sections, this order — as data, so the blocks stay shared.
+
+**What it deliberately is not.** Compositions have no conditionals, no nesting, no slots and no
+per-block visibility rules. A section needing real logic should be a block, where it is
+ordinary Vue with types and a test, rather than an expression language in JSON. The brief for
+this work asked for a modular theme engine and explicitly not an overengineered CMS; that line
+is where it was drawn.
 
 **Guard rails, because an override is a fork of that file.**
 
 - Shell behaviour — the navigation list, active-route matching, the sign-out sequence — lives in
-  `useShell()`, and branding in `useGame()`. A theme's layout consumes them. Without this, every
+  `useShell()`, and branding in `useGame()`. A theme's blocks consume them. Without this, every
   theme would copy the sign-out sequence and the fourth one would forget to clear the session.
+- **Blocks receive data through core composables** (`resources/js/blocks/data.ts`), each
+  returning a contract from `contracts.ts`. A block never calls the API. The contracts are
+  shared, so a theme cannot invent its own backend shape — if it could, switching themes would
+  mean changing the API and the backend would no longer be independent of the presentation.
 - Themes may not fetch data or make authorisation decisions. A test scans every theme file for
   `DB::`, `Hash::`, `Gate::`, `fetch(` and the hardcoded game name, and another asserts the API
   returns byte-identical responses whichever theme is active.
-- `npm run verify:themes` fails when an override is not in the resolver's glob, because the
-  symptom otherwise is the core file being used with no error at all.
+- `npm run verify:themes` fails when an override is not in the resolver's glob, or when a
+  composition names a block nothing provides. Both symptoms are otherwise silent: the core file
+  is used, or the section is simply missing, with no error either way.
 
 **What is preserved from the legacy system.** Override one file and inherit the rest; restyle
 and replace chrome without forking every page; and a switchable theme — now an operator setting

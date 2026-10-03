@@ -1,5 +1,6 @@
 import { defineAsyncComponent, type Component } from 'vue'
-import { activeThemeSlug } from './bootstrap'
+import { activeThemeSlug, bootstrap } from './bootstrap'
+import { compositionFor, hasComposition } from './blocks'
 
 /**
  * Resolves a component, layout or page to the active theme's version of it,
@@ -102,4 +103,85 @@ export function overridesProvidedBy(slug: string): Record<string, string[]> {
         layouts: collect(themeLayouts, 'layouts'),
         components: collect(themeComponents, 'components'),
     }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Routes                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The component for a route, resolved through the three levels a theme has.
+ *
+ *   1. the theme's own pages/<Name>.vue   -- full control, a hand-built page
+ *   2. a composition in theme.json        -- declarative, a list of blocks
+ *   3. the core pages/<Name>.vue          -- the application's default
+ *
+ * A theme can therefore take over a page entirely, rearrange it from
+ * configuration, or leave it alone, and the router does not care which.
+ *
+ * @param pageKey The route name, which is how a composition addresses a page.
+ */
+export function themedRoute(pageKey: string, name: string, fallback: ModuleLoader): ModuleLoader {
+    const override = findOverride(themePages, 'pages', name)
+
+    if (override !== null) {
+        return override
+    }
+
+    if (hasComposition(pageKey)) {
+        return () => import('../pages/ComposedPage.vue')
+    }
+
+    return fallback
+}
+
+/* -------------------------------------------------------------------------- */
+/* Layouts by role                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Core layouts, by component name.
+ *
+ * A theme overrides any of these by providing layouts/<Name>.vue; this is the
+ * fallback each name resolves to.
+ */
+const coreLayouts: Record<string, ModuleLoader> = {
+    AppLayout: () => import('../layouts/AppLayout.vue'),
+    PublicLayout: () => import('../layouts/PublicLayout.vue'),
+    AuthLayout: () => import('../layouts/AuthLayout.vue'),
+}
+
+/**
+ * The default component for each layout role.
+ *
+ * Roles are the vocabulary a theme uses in theme.json, so that a theme can say
+ * "this page is public" without knowing what the core calls that layout.
+ */
+const roleDefaults: Record<string, string> = {
+    public: 'PublicLayout',
+    app: 'AppLayout',
+    auth: 'AuthLayout',
+}
+
+/**
+ * Resolve a layout role to a component.
+ *
+ * The theme's `layouts` map may rename the component for a role; otherwise the
+ * core default for that role is used. An unknown role falls back to the
+ * application shell rather than rendering nothing.
+ */
+export function layoutForRole(role: string): Component {
+    const themeLayouts = bootstrap().theme.layouts
+    const name = themeLayouts[role] ?? roleDefaults[role] ?? 'AppLayout'
+    const fallback = coreLayouts[name] ?? coreLayouts.AppLayout
+
+    return themedLayout(name, fallback)
+}
+
+/**
+ * The layout role a page should use: the composition's choice, then the
+ * route's own declaration, then the application shell.
+ */
+export function layoutRoleFor(pageKey: string, routeDeclared?: string): string {
+    return compositionFor(pageKey)?.layout ?? routeDeclared ?? 'app'
 }

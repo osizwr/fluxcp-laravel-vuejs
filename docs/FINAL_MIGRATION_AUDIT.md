@@ -102,14 +102,14 @@ COMPATIBILITY_REPORT.md section 1.5.
 
 | | |
 | --- | --- |
-| PHP files | 66 (6,856 lines) |
+| PHP files | 71 (7,465 lines) |
 | Configuration | 18 files (2,676 lines) |
-| Vue components | 22 (incl. 2 themes) |
-| TypeScript modules | 14 |
-| Frontend | 3,793 lines (incl. themes) |
+| Vue components | 41 (11 core blocks, 8 fantasy blocks, pages, layouts, UI) |
+| TypeScript modules | 18 |
+| Frontend | 5,965 lines (incl. themes) |
 | Migrations | 4 |
 | Factories | 4 |
-| Tests | 17 files, **168 tests, 445 assertions** |
+| Tests | 19 files, **197 tests, 580 assertions** |
 | Documentation | 9 documents |
 
 ### Complete and tested
@@ -134,7 +134,10 @@ COMPATIBILITY_REPORT.md section 1.5.
 | Realtime | Reverb with a polling fallback, verified end to end with a WebSocket client |
 | Scheduling | Status measurement moved out of the request path |
 | Design system | Tokens, light/dark, accessible components |
-| Theme system | Swappable skins via `APP_THEME`: design tokens plus file-resolution overrides for pages, layouts and components. Two themes ship. |
+| Theme system | Swappable skins via `APP_THEME`, in three layers: design tokens, block overrides, and declarative page composition. Two themes ship. |
+| Block system | 11 core blocks, overridable per theme with fallback to core. `fantasy` overrides 8 and inherits 3. |
+| Page composition | A theme declares a page as an ordered list of blocks in `theme.json`; reordering a page is configuration, not code. |
+| Site data | Statistics, class distribution and news endpoints, so the front-page blocks have real data rather than decoration. |
 | Game branding | `config/game.php`, consumed through `useGame()`; no component hardcodes the game name |
 
 ### Deliberately not ported
@@ -167,7 +170,7 @@ COMPATIBILITY_REPORT.md section 1.5.
 | Donations | 6 | PayPal flow, IPN, history, trusted donors |
 | Character | 8 | Detail view, slot change, look and position reset, divorce, map statistics, preferences |
 | History | 6 | Self-service account history |
-| News and pages CMS | 11 | Public and admin |
+| News and pages CMS | 9 | The admin half of news, and all of the static-page CMS. Public news listing and article views are done. |
 | IP bans | 5 | |
 | Item database | 3 | Depends on the temporary-table merge (D6) |
 | Monster database | 2 | Same |
@@ -205,7 +208,7 @@ Every command below was run, and these are its real results.
 
 | Command | Result |
 | --- | --- |
-| `composer test` | **168 passed**, 445 assertions, 0 failures, 9s |
+| `composer test` | **197 passed**, 580 assertions, 0 failures, 10s |
 | `composer lint` (Pint) | **passed** |
 | `npm run lint` (ESLint + `vue-tsc`) | **passed**, 0 errors, 0 warnings |
 | `npm run build` | **passed**, 16 chunks, 41.7 kB gzipped entry |
@@ -351,7 +354,7 @@ Against the project's own checklist:
 | ✅ | Queues configured |
 | 🟨 | API implemented — **8 endpoints** |
 | 🟨 | Security review — **applied to what exists; no review of unbuilt code** |
-| ✅ | Automated tests created — 168 |
+| ✅ | Automated tests created — 197 |
 | 🟨 | Legacy/new compatibility testing — **for what is built** |
 | ✅ | Production build succeeds |
 | ✅ | No placeholder functionality |

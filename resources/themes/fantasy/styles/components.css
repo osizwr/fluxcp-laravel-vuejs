@@ -1,19 +1,18 @@
 /*
 |--------------------------------------------------------------------------
-| Fantasy — surfaces and ornament
+| Fantasy -- core component restyles
 |--------------------------------------------------------------------------
 |
-| Restyles the core component classes and adds a few of this theme's own.
+| How the *application's own* components look in this theme: the page ground,
+| typography, `.panel`, form fields and focus. Block ornament lives in
+| blocks.css.
 |
 | Everything is scoped under `[data-theme-slug='fantasy']` so that installing a
 | second theme cannot inherit any of it.
 |
-| The restraint here is deliberate. `.panel` -- which every card, table and
-| empty state in the application uses -- gets only a hairline top highlight.
-| The corner brackets are an opt-in class the theme's own components apply to
-| the two or three places that should feel like a framed plate. Decorating
-| every panel would make none of them read as special, which is the usual way
-| a themed interface ends up looking cluttered rather than art-directed.
+| `.panel` is used by every card, table and empty state in the application, so
+| it gets only a hairline top highlight here. The heavier ornament is opt-in
+| and lives with the blocks that apply it.
 |
 | All original CSS. No third-party or game artwork; the only external asset is
 | the Cinzel webfont, under the SIL Open Font License.
@@ -92,70 +91,6 @@
     box-shadow: inset 0 1px 0 color-mix(in oklab, var(--color-accent-300) 12%, transparent);
 }
 
-/*
-| The framed plate: thin gold brackets at the corners.
-|
-| Opt-in, applied by this theme's own components to a small number of places.
-*/
-[data-theme-slug='fantasy'] .theme-framed {
-    position: relative;
-}
-
-[data-theme-slug='fantasy'] .theme-framed::before,
-[data-theme-slug='fantasy'] .theme-framed::after {
-    content: '';
-    position: absolute;
-    width: var(--theme-bracket-size);
-    height: var(--theme-bracket-size);
-    border-color: var(--color-accent-600);
-    border-style: solid;
-    pointer-events: none;
-}
-
-[data-theme-slug='fantasy'] .theme-framed::before {
-    top: -1px;
-    left: -1px;
-    border-width: 1px 0 0 1px;
-}
-
-[data-theme-slug='fantasy'] .theme-framed::after {
-    right: -1px;
-    bottom: -1px;
-    border-width: 0 1px 1px 0;
-}
-
-/* ---------------------------------------------------------------------------
-| Rules and separators
-| -------------------------------------------------------------------------- */
-
-/*
-| A hairline that fades out at both ends with a small lozenge at its centre.
-| Used between major sections instead of a plain border.
-*/
-[data-theme-slug='fantasy'] .theme-rule {
-    position: relative;
-    height: 1px;
-    border: 0;
-    background: linear-gradient(
-        to right,
-        transparent,
-        var(--theme-rule-color) 20%,
-        var(--theme-rule-color) 80%,
-        transparent
-    );
-}
-
-[data-theme-slug='fantasy'] .theme-rule::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0.3rem;
-    height: 0.3rem;
-    background: var(--color-accent-600);
-    transform: translate(-50%, -50%) rotate(45deg);
-}
-
 /* ---------------------------------------------------------------------------
 | Forms
 | -------------------------------------------------------------------------- */
@@ -192,61 +127,10 @@
 }
 
 /* ---------------------------------------------------------------------------
-| Live indicator
-| -------------------------------------------------------------------------- */
-
-/*
-| Marks a figure that updates by itself. Arcane violet, so it is distinct from
-| both the status colours and the gold used for actions.
-*/
-[data-theme-slug='fantasy'] .theme-live {
-    position: relative;
-    padding-left: 0.85rem;
-}
-
-[data-theme-slug='fantasy'] .theme-live::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 0.4rem;
-    height: 0.4rem;
-    margin-top: -0.2rem;
-    border-radius: 50%;
-    background: var(--theme-arcane);
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--theme-arcane) 60%, transparent);
-    animation: theme-pulse 2.4s ease-out infinite;
-}
-
-@keyframes theme-pulse {
-    70% {
-        box-shadow: 0 0 0 0.35rem transparent;
-    }
-    100% {
-        box-shadow: 0 0 0 0 transparent;
-    }
-}
-
-/* ---------------------------------------------------------------------------
 | Scrollbars
 | -------------------------------------------------------------------------- */
 
 [data-theme-slug='fantasy'] * {
     scrollbar-color: var(--border-strong) transparent;
     scrollbar-width: thin;
-}
-
-/* ---------------------------------------------------------------------------
-| Motion
-| -------------------------------------------------------------------------- */
-
-/*
-| The core stylesheet already neutralises transitions under reduced motion.
-| The pulse above is this theme's own addition, so it is this theme's job to
-| stop it: an indefinitely animating dot is exactly what the preference is for.
-*/
-@media (prefers-reduced-motion: reduce) {
-    [data-theme-slug='fantasy'] .theme-live::before {
-        animation: none;
-    }
 }

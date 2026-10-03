@@ -2,10 +2,11 @@
 import { computed } from 'vue'
 
 /**
- * A button, or a router link styled as one.
+ * A button, a router link, or an external anchor -- styled identically.
  *
- * Renders an <a> when given a `to`, so navigation stays a real link that can be
- * opened in a new tab, rather than a div with a click handler.
+ * Navigation renders as a real link so it can be opened in a new tab, rather
+ * than a div with a click handler. An external `href` also gets
+ * rel="noreferrer noopener", which is easy to forget at each call site.
  */
 const props = withDefaults(
     defineProps<{
@@ -14,7 +15,10 @@ const props = withDefaults(
         type?: 'button' | 'submit'
         disabled?: boolean
         loading?: boolean
+        /** Internal route. */
         to?: string
+        /** External URL. Mutually exclusive with `to`. */
+        href?: string
         block?: boolean
     }>(),
     {
@@ -54,6 +58,16 @@ const classes = computed(() => [
     <RouterLink v-if="props.to" :to="props.to" :class="classes">
         <slot />
     </RouterLink>
+
+    <a
+        v-else-if="props.href"
+        :href="props.href"
+        :class="classes"
+        rel="noreferrer noopener"
+        target="_blank"
+    >
+        <slot />
+    </a>
 
     <button
         v-else

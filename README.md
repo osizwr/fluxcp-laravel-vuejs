@@ -35,8 +35,10 @@ pointed at an existing install without migrating data.
 | Multi-server | Several server groups, several char/map pairs per group |
 | Authorisation | All 133 route permissions and 47 abilities, deny by default |
 | Schema install | All 25 `cp_*` tables, non-destructive |
-| Theming | Swappable skins via `APP_THEME`; two themes ship |
+| Theming | Swappable skins via `APP_THEME`: tokens, blocks and page composition |
 | Branding | Game name, logo and links from config, no component edits |
+| News | Public listing and article view, from the legacy CMS table |
+| Statistics | Account, character and guild counts; class distribution |
 
 Not built yet, among much else: registration, password reset, e-mail changes,
 the item shop and its cart, donations, guild pages, the item and monster
@@ -190,12 +192,32 @@ Two themes ship: **fantasy** (dark and warm, the default) and **slate** (cool,
 light-first, and nothing but a palette — a worked example of how little a theme
 needs).
 
-A theme restyles by redefining semantic CSS tokens, which the core components
-all read, and restructures by dropping a file into
-`resources/themes/<slug>/{pages,layouts,components}/` to override the core one.
-Themes own no logic: navigation behaviour comes from `useShell()`, branding from
-`useGame()`, and data from the existing stores, with tests asserting the API is
-byte-identical whichever theme is active.
+A theme works in three layers, and uses only as many as it needs:
+
+| Layer | Changes | Costs |
+| --- | --- | --- |
+| Design tokens | Colours, type, geometry everywhere | One stylesheet |
+| Blocks | How a page section looks and is structured | One component per section |
+| Page composition | Which sections a page has, and their order | A list in `theme.json` |
+
+Eleven core blocks ship — hero, navbar, server status, statistics, class
+showcase, rankings, news, features, CTA, announcement bar, footer — and a theme
+overrides the ones it wants. `fantasy` overrides eight and inherits three. Its
+front page is composed declaratively:
+
+```json
+"pages": {
+    "home": {
+        "layout": "public",
+        "blocks": ["hero", { "block": "server-status", "props": { "detailed": true } }, "…"]
+    }
+}
+```
+
+Themes own no logic: navigation comes from `useShell()`, branding from
+`useGame()`, and data from core composables in `resources/js/blocks/data.ts`. A
+block never calls the API. Tests assert the API is byte-identical whichever
+theme is active, and that no theme file contains data access.
 
 Switching between installed themes needs only `.env`. Adding a new theme
 directory needs `npm run build`, because Vite has to have seen the files.

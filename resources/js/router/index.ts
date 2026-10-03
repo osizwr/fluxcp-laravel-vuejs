@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { bootstrap } from '../theme/bootstrap'
-import { themedPage } from '../theme/resolve'
+import { themedRoute } from '../theme/resolve'
 
 /**
  * Client routes.
@@ -15,43 +15,45 @@ const routes: RouteRecordRaw[] = [
     {
         path: '/',
         name: 'home',
-        component: themedPage('HomePage', () => import('../pages/HomePage.vue')),
-        meta: { title: 'Server status' },
+        component: themedRoute('home', 'HomePage', () => import('../pages/HomePage.vue')),
+        // The front page is public-facing, so it uses the public shell by
+        // default. A theme's composition may override the role per page.
+        meta: { title: 'Server status', layout: 'public' },
     },
     {
         path: '/sign-in',
         name: 'login',
-        component: themedPage('LoginPage', () => import('../pages/LoginPage.vue')),
-        meta: { title: 'Sign in', guestOnly: true, layout: 'AuthLayout' },
+        component: themedRoute('login', 'LoginPage', () => import('../pages/LoginPage.vue')),
+        meta: { title: 'Sign in', guestOnly: true, layout: 'auth' },
     },
     {
         path: '/account',
         name: 'account',
-        component: themedPage('AccountPage', () => import('../pages/AccountPage.vue')),
+        component: themedRoute('account', 'AccountPage', () => import('../pages/AccountPage.vue')),
         meta: { title: 'My account', requiresAuth: true },
     },
     {
         path: '/characters',
         name: 'characters',
-        component: themedPage('CharactersPage', () => import('../pages/CharactersPage.vue')),
+        component: themedRoute('characters', 'CharactersPage', () => import('../pages/CharactersPage.vue')),
         meta: { title: 'My characters', requiresAuth: true },
     },
     {
         path: '/who-is-online',
         name: 'online',
-        component: themedPage('OnlinePage', () => import('../pages/OnlinePage.vue')),
+        component: themedRoute('online', 'OnlinePage', () => import('../pages/OnlinePage.vue')),
         meta: { title: "Who's online" },
     },
     {
         path: '/rankings/:ladder(level|zeny)',
         name: 'rankings',
-        component: themedPage('RankingsPage', () => import('../pages/RankingsPage.vue')),
+        component: themedRoute('rankings', 'RankingsPage', () => import('../pages/RankingsPage.vue')),
         meta: { title: 'Rankings' },
     },
     {
         path: '/:pathMatch(.*)*',
         name: 'not-found',
-        component: themedPage('NotFoundPage', () => import('../pages/NotFoundPage.vue')),
+        component: themedRoute('not-found', 'NotFoundPage', () => import('../pages/NotFoundPage.vue')),
         meta: { title: 'Page not found' },
     },
 ]

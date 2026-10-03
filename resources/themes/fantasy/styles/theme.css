@@ -4,9 +4,11 @@
 |--------------------------------------------------------------------------
 |
 | Vite builds this file as its own entrypoint, and Blade links it for whichever
-| theme APP_THEME names. Splitting the theme into palette and surfaces keeps
-| the two kinds of change apart: a derivative skin usually needs only
-| variables.css.
+| theme APP_THEME names. The three parts are split by what they change:
+|
+|   variables.css   the palette -- a derivative skin usually needs only this
+|   components.css  how the application's own components look
+|   blocks.css      how this theme's page sections are decorated
 |
 | The font is loaded here rather than from the page shell so that a theme owns
 | its own typography. Cinzel is licensed under the SIL Open Font License 1.1;
@@ -18,3 +20,4 @@
 
 @import './variables.css';
 @import './components.css';
+@import './blocks.css';

@@ -46,6 +46,8 @@ final readonly class ClientBootstrap
             'game' => $this->game(),
             'theme' => $this->themes->active()->toClientArray(),
             'broadcasting' => $this->broadcasting(),
+            'announcement' => $this->announcement(),
+            'features' => $this->features(),
         ];
     }
 
@@ -89,6 +91,84 @@ final readonly class ClientBootstrap
              */
             'links' => (object) $links,
         ];
+    }
+
+    /**
+     * The operator's announcement, or null when there is nothing to announce.
+     *
+     * Null rather than an empty object, so a block can be absent instead of
+     * rendering an empty bar. A placeholder is worse than a missing section.
+     *
+     * The dismissal id is a hash of the message rather than something the
+     * operator maintains: editing the text produces a new id, so an
+     * announcement someone dismissed does not hide its replacement.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function announcement(): ?array
+    {
+        $announcement = (array) $this->config->get('game.announcement', []);
+        $message = trim((string) ($announcement['message'] ?? ''));
+
+        if (($announcement['enabled'] ?? false) !== true || $message === '') {
+            return null;
+        }
+
+        $tone = in_array($announcement['tone'] ?? null, ['info', 'event', 'maintenance'], true)
+            ? (string) $announcement['tone']
+            : 'info';
+
+        $url = is_string($announcement['url'] ?? null) && trim((string) $announcement['url']) !== ''
+            ? (string) $announcement['url']
+            : null;
+
+        return [
+            'id' => substr(hash('sha256', $message), 0, 12),
+            'message' => $message,
+            'url' => $url,
+            'label' => is_string($announcement['label'] ?? null) && $announcement['label'] !== ''
+                ? (string) $announcement['label']
+                : null,
+            'tone' => $tone,
+            'dismissible' => ($announcement['dismissible'] ?? true) === true,
+        ];
+    }
+
+    /**
+     * The operator's feature list.
+     *
+     * Entries without a title are dropped rather than rendered blank, and a
+     * null url means the entry is plain text rather than a dead link.
+     *
+     * @return list<array{title: string, description: string, url: string|null}>
+     */
+    private function features(): array
+    {
+        $features = [];
+
+        foreach ((array) $this->config->get('game.features', []) as $feature) {
+            if (! is_array($feature)) {
+                continue;
+            }
+
+            $title = trim((string) ($feature['title'] ?? ''));
+
+            if ($title === '') {
+                continue;
+            }
+
+            $url = is_string($feature['url'] ?? null) && trim((string) $feature['url']) !== ''
+                ? (string) $feature['url']
+                : null;
+
+            $features[] = [
+                'title' => $title,
+                'description' => trim((string) ($feature['description'] ?? '')),
+                'url' => $url,
+            ];
+        }
+
+        return $features;
     }
 
     /**

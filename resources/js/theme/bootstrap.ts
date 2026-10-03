@@ -27,8 +27,12 @@ const FALLBACK: PanelBootstrap = {
         version: '0.0.0',
         supports: {},
         defaultAppearance: null,
+        layouts: {},
+        pages: {},
     },
     broadcasting: null,
+    announcement: null,
+    features: [],
 }
 
 let cached: PanelBootstrap | null = null
@@ -51,6 +55,8 @@ export function bootstrap(): PanelBootstrap {
             game: { ...FALLBACK.game, ...(parsed.game ?? {}) },
             theme: { ...FALLBACK.theme, ...(parsed.theme ?? {}) },
             broadcasting: parsed.broadcasting ?? null,
+            announcement: parsed.announcement ?? null,
+            features: parsed.features ?? [],
         }
     } catch {
         cached = FALLBACK

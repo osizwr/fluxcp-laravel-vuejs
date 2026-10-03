@@ -2,11 +2,33 @@
     "name": "Fantasy",
     "version": "1.0.0",
     "author": "",
-    "description": "A dark, warm control panel skin in the manner of an adventurer's guild ledger: parchment, iron and antique gold.",
+    "description": "A dark, warm skin in the manner of an adventurer's guild ledger: parchment, iron and antique gold.",
     "supports": {
         "dark_mode": true,
         "light_mode": true,
         "mobile": true
     },
-    "default_appearance": "dark"
+    "default_appearance": "dark",
+
+    "layouts": {
+        "public": "PublicLayout",
+        "app": "AppLayout",
+        "auth": "AuthLayout"
+    },
+
+    "pages": {
+        "home": {
+            "layout": "public",
+            "blocks": [
+                "hero",
+                { "block": "server-status", "props": { "detailed": true } },
+                "statistics",
+                { "block": "class-showcase", "props": { "limit": 6 } },
+                { "block": "ranking-showcase", "props": { "ladder": "level", "limit": 5 } },
+                { "block": "news-section", "props": { "limit": 3, "featureFirst": true } },
+                "feature-grid",
+                "call-to-action"
+            ]
+        }
+    }
 }

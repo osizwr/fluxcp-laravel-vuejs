@@ -125,3 +125,34 @@ export interface Paginated<T> {
         total: number
     }
 }
+
+/**
+ * Aggregate counts over the game database.
+ *
+ * No uptime: rAthena records no start time the panel can read, so the figure
+ * would have to be invented.
+ */
+export interface ServerStatistics {
+    accounts: number
+    characters: number
+    guilds: number
+    players_online: number
+}
+
+export interface ClassDistributionEntry {
+    job_id: number
+    job_name: string
+    characters: number
+}
+
+export interface NewsArticle {
+    id: number
+    title: string
+    excerpt: string
+    author: string
+    link: string | null
+    published_at: string | null
+    updated_at: string | null
+    /** Rich text, sent only when a single article was requested. */
+    body?: string
+}

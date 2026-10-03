@@ -2,15 +2,19 @@
 import { resolveBlock } from '../theme/blocks'
 
 /**
- * The shell for the application's utility pages.
+ * The shell for public-facing pages.
  *
- * Differs from PublicLayout only in that content is constrained to a column:
- * an account page or a character table wants a readable measure, where a
- * landing page wants full-bleed sections.
+ * Distinct from AppLayout: a landing page wants full-bleed sections and an
+ * announcement bar, where a utility page wants a constrained column. Which one
+ * a page uses is the theme's decision, declared per page in theme.json.
  *
- * The chrome is composed from blocks rather than written here, so a theme
- * restyles the masthead once and both layouts follow. Before this, each layout
- * carried its own copy of the masthead and the two drifted apart.
+ * The announcement bar, navbar and footer are *blocks*, not markup written
+ * here, so a theme replaces them the same way it replaces any other block.
+ * They live in the layout rather than in every page's block list because
+ * repeating three entries across every page would be noise, not control.
+ *
+ * Content is not wrapped in a container: a composed page's blocks manage their
+ * own width, which is what lets one be full-bleed and the next inset.
  */
 const AnnouncementBar = resolveBlock('announcement-bar')
 const Navbar = resolveBlock('navbar')
@@ -29,7 +33,7 @@ const Footer = resolveBlock('footer')
         <component :is="AnnouncementBar" v-if="AnnouncementBar" />
         <component :is="Navbar" v-if="Navbar" />
 
-        <main id="main" class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+        <main id="main" class="flex-1">
             <slot />
         </main>
 

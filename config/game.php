@@ -76,4 +76,68 @@ return [
         'forum' => env('GAME_FORUM_URL'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Announcement bar
+    |--------------------------------------------------------------------------
+    |
+    | A single operator-authored notice shown above the masthead. Content, not
+    | theme: the theme decides how it looks, this decides whether there is one
+    | and what it says.
+    |
+    | Off by default. An announcement bar with nothing to announce is a
+    | placeholder, and a placeholder is worse than an absent section.
+    |
+    | 'tone' lets a theme distinguish a cheerful event from a maintenance
+    | warning. The dismissal id is derived from the message on the server, so
+    | editing the message makes it reappear for everyone who dismissed the old
+    | one -- which is what an operator means by changing it.
+    |
+    */
+
+    'announcement' => [
+        'enabled' => (bool) env('GAME_ANNOUNCEMENT_ENABLED', false),
+        'message' => env('GAME_ANNOUNCEMENT_MESSAGE', ''),
+        'url' => env('GAME_ANNOUNCEMENT_URL'),
+        'label' => env('GAME_ANNOUNCEMENT_LABEL'),
+        // 'info', 'event' or 'maintenance'.
+        'tone' => env('GAME_ANNOUNCEMENT_TONE', 'info'),
+        'dismissible' => (bool) env('GAME_ANNOUNCEMENT_DISMISSIBLE', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Features
+    |--------------------------------------------------------------------------
+    |
+    | What the server offers, for the feature section on the front page.
+    |
+    | Entirely operator-owned, because the panel cannot know what a given
+    | rAthena install has enabled. The defaults below are limited to things
+    | this panel demonstrably provides and can link to -- they are not claims
+    | about game mechanics that may not exist on your server.
+    |
+    | Replace them. A 'url' is optional, and an entry without one renders as
+    | plain text rather than a dead link.
+    |
+    */
+
+    'features' => [
+        [
+            'title' => 'Competitive rankings',
+            'description' => 'Level and wealth ladders, updated from live character data.',
+            'url' => '/rankings/level',
+        ],
+        [
+            'title' => 'Who is online',
+            'description' => 'See who is in the world right now, searchable by name.',
+            'url' => '/who-is-online',
+        ],
+        [
+            'title' => 'War of Emperium',
+            'description' => 'Siege schedule and castle ownership for every world.',
+            'url' => null,
+        ],
+    ],
+
 ];

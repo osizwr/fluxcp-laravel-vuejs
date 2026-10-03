@@ -7,10 +7,18 @@ the practical checklist and the licence notes.
 
 ```
 resources/themes/
-├── fantasy/     the default — dark, warm, antique gold
-├── slate/       a cool, light-first skin; palette only
+├── fantasy/     the default — dark, warm, antique gold; 8 blocks, composed home page
+├── slate/       a cool, light-first skin; palette only, core pages throughout
 └── README.md
 ```
+
+A theme has three layers, and you only use as many as you need:
+
+| Layer | Changes | Costs |
+| --- | --- | --- |
+| Design tokens | Colours, type, geometry everywhere | One stylesheet |
+| Blocks | How a page section looks | One component per section |
+| Page composition | Which sections a page has, and their order | A list in `theme.json` |
 
 ---
 
@@ -33,6 +41,16 @@ import { useShell } from '@/composables/useShell'    // nav, sign-out, active ro
 import { useServerStore } from '@/stores/server'     // live status, already fed by Reverb
 import { useAuthStore } from '@/stores/auth'         // the signed-in account
 ```
+
+Blocks take their data from `@/blocks/data.ts`, each function returning a
+contract from `@/blocks/contracts.ts`:
+
+```ts
+import { useServerStatusData, useRankingData } from '@/blocks/data'
+```
+
+**A block never calls the API.** That is what keeps a theme swappable, and a
+test enforces it.
 
 ---
 
@@ -67,17 +85,35 @@ cp -r resources/themes/slate resources/themes/my-theme
    `php artisan theme:publish` if something outside the bundle needs a stable
    URL, such as a logo an operator points `GAME_LOGO` at.
 
-5. **Override only what restyling cannot do.** Drop a file with a matching name
-   into `layouts/`, `pages/` or `components/`; it replaces the core one with no
-   registration step. If the theme does not provide it, the core file is used.
+5. **Override blocks** where a section needs different structure. Copy one out
+   of `resources/js/blocks/` into `blocks/` and edit it, keeping its props and
+   data composable. Eleven core blocks exist; override only the ones you want.
 
-6. **Point `.env` at it.**
+6. **Compose pages** in `theme.json` if you want different sections or a
+   different order:
+
+   ```json
+   "pages": {
+       "home": {
+           "layout": "public",
+           "blocks": ["hero", { "block": "ranking-showcase", "props": { "limit": 10 } }]
+       }
+   }
+   ```
+
+   Omit this and the application's own pages are used.
+
+7. **Override layouts or whole pages** only where neither of those is enough.
+   Drop a file with a matching name into `layouts/` or `pages/`; it replaces
+   the core one with no registration step.
+
+8. **Point `.env` at it.**
 
    ```env
    APP_THEME=my-theme
    ```
 
-7. **Build once.** A new directory has to be seen by Vite:
+9. **Build once.** A new directory has to be seen by Vite:
 
    ```bash
    npm run build
@@ -93,7 +129,8 @@ cp -r resources/themes/slate resources/themes/my-theme
 - [ ] `theme.json` has `name` and `version`, and no `slug`
 - [ ] Every CSS rule is scoped to `:root[data-theme-slug='<your-slug>']`
 - [ ] Both appearances are legible, or `supports.light_mode` / `dark_mode` says otherwise
-- [ ] `npm run verify:themes` passes — no stylesheet missing from the build, no override being silently ignored
+- [ ] `npm run verify:themes` passes — no stylesheet missing from the build, no override or composed block being silently ignored
+- [ ] Every block your compositions name resolves, in your theme or in core
 - [ ] Keyboard focus is visible on every interactive element
 - [ ] Text meets contrast against its own surfaces, not the core's
 - [ ] Any animation you add is disabled under `prefers-reduced-motion`

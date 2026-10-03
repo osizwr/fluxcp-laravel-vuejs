@@ -9,6 +9,8 @@
  *   2. A theme's override is not in the resolver's glob, so the application
  *      falls back to the core component. Nothing errors; the override is just
  *      ignored, which is the hardest kind of bug to notice.
+ *   3. A page composition names a block that nothing provides, so the renderer
+ *      drops it. The page loads, just missing a section.
  *
  * Run after `npm run build`:  npm run verify:themes
  */
@@ -51,12 +53,71 @@ if (themes.length === 0) {
     process.exit(1)
 }
 
+/** 'server-status' -> 'ServerStatus', matching the client block registry. */
+function blockFileName(name) {
+    return name
+        .split(/[-_]/)
+        .filter((part) => part !== '')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join('')
+}
+
+const coreBlockDir = join(root, 'resources/js/blocks')
+const coreBlocks = existsSync(coreBlockDir)
+    ? readdirSync(coreBlockDir).filter((file) => file.endsWith('.vue'))
+    : []
+
 for (const slug of themes) {
     const themeDir = join(themeRoot, slug)
+    const manifestFile = join(themeDir, 'theme.json')
 
-    if (!existsSync(join(themeDir, 'theme.json'))) {
+    if (!existsSync(manifestFile)) {
         problems.push(`${slug}: no theme.json, so the server will ignore this directory.`)
         continue
+    }
+
+    /*
+     * 0. Every block a composition names must resolve somewhere.
+     *
+     * Named themeManifest, not manifest: the Vite build manifest is already in
+     * scope above, and shadowing it made the stylesheet check below silently
+     * look in the wrong file.
+     */
+    let themeManifest
+    try {
+        themeManifest = JSON.parse(readFileSync(manifestFile, 'utf8'))
+    } catch (error) {
+        problems.push(`${slug}: theme.json is not valid JSON (${error.message}).`)
+        continue
+    }
+
+    for (const [pageKey, page] of Object.entries(themeManifest.pages ?? {})) {
+        const blocks = (page.blocks ?? []).map((entry) =>
+            typeof entry === 'string' ? entry : entry.block,
+        )
+
+        if (blocks.length === 0) {
+            problems.push(`${slug}: page '${pageKey}' declares no blocks, so it would render blank.`)
+            continue
+        }
+
+        for (const block of blocks) {
+            const file = `${blockFileName(block)}.vue`
+            const inTheme = existsSync(join(themeDir, 'blocks', file))
+            const inCore = coreBlocks.includes(file)
+
+            if (inTheme) {
+                notes.push(`${slug}: ${pageKey} block '${block}' -> theme's ${file}`)
+            } else if (inCore) {
+                notes.push(`${slug}: ${pageKey} block '${block}' -> core ${file} (fallback)`)
+            } else {
+                problems.push(
+                    `${slug}: page '${pageKey}' names the block '${block}', but neither ` +
+                        `${slug}/blocks/${file} nor resources/js/blocks/${file} exists. ` +
+                        'The renderer drops it, so the section would be silently missing.',
+                )
+            }
+        }
     }
 
     // 1. The stylesheet, if the theme ships one, must be an entrypoint.
@@ -76,7 +137,7 @@ for (const slug of themes) {
     }
 
     // 2. Every override must appear as a glob key in the bundle.
-    for (const kind of ['pages', 'layouts', 'components']) {
+    for (const kind of ['pages', 'layouts', 'components', 'blocks']) {
         const dir = join(themeDir, kind)
 
         if (!existsSync(dir)) {
@@ -96,6 +157,11 @@ for (const slug of themes) {
                 notes.push(`${slug}: ${kind}/${name} resolves as an override`)
             } else if (kind === 'components') {
                 notes.push(`${slug}: ${kind}/${name} is theme-internal (not a core override)`)
+            } else if (kind === 'blocks') {
+                problems.push(
+                    `${slug}: blocks/${name}.vue is not in the block registry's glob, so the ` +
+                        'core block would be used instead with no error.',
+                )
             } else {
                 problems.push(
                     `${slug}: ${kind}/${name}.vue is not in the resolver's glob, so it will ` +

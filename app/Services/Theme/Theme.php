@@ -40,6 +40,20 @@ final readonly class Theme
          * screen.
          */
         public ?string $defaultAppearance,
+        /**
+         * Layout component names by role, e.g. ['public' => 'PublicLayout'].
+         *
+         * @var array<string, string>
+         */
+        public array $layouts,
+        /**
+         * Page compositions keyed by route name. Each is a layout plus an
+         * ordered list of blocks, which is how a theme controls page structure
+         * rather than only its styling.
+         *
+         * @var array<string, array{layout: string, blocks: list<array{block: string, props: array<string, mixed>}>}>
+         */
+        public array $pages,
         public string $directory,
         public string $relativePath,
     ) {}
@@ -122,6 +136,8 @@ final readonly class Theme
             defaultAppearance: in_array($manifest['default_appearance'] ?? null, ['light', 'dark'], true)
                 ? (string) $manifest['default_appearance']
                 : null,
+            layouts: self::parseLayouts($manifest, $relativePath),
+            pages: self::parsePages($manifest, $relativePath),
             directory: $directory,
             relativePath: $relativePath,
         );
@@ -130,6 +146,118 @@ final readonly class Theme
     public function supports(string $feature): bool
     {
         return $this->supports[$feature] ?? false;
+    }
+
+    /**
+     * The layout component for a role, or null if the theme names none.
+     */
+    public function layoutFor(string $role): ?string
+    {
+        return $this->layouts[$role] ?? null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $manifest
+     * @return array<string, string>
+     */
+    private static function parseLayouts(array $manifest, string $relativePath): array
+    {
+        $layouts = [];
+
+        foreach (is_array($manifest['layouts'] ?? null) ? $manifest['layouts'] : [] as $role => $component) {
+            if (! is_string($role) || ! is_string($component) || $component === '') {
+                continue;
+            }
+
+            // A component name, not a path: it is resolved through the client
+            // layout registry, and a path would let a manifest reach outside
+            // the theme.
+            if (preg_match('/^[A-Za-z][A-Za-z0-9]*$/', $component) !== 1) {
+                throw new RuntimeException(sprintf(
+                    "The theme at '%s' declares the layout '%s' for role '%s'. "
+                    .'A layout must be a bare component name.',
+                    $relativePath,
+                    $component,
+                    $role,
+                ));
+            }
+
+            $layouts[$role] = $component;
+        }
+
+        return $layouts;
+    }
+
+    /**
+     * Parse the page compositions.
+     *
+     * Validated here rather than trusted, because a malformed composition
+     * would otherwise surface as a blank page in the browser with nothing to
+     * point at.
+     *
+     * @param  array<string, mixed>  $manifest
+     * @return array<string, array{layout: string, blocks: list<array{block: string, props: array<string, mixed>}>}>
+     */
+    private static function parsePages(array $manifest, string $relativePath): array
+    {
+        $pages = [];
+
+        foreach (is_array($manifest['pages'] ?? null) ? $manifest['pages'] : [] as $key => $page) {
+            if (! is_string($key) || ! is_array($page)) {
+                continue;
+            }
+
+            $blocks = [];
+
+            foreach (is_array($page['blocks'] ?? null) ? $page['blocks'] : [] as $entry) {
+                // A bare string is allowed for a block with no options, since
+                // most blocks have none and {"block": "hero"} is noise.
+                $name = is_string($entry) ? $entry : (is_array($entry) ? ($entry['block'] ?? null) : null);
+
+                if (! is_string($name) || preg_match('/^[a-z][a-z0-9-]*$/', $name) !== 1) {
+                    throw new RuntimeException(sprintf(
+                        "The theme at '%s' declares an invalid block in page '%s'. "
+                        .'A block name must be lower-case kebab-case.',
+                        $relativePath,
+                        $key,
+                    ));
+                }
+
+                $props = is_array($entry) && is_array($entry['props'] ?? null)
+                    ? $entry['props']
+                    : [];
+
+                $blocks[] = [
+                    'block' => $name,
+                    /*
+                     * Cast so an empty set encodes as {} rather than [].
+                     * The client spreads these onto a component with v-bind,
+                     * which needs an object; an array would be passed through
+                     * and silently do nothing useful.
+                     */
+                    'props' => (object) $props,
+                ];
+            }
+
+            if ($blocks === []) {
+                // An empty composition would render a blank page, which is
+                // never what was meant.
+                throw new RuntimeException(sprintf(
+                    "The theme at '%s' declares page '%s' with no blocks.",
+                    $relativePath,
+                    $key,
+                ));
+            }
+
+            $pages[$key] = [
+                'layout' => is_string($page['layout'] ?? null) && $page['layout'] !== ''
+                    ? (string) $page['layout']
+                    : 'app',
+                'blocks' => $blocks,
+            ];
+        }
+
+        return $pages;
     }
 
     /**
@@ -166,6 +294,8 @@ final readonly class Theme
             'version' => $this->version,
             'supports' => $this->supports,
             'defaultAppearance' => $this->defaultAppearance,
+            'layouts' => (object) $this->layouts,
+            'pages' => (object) $this->pages,
         ];
     }
 }

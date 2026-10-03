@@ -3,6 +3,15 @@
 How the panel's appearance is separated from what it does, and how to build a
 skin of your own.
 
+A theme here controls more than colour. It has three layers, in increasing
+order of how much it takes over:
+
+| Layer | What it changes | What it costs |
+| --- | --- | --- |
+| **Design tokens** | Colours, type, geometry across the whole application | One stylesheet |
+| **Blocks** | How an individual section looks and is structured | One component per section replaced |
+| **Page composition** | Which sections a page has, and in what order | A list in `theme.json` |
+
 The rule the whole system rests on: **a theme is presentation**. It may restyle
 and restructure the interface. It may not query a database, call an API,
 authenticate anybody, or decide what someone is allowed to do. The same backend
@@ -80,19 +89,25 @@ players see.
 
 ```
 resources/themes/fantasy/
-├── theme.json          required — the manifest
+├── theme.json          required — manifest, layout roles, page compositions
 ├── styles/
 │   ├── theme.css       the Vite entrypoint; imports the others
 │   ├── variables.css   the palette
-│   └── components.css  surfaces and ornament
-├── layouts/            override AppLayout, AuthLayout
-├── pages/              override any core page
+│   ├── components.css  how the application's own components look
+│   └── blocks.css      how this theme's sections are decorated
+├── blocks/             override page sections (hero, navbar, rankings, …)
+├── layouts/            override AppLayout, PublicLayout, AuthLayout
+├── pages/              override a whole page
 ├── components/         override core components, or add theme-only ones
 └── assets/             images, icons, fonts the theme owns
 ```
 
 Only `theme.json` is required. A theme consisting of nothing but `theme.json`
 and `styles/theme.css` is valid and useful — see `slate`.
+
+The `fantasy` theme overrides eight blocks and inherits three from core
+(`statistics`, `class-showcase`, `feature-grid`), which is the fallback system
+working in production rather than only in a test.
 
 ### theme.json
 
@@ -103,7 +118,26 @@ and `styles/theme.css` is valid and useful — see `slate`.
     "author": "",
     "description": "A dark, warm skin in the manner of an adventurer's ledger.",
     "supports": { "dark_mode": true, "light_mode": true, "mobile": true },
-    "default_appearance": "dark"
+    "default_appearance": "dark",
+
+    "layouts": {
+        "public": "PublicLayout",
+        "app": "AppLayout",
+        "auth": "AuthLayout"
+    },
+
+    "pages": {
+        "home": {
+            "layout": "public",
+            "blocks": [
+                "hero",
+                { "block": "server-status", "props": { "detailed": true } },
+                "statistics",
+                { "block": "ranking-showcase", "props": { "ladder": "level", "limit": 5 } },
+                "call-to-action"
+            ]
+        }
+    }
 }
 ```
 
@@ -114,6 +148,8 @@ and `styles/theme.css` is valid and useful — see `slate`.
 | `description` | Shown in `theme:list`. |
 | `supports` | Advisory flags, readable from the client via `useGame().supports()`. |
 | `default_appearance` | `light`, `dark`, or omitted to follow the visitor's OS. |
+| `layouts` | Layout component per role. Optional; each role has a core default. |
+| `pages` | Page compositions, keyed by route name. Optional. |
 
 There is no `slug` field to set: **the directory name is the slug.** A manifest
 declaring a different one is rejected, because the directory name is what
@@ -259,13 +295,176 @@ is one.
 
 ---
 
-## 6. Data and realtime
+## 6. Blocks
+
+A **block** is a named section of a page: the hero, the server status panel, a
+ranking ladder, the footer. Blocks are the unit a theme replaces when it wants
+a section to look or work differently.
+
+```
+resources/themes/fantasy/blocks/Hero.vue      overrides
+resources/js/blocks/Hero.vue
+```
+
+Resolution is the same three-step fallback as everything else:
+
+```
+active theme's blocks/<Name>.vue   ->   the theme's own
+resources/js/blocks/<Name>.vue     ->   the core default
+neither                            ->   skipped, and verify:themes fails
+```
+
+That fallback is the point. A new theme does not have to reimplement eleven
+blocks to change three of them.
+
+### The core blocks
+
+Eleven ship, in `resources/js/blocks/`:
+
+| Block name | Component | Shows |
+| --- | --- | --- |
+| `announcement-bar` | `AnnouncementBar.vue` | The operator's notice, if there is one |
+| `navbar` | `Navbar.vue` | Masthead, navigation, session, appearance toggle |
+| `hero` | `Hero.vue` | Branding, tagline, calls to action, live player count |
+| `server-status` | `ServerStatus.vue` | Login/character/map state, players online |
+| `statistics` | `Statistics.vue` | Accounts, characters, guilds, players online |
+| `class-showcase` | `ClassShowcase.vue` | Characters per job class |
+| `ranking-showcase` | `RankingShowcase.vue` | A short ladder with a link onward |
+| `news-section` | `NewsSection.vue` | Recent news |
+| `feature-grid` | `FeatureGrid.vue` | Operator-configured features |
+| `call-to-action` | `CallToAction.vue` | A closing action |
+| `footer` | `Footer.vue` | Branding, navigation, configured links |
+
+Names are kebab-case in configuration and PascalCase as files. That translation
+happens in one place, `blockFileName()` in `resources/js/theme/blocks.ts`.
+
+### Writing a block
+
+A block has two kinds of input, deliberately separate:
+
+```ts
+// props -- presentation choices the page composition makes
+const props = withDefaults(defineProps<RankingProps>(), { ladder: 'level', limit: 5 })
+
+// data -- application state, from a core composable. Never fetched here.
+const ranking = useRankingData(props.ladder, props.limit)
+```
+
+Every contract lives in `resources/js/blocks/contracts.ts` and every data
+composable in `resources/js/blocks/data.ts`. **A block never calls the API.**
+That is what keeps themes free of data access, and it is enforced: a test
+scans every theme file for `fetch(`, `DB::`, `Hash::` and `Gate::`.
+
+The contracts are the one part of the theme system that should move slowly.
+Adding a field changes every theme's expectations, and a theme inventing its
+own shape would mean the backend was no longer independent of the presentation.
+
+### Blocks are reusable
+
+The same block appears in more than one place. `server-status` is on the front
+page and could go on a dashboard; `navbar` and `footer` are used by both the
+public and application layouts. Nothing about a block ties it to one page.
+
+---
+
+## 7. Page composition
+
+A theme can declare what a page is made of, rather than overriding the whole
+page:
+
+```json
+"pages": {
+    "home": {
+        "layout": "public",
+        "blocks": [
+            "hero",
+            { "block": "server-status", "props": { "detailed": true } },
+            "statistics",
+            { "block": "ranking-showcase", "props": { "ladder": "zeny", "limit": 10 } },
+            "call-to-action"
+        ]
+    }
+}
+```
+
+Reordering that list reorders the page. Removing an entry removes a section.
+Neither touches a component.
+
+Keys are **route names**, so a theme composes `home` without knowing a file
+path. A block with no options may be a bare string; `{ "block": …, "props": … }`
+is for when it has some.
+
+### How a page is chosen
+
+For each route, in order:
+
+1. the theme's `pages/<Name>.vue` — a hand-built page, full control
+2. a composition in `theme.json` — declarative, a list of blocks
+3. the core `pages/<Name>.vue` — the application's own
+
+So a theme can take a page over entirely, rearrange it from configuration, or
+leave it alone. `slate` declares no compositions and gets core pages
+throughout; `fantasy` composes its front page from eight blocks.
+
+The renderer is `resources/js/pages/ComposedPage.vue`, and it is a loop. It
+knows nothing about any block, which is why adding one to a page never touches
+it.
+
+### Layout roles
+
+`layout` names a **role**, not a component:
+
+| Role | Core default | For |
+| --- | --- | --- |
+| `public` | `PublicLayout` | Full-bleed landing pages |
+| `app` | `AppLayout` | Utility pages, content in a column |
+| `auth` | `AuthLayout` | Sign-in and friends; no navigation |
+
+A theme's `layouts` map may point a role at a differently named component. The
+announcement bar, navbar and footer live in the layouts rather than in every
+page's block list — repeating three entries on every page would be noise, not
+control.
+
+### Where navbar and footer live
+
+They are blocks, so a theme replaces them like any other. They are *composed by
+the layout* rather than listed per page. Before this they were written inline
+in each layout, and the two copies drifted apart.
+
+### Not everything is configuration
+
+Compositions exist for page structure. They are deliberately not a page
+builder: no conditionals, no slots, no nesting, no per-block visibility rules.
+A section that needs real logic should be a block, where it is ordinary Vue
+with types and a test, rather than an expression language in JSON.
+
+---
+
+## 8. Data and realtime
 
 Themes **consume** data. They never fetch it.
+
+Blocks use the composables in `resources/js/blocks/data.ts`, each returning one
+of the contracts in `contracts.ts`:
+
+```ts
+useAnnouncement()        // the operator's notice, and dismissal
+useHeroData(props)       // branding plus live status
+useServerStatusData()    // processes, players, War of Emperium
+useStatisticsData()      // accounts, characters, guilds, players online
+useClassShowcaseData(n)  // characters per job class
+useRankingData(l, n)     // a ladder
+useNewsData(n)           // recent articles
+useFeatureData()         // operator-configured features
+useCallToActionData()    // session-aware actions
+```
+
+Outside a block, the stores are available directly:
 
 ```ts
 const servers = useServerStore()   // server status, kept current for you
 const auth = useAuthStore()        // the signed-in account
+const site = useSiteStore()        // statistics, classes, news
 ```
 
 Server status is already fed by the Reverb broadcast with a polling fallback,
@@ -283,7 +482,7 @@ and similar, and fails if a theme is doing its own data access.
 
 ---
 
-## 7. Assets
+## 9. Assets
 
 Keep them in the theme:
 
@@ -324,7 +523,7 @@ License) from its `theme.css`.
 
 ---
 
-## 8. Validation
+## 10. Validation
 
 A misconfigured theme is reported, never silently ignored.
 
@@ -351,7 +550,7 @@ php artisan theme:list --strict    # non-zero exit if the fallback is in use
 
 ---
 
-## 9. Development
+## 11. Development
 
 ```bash
 npm run dev
@@ -373,7 +572,7 @@ resolver's glob (it is ignored in favour of the core file, with no error).
 
 ---
 
-## 10. Creating a theme
+## 12. Creating a theme
 
 ```bash
 cp -r resources/themes/slate resources/themes/my-theme
@@ -383,10 +582,15 @@ cp -r resources/themes/slate resources/themes/my-theme
    `default_appearance` if the theme is art-directed for one.
 2. Rename the scope in every CSS file: `:root[data-theme-slug='my-theme']`.
 3. Replace the palette.
-4. Override layouts, pages or components **only where restyling is not enough**.
-5. `APP_THEME=my-theme`
-6. `npm run build` — needed once, because the directory is new.
-7. `npm run verify:themes`
+4. Override **blocks** where a section needs to look or behave differently.
+   Copy one out of `resources/js/blocks/` into `my-theme/blocks/` and edit it;
+   keep the props and the data composable it already uses.
+5. Declare **page compositions** in `theme.json` if you want different sections
+   or a different order. Omit them to keep the application's pages.
+6. Override layouts or whole pages **only where neither of those is enough**.
+7. `APP_THEME=my-theme`
+8. `npm run build` — needed once, because the directory is new.
+9. `npm run verify:themes` — catches a block that will be silently dropped.
 
 `slate` is the better starting point for a recolour; `fantasy` for something
 structurally different.
@@ -396,7 +600,7 @@ checklist and the licence notes on third-party assets.
 
 ---
 
-## 11. Reference
+## 13. Reference
 
 | | |
 | --- | --- |
@@ -406,10 +610,16 @@ checklist and the licence notes on third-party assets.
 | `app/Services/Theme/Theme.php` | A theme's manifest, as a value object |
 | `app/Services/Theme/ClientBootstrap.php` | The payload sent to the browser |
 | `app/Providers/ThemeServiceProvider.php` | Shares the theme with the shell view |
-| `resources/js/theme/resolve.ts` | Override resolution |
+| `resources/js/theme/resolve.ts` | Page, layout and component resolution |
+| `resources/js/theme/blocks.ts` | Block registry and page compositions |
 | `resources/js/theme/bootstrap.ts` | Reads the payload |
+| `resources/js/blocks/contracts.ts` | The block data contracts |
+| `resources/js/blocks/data.ts` | The block data layer |
+| `resources/js/blocks/*.vue` | The eleven core blocks |
+| `resources/js/pages/ComposedPage.vue` | Renders a composition |
 | `resources/js/composables/useGame.ts` | Branding for components |
 | `resources/js/composables/useShell.ts` | Shell behaviour, so themes need none |
+| `resources/js/stores/site.ts` | Statistics, classes and news |
 | `resources/views/app.blade.php` | Links the active theme's CSS |
 | `vite.config.ts` | Turns each theme's stylesheet into an entrypoint |
 

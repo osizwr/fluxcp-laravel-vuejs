@@ -149,31 +149,44 @@ final class GameBrandingTest extends TestCase
 
         $this->assertNotNull($entry, 'The fantasy theme should ship a stylesheet.');
 
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertIsString($html);
+
+        /*
+         * Accepts either form, because both are correct depending on how the
+         * frontend is being served:
+         *
+         *   npm run dev    Vite emits the source path from its dev server
+         *   npm run build  Blade emits the hashed file from the manifest
+         *
+         * An earlier version of this test keyed off whether a manifest existed,
+         * which was the wrong signal: a developer running the suite with the
+         * dev server up has both.
+         */
         $manifestPath = public_path('build/manifest.json');
-        $response = $this->get('/')->assertOk();
+        $hashed = null;
 
-        if (! is_file($manifestPath)) {
-            /*
-             * No build yet, so Vite serves the source path directly. Asserted
-             * rather than skipped, so the test still means something on a
-             * fresh checkout.
-             */
-            $response->assertSee($entry, escape: false);
+        if (is_file($manifestPath)) {
+            $manifest = json_decode((string) file_get_contents($manifestPath), true);
 
-            return;
+            $this->assertIsArray($manifest);
+            $this->assertArrayHasKey(
+                $entry,
+                $manifest,
+                'The theme stylesheet is not a Vite entrypoint. Check themeStylesheets() in vite.config.ts.',
+            );
+
+            $hashed = (string) $manifest[$entry]['file'];
         }
 
-        $manifest = json_decode((string) file_get_contents($manifestPath), true);
+        $linked = str_contains($html, $entry)
+            || ($hashed !== null && str_contains($html, $hashed));
 
-        $this->assertIsArray($manifest);
-        $this->assertArrayHasKey(
-            $entry,
-            $manifest,
-            'The theme stylesheet is not a Vite entrypoint. Check themeStylesheets() in vite.config.ts.',
+        $this->assertTrue(
+            $linked,
+            "The page links neither '{$entry}' nor its built output.",
         );
-
-        // The hashed file the build actually emitted for this theme.
-        $response->assertSee($manifest[$entry]['file'], escape: false);
     }
 
     #[Test]

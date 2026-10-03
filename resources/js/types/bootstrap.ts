@@ -15,6 +15,23 @@ export interface GameConfig {
     links: Partial<Record<'website' | 'downloads' | 'discord' | 'forum', string>>
 }
 
+/** One block in a page composition, as declared in theme.json. */
+export interface BlockDefinition {
+    /** Kebab-case block name, resolved through the block registry. */
+    block: string
+    /** Presentation options passed to the block as props. */
+    props?: Record<string, unknown>
+}
+
+/**
+ * How a theme composes one page: which layout wraps it, and which blocks
+ * appear in which order.
+ */
+export interface PageComposition {
+    layout: string
+    blocks: BlockDefinition[]
+}
+
 export interface ThemeConfig {
     slug: string
     name: string
@@ -25,6 +42,10 @@ export interface ThemeConfig {
      * visitor's operating system.
      */
     defaultAppearance: 'light' | 'dark' | null
+    /** Named layout components the theme provides, by role. */
+    layouts: Record<string, string>
+    /** Page compositions, keyed by route name. Empty when the theme declares none. */
+    pages: Record<string, PageComposition>
 }
 
 export interface BroadcastingConfig {
@@ -36,9 +57,27 @@ export interface BroadcastingConfig {
     scheme: 'http' | 'https'
 }
 
+/** The operator's announcement, or null when there is nothing to announce. */
+export interface AnnouncementConfig {
+    id: string
+    message: string
+    url: string | null
+    label: string | null
+    tone: 'info' | 'event' | 'maintenance'
+    dismissible: boolean
+}
+
+export interface FeatureConfig {
+    title: string
+    description: string
+    url: string | null
+}
+
 export interface PanelBootstrap {
     game: GameConfig
     theme: ThemeConfig
     /** Null when broadcasting is not configured, so the client polls instead. */
     broadcasting: BroadcastingConfig | null
+    announcement: AnnouncementConfig | null
+    features: FeatureConfig[]
 }
