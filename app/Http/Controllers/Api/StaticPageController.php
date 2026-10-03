@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Models\StaticPage;
+use App\Services\Content\ContentRenderer;
 use App\Support\Http\ListQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,39 @@ final class StaticPageController
                 'path' => $page->path,
                 'title' => $page->title,
                 'body' => $page->body,
+                'updated_at' => $page->modified?->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * The terms of service.
+     *
+     * Ports modules/service/tos.php, which rendered a template an operator
+     * edited on disk. Here it is an ordinary page in the CMS at a configured
+     * path, so it is edited where every other page is -- and a server that has
+     * not written one gets an honest "not published" rather than an empty
+     * page that looks broken.
+     */
+    public function termsOfService(): JsonResponse
+    {
+        $path = (string) config('panel.terms_of_service_path', 'terms');
+
+        $page = StaticPage::query()->atPath($path)->first();
+
+        if ($page === null) {
+            return response()->json([
+                'data' => null,
+                'message' => 'This server has not published terms of service.',
+            ], 404);
+        }
+
+        return response()->json([
+            'data' => [
+                'path' => $page->path,
+                'title' => $page->title,
+                'body' => $page->body,
+                'body_html' => app(ContentRenderer::class)->toHtml($page->body),
                 'updated_at' => $page->modified?->toIso8601String(),
             ],
         ]);

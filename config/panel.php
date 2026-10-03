@@ -567,6 +567,13 @@ return [
         'cache_seconds' => (int) env('PANEL_STATISTICS_CACHE_SECONDS', 300),
     ],
 
+    /*
+     * Which CMS page holds the terms of service. The legacy rendered a
+     * template edited on disk; here it is an ordinary page, edited where every
+     * other page is.
+     */
+    'terms_of_service_path' => env('PANEL_TERMS_PATH', 'terms'),
+
     'pagination' => [
         'per_page' => (int) env('PANEL_PER_PAGE', 20),
         'max_per_page' => (int) env('PANEL_MAX_PER_PAGE', 100),

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AccountCreditsController;
 use App\Http\Controllers\Api\AccountHistoryController;
 use App\Http\Controllers\Api\AdminSearchController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BroadcastMailController;
 use App\Http\Controllers\Api\CaptchaController;
 use App\Http\Controllers\Api\CharacterController;
 use App\Http\Controllers\Api\CharacterManagementController;
@@ -196,6 +197,20 @@ Route::middleware('permission')->group(function (): void {
     Route::delete('pages/{page}', [StaticPageController::class, 'destroy'])
         ->whereNumber('page')
         ->name('pages.delete');
+
+    /*
+     * The terms of service: an ordinary CMS page at a configured path, so it
+     * is edited where every other page is. Declared before the catch-all so
+     * `pages/{path}` does not swallow it.
+     */
+    Route::get('terms', [StaticPageController::class, 'termsOfService'])->name('service.tos');
+
+    /*
+     * Mailing the player base. The only action here that cannot be stopped
+     * once it starts and is visible to everyone at once, so it answers with a
+     * recipient count first and sends only when the request repeats it back.
+     */
+    Route::post('admin/broadcast', [BroadcastMailController::class, 'send'])->name('mail.index');
 
     Route::get('pages/{path}', [StaticPageController::class, 'show'])
         ->where('path', '[A-Za-z0-9][A-Za-z0-9\-\/]*')
