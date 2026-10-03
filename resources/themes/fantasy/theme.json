@@ -1,0 +1,12 @@
+{
+    "name": "Fantasy",
+    "version": "1.0.0",
+    "author": "",
+    "description": "A dark, warm control panel skin in the manner of an adventurer's guild ledger: parchment, iron and antique gold.",
+    "supports": {
+        "dark_mode": true,
+        "light_mode": true,
+        "mobile": true
+    },
+    "default_appearance": "dark"
+}

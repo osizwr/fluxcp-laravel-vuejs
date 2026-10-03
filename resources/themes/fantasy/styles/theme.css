@@ -1,0 +1,20 @@
+/*
+|--------------------------------------------------------------------------
+| Fantasy — entrypoint
+|--------------------------------------------------------------------------
+|
+| Vite builds this file as its own entrypoint, and Blade links it for whichever
+| theme APP_THEME names. Splitting the theme into palette and surfaces keeps
+| the two kinds of change apart: a derivative skin usually needs only
+| variables.css.
+|
+| The font is loaded here rather than from the page shell so that a theme owns
+| its own typography. Cinzel is licensed under the SIL Open Font License 1.1;
+| third-party assets are listed in resources/themes/README.md.
+|
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&display=swap');
+
+@import './variables.css';
+@import './components.css';

@@ -35,6 +35,8 @@ pointed at an existing install without migrating data.
 | Multi-server | Several server groups, several char/map pairs per group |
 | Authorisation | All 133 route permissions and 47 abilities, deny by default |
 | Schema install | All 25 `cp_*` tables, non-destructive |
+| Theming | Swappable skins via `APP_THEME`; two themes ship |
+| Branding | Game name, logo and links from config, no component edits |
 
 Not built yet, among much else: registration, password reset, e-mail changes,
 the item shop and its cart, donations, guild pages, the item and monster
@@ -170,6 +172,36 @@ php artisan queue:work        # broadcasts are queued
 In production, run the scheduler from cron and the worker under a supervisor.
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
+## Theming
+
+The interface is a swappable skin, separate from what the panel does.
+
+```env
+APP_THEME=fantasy          # or slate
+GAME_NAME="My Ragnarok Online"
+```
+
+```bash
+php artisan theme:list     # installed themes, and which is active
+npm run verify:themes      # after a build
+```
+
+Two themes ship: **fantasy** (dark and warm, the default) and **slate** (cool,
+light-first, and nothing but a palette — a worked example of how little a theme
+needs).
+
+A theme restyles by redefining semantic CSS tokens, which the core components
+all read, and restructures by dropping a file into
+`resources/themes/<slug>/{pages,layouts,components}/` to override the core one.
+Themes own no logic: navigation behaviour comes from `useShell()`, branding from
+`useGame()`, and data from the existing stores, with tests asserting the API is
+byte-identical whichever theme is active.
+
+Switching between installed themes needs only `.env`. Adding a new theme
+directory needs `npm run build`, because Vite has to have seen the files.
+
+Full guide: [docs/THEMING.md](docs/THEMING.md).
+
 ## Development
 
 ```bash
@@ -187,6 +219,7 @@ php artisan reverb:start
 | `npm run lint` | ESLint and `vue-tsc` |
 | `npm run typecheck` | `vue-tsc` only |
 | `npm run build` | Production bundle |
+| `npm run verify:themes` | Check themes against the build output |
 | `npm run format` | Prettier |
 
 ## Testing
@@ -195,7 +228,7 @@ php artisan reverb:start
 composer test
 ```
 
-140 tests, 342 assertions.
+168 tests, 445 assertions.
 
 The tests against rAthena's schema are **integration tests against a real
 MySQL/MariaDB database**, not SQLite. They exercise an 80-column
@@ -308,6 +341,7 @@ of the emulator's schema. Enabling `UseMD5` is weak but better than cleartext.
 | [COMPATIBILITY_REPORT.md](docs/COMPATIBILITY_REPORT.md) | Differences established by comparison |
 | [API.md](docs/API.md) | Endpoint reference |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment |
+| [THEMING.md](docs/THEMING.md) | Switching, creating and overriding themes |
 | [FINAL_MIGRATION_AUDIT.md](docs/FINAL_MIGRATION_AUDIT.md) | Counts and what remains |
 
 ## Licence and attribution

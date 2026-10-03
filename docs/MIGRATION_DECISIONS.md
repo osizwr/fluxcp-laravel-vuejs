@@ -178,25 +178,64 @@ and silently serves pre-renewal stats while ignoring every custom item on a real
 
 ---
 
-## D7 — Theme inheritance becomes a design-token system
+## D7 — Themes are design tokens plus file-resolution overrides
 
 **Legacy behaviour.** `themes/<name>/<module>/<action>.php` are PHP templates. A theme's
 `manifest.php` may declare `inherit`, and `Flux_Template::themePath()` walks parent theme then
 add-ons when a file is absent. The shipped `bootstrap` theme uses this to override only
 `header.php`, `footer.php`, `main/navbar.php` and CSS — 4 files against the default theme's 144.
 
-**Decision.** PHP template inheritance cannot survive the move to a Vue SPA and is replaced
-rather than emulated. Customisation is provided through CSS custom properties (design tokens),
-replaceable Vue layout components, and slot-based page shells.
+**Decision.** Two mechanisms, in this order of preference:
 
-**Why.** The legacy mechanism is file-resolution-based: it exists so a theme can replace one
-server-rendered page without copying the other 143. With a component tree the equivalent need
-is met by overriding a component or a token, and keeping a path-walking template resolver on
-top of Vue would add a second, weaker component system.
+1. **Design tokens.** Core components read semantic CSS custom properties rather than a
+   palette, so a theme shipping nothing but `variables.css` restyles the whole application.
+   The `slate` theme is exactly that and nothing more.
+2. **File-resolution overrides.** A theme may replace any core page, layout or component by
+   putting a file of the same name in `resources/themes/<slug>/{pages,layouts,components}/`.
+   Resolution is a glob lookup in `resources/js/theme/resolve.ts` with fallback to the core
+   file — the same "override one file, inherit the rest" shape the legacy system had.
 
-**What is preserved.** The capability the theme system actually delivers — restyle and replace
-chrome without forking every page — and the per-session theme switch, which becomes a
-persisted user preference.
+### This revises an earlier version of this decision
+
+The first version of D7 recorded only the token system, and argued against file resolution on
+the grounds that "keeping a path-walking template resolver on top of Vue would add a second,
+weaker component system".
+
+That reasoning was wrong about the cost. `import.meta.glob` resolves the override set **at
+build time**, so there is no runtime path walking and no template interpretation: each theme's
+files become ordinary lazy chunks, and an inactive theme's chunks are simply never requested.
+The resolver is about forty lines and adds no component system at all.
+
+It was also wrong about the need. Tokens handle recolouring, which is most themes. They cannot
+restructure a masthead or lay a dashboard out differently, and that is precisely what the
+legacy mechanism was for. Dropping it would have meant a theme could change a panel's colours
+but not its shape.
+
+**What the token-first ordering still buys.** A derivative skin needs no overrides, so it
+cannot drift from the core as pages change. Overrides are for structural difference, and a
+theme that overrides a page has opted into maintaining it.
+
+**Guard rails, because an override is a fork of that file.**
+
+- Shell behaviour — the navigation list, active-route matching, the sign-out sequence — lives in
+  `useShell()`, and branding in `useGame()`. A theme's layout consumes them. Without this, every
+  theme would copy the sign-out sequence and the fourth one would forget to clear the session.
+- Themes may not fetch data or make authorisation decisions. A test scans every theme file for
+  `DB::`, `Hash::`, `Gate::`, `fetch(` and the hardcoded game name, and another asserts the API
+  returns byte-identical responses whichever theme is active.
+- `npm run verify:themes` fails when an override is not in the resolver's glob, because the
+  symptom otherwise is the core file being used with no error at all.
+
+**What is preserved from the legacy system.** Override one file and inherit the rest; restyle
+and replace chrome without forking every page; and a switchable theme — now an operator setting
+(`APP_THEME`) rather than a per-session user choice, with light/dark remaining the visitor's.
+
+**The one trade.** Switching between installed themes needs only `.env`, resolved per request.
+Adding a *new* theme directory needs `npm run build`, because Vite must have seen the files. The
+alternative — resolving theme files over HTTP at runtime — would mean shipping a template
+interpreter to the browser and giving up bundling.
+
+See [THEMING.md](THEMING.md).
 
 ---
 

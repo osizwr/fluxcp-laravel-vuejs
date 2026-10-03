@@ -1,0 +1,129 @@
+/*
+|--------------------------------------------------------------------------
+| Fantasy — palette
+|--------------------------------------------------------------------------
+|
+| Every token the core components read, redefined for this theme.
+|
+| Scoped to `:root[data-theme-slug='fantasy']` rather than plain `:root` so
+| the theme wins on specificity instead of on stylesheet order. That matters:
+| the core stylesheet arrives in the bundle and this one as its own <link>, and
+| depending on which the browser happens to apply last would be fragile.
+|
+| Because the core components reference these semantic names and never a
+| palette directly, redefining them here restyles the entire application --
+| tables, buttons, forms, status pills, empty states -- without overriding a
+| single component.
+|
+| Direction: an adventurer's guild ledger. Deep indigo-black ground, warm
+| parchment ink, iron borders with a faint bronze cast, antique gold for the
+| few things that are actually actionable. One accent, used sparingly, so that
+| when something is gold it means something.
+|
+*/
+
+:root[data-theme-slug='fantasy'] {
+    /* ---- Surfaces: night, lit by lamplight ---------------------------- */
+    --surface-page: oklch(0.145 0.018 275);
+    --surface-raised: oklch(0.205 0.02 272);
+    --surface-sunken: oklch(0.125 0.016 275);
+    --surface-hover: oklch(0.255 0.022 270);
+
+    /* ---- Borders: cold iron, faint bronze cast ------------------------ */
+    --border-subtle: oklch(0.3 0.025 80);
+    --border-strong: oklch(0.42 0.045 82);
+
+    /* ---- Ink: warm parchment, never pure white ------------------------ */
+    --text-primary: oklch(0.94 0.013 85);
+    --text-secondary: oklch(0.74 0.018 85);
+    --text-muted: oklch(0.6 0.018 85);
+
+    /*
+     * Antique gold. The only accent, reserved for primary actions and the
+     * active navigation item. Resisting the urge to use it for decoration is
+     * what keeps it meaning "you can do something here".
+     */
+    --color-accent-300: oklch(0.88 0.1 88);
+    --color-accent-400: oklch(0.83 0.12 86);
+    --color-accent-500: oklch(0.77 0.135 84);
+    --color-accent-600: oklch(0.7 0.13 82);
+    --color-accent-700: oklch(0.6 0.115 80);
+
+    /* ---- Status: moss, rust, amber ------------------------------------ */
+    --color-up: oklch(0.72 0.14 150);
+    --color-down: oklch(0.65 0.19 28);
+    --color-warn: oklch(0.8 0.14 85);
+
+    --status-up-bg: oklch(0.28 0.055 150);
+    --status-down-bg: oklch(0.3 0.075 28);
+    --status-warn-bg: oklch(0.31 0.06 85);
+
+    /*
+     * Arcane violet. Theme-only, for realtime indicators: it reads as "this is
+     * live" without competing with gold for "this is a button".
+     */
+    --theme-arcane: oklch(0.7 0.16 295);
+    --theme-arcane-soft: oklch(0.3 0.07 295);
+
+    /* ---- Typography --------------------------------------------------- */
+    /*
+     * Cinzel for headings only. A classical engraved serif carries the
+     * register without costing legibility, because it never touches body
+     * copy or table data. Licensed under the SIL Open Font License; see
+     * resources/themes/README.md.
+     */
+    --font-display: 'Cinzel', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+
+    /* ---- Geometry ----------------------------------------------------- */
+    /*
+     * Nearly square. Soft corners read as software; a ledger reads as forged.
+     */
+    --radius-panel: 2px;
+
+    /* Ornament sizing, consumed by components.css. */
+    --theme-bracket-size: 0.5rem;
+    --theme-rule-color: oklch(0.42 0.045 82);
+}
+
+/*
+| The parchment variant.
+|
+| Not a washed-out version of the dark one: aged paper and sepia ink, with the
+| gold darkened enough to hold contrast against it. Only applied when the
+| visitor explicitly asks for light -- theme.json declares dark as this theme's
+| art direction, so that is what a first visit gets.
+*/
+
+:root[data-theme-slug='fantasy'][data-appearance='light'] {
+    --surface-page: oklch(0.955 0.015 85);
+    --surface-raised: oklch(0.985 0.008 85);
+    --surface-sunken: oklch(0.925 0.02 83);
+    --surface-hover: oklch(0.935 0.022 83);
+
+    --border-subtle: oklch(0.86 0.025 80);
+    --border-strong: oklch(0.74 0.04 78);
+
+    --text-primary: oklch(0.26 0.03 70);
+    --text-secondary: oklch(0.44 0.03 72);
+    --text-muted: oklch(0.56 0.028 74);
+
+    /* Darkened so gold-on-parchment still passes contrast. */
+    --color-accent-300: oklch(0.72 0.11 78);
+    --color-accent-400: oklch(0.64 0.12 76);
+    --color-accent-500: oklch(0.57 0.125 74);
+    --color-accent-600: oklch(0.5 0.12 72);
+    --color-accent-700: oklch(0.42 0.105 70);
+
+    --color-up: oklch(0.52 0.13 150);
+    --color-down: oklch(0.5 0.18 28);
+    --color-warn: oklch(0.58 0.12 80);
+
+    --status-up-bg: oklch(0.93 0.04 150);
+    --status-down-bg: oklch(0.94 0.035 28);
+    --status-warn-bg: oklch(0.94 0.04 85);
+
+    --theme-arcane: oklch(0.48 0.16 295);
+    --theme-arcane-soft: oklch(0.93 0.04 295);
+
+    --theme-rule-color: oklch(0.74 0.04 78);
+}

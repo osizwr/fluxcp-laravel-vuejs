@@ -102,15 +102,15 @@ COMPATIBILITY_REPORT.md section 1.5.
 
 | | |
 | --- | --- |
-| PHP files | 59 (6,111 lines) |
-| Configuration | 16 files (2,517 lines) |
-| Vue components | 17 |
-| TypeScript modules | 9 |
-| Frontend | 2,346 lines |
+| PHP files | 66 (6,856 lines) |
+| Configuration | 18 files (2,676 lines) |
+| Vue components | 22 (incl. 2 themes) |
+| TypeScript modules | 14 |
+| Frontend | 3,793 lines (incl. themes) |
 | Migrations | 4 |
 | Factories | 4 |
-| Tests | 15 files (3,229 lines), **140 tests, 342 assertions** |
-| Documentation | 7 documents (2,442 lines) |
+| Tests | 17 files, **168 tests, 445 assertions** |
+| Documentation | 9 documents |
 
 ### Complete and tested
 
@@ -134,6 +134,8 @@ COMPATIBILITY_REPORT.md section 1.5.
 | Realtime | Reverb with a polling fallback, verified end to end with a WebSocket client |
 | Scheduling | Status measurement moved out of the request path |
 | Design system | Tokens, light/dark, accessible components |
+| Theme system | Swappable skins via `APP_THEME`: design tokens plus file-resolution overrides for pages, layouts and components. Two themes ship. |
+| Game branding | `config/game.php`, consumed through `useGame()`; no component hardcodes the game name |
 
 ### Deliberately not ported
 
@@ -203,7 +205,7 @@ Every command below was run, and these are its real results.
 
 | Command | Result |
 | --- | --- |
-| `composer test` | **140 passed**, 342 assertions, 0 failures, 9s |
+| `composer test` | **168 passed**, 445 assertions, 0 failures, 9s |
 | `composer lint` (Pint) | **passed** |
 | `npm run lint` (ESLint + `vue-tsc`) | **passed**, 0 errors, 0 warnings |
 | `npm run build` | **passed**, 16 chunks, 41.7 kB gzipped entry |
@@ -349,7 +351,7 @@ Against the project's own checklist:
 | ✅ | Queues configured |
 | 🟨 | API implemented — **8 endpoints** |
 | 🟨 | Security review — **applied to what exists; no review of unbuilt code** |
-| ✅ | Automated tests created — 140 |
+| ✅ | Automated tests created — 168 |
 | 🟨 | Legacy/new compatibility testing — **for what is built** |
 | ✅ | Production build succeeds |
 | ✅ | No placeholder functionality |

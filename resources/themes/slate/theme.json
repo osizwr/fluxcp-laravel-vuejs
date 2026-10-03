@@ -1,0 +1,12 @@
+{
+    "name": "Slate",
+    "version": "1.0.0",
+    "author": "",
+    "description": "A cool, light-first skin. Ships only a palette, to demonstrate that a theme needs no component overrides to restyle the panel.",
+    "supports": {
+        "dark_mode": true,
+        "light_mode": true,
+        "mobile": true
+    },
+    "default_appearance": "light"
+}

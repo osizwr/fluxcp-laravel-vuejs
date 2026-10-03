@@ -1,0 +1,252 @@
+/*
+|--------------------------------------------------------------------------
+| Fantasy — surfaces and ornament
+|--------------------------------------------------------------------------
+|
+| Restyles the core component classes and adds a few of this theme's own.
+|
+| Everything is scoped under `[data-theme-slug='fantasy']` so that installing a
+| second theme cannot inherit any of it.
+|
+| The restraint here is deliberate. `.panel` -- which every card, table and
+| empty state in the application uses -- gets only a hairline top highlight.
+| The corner brackets are an opt-in class the theme's own components apply to
+| the two or three places that should feel like a framed plate. Decorating
+| every panel would make none of them read as special, which is the usual way
+| a themed interface ends up looking cluttered rather than art-directed.
+|
+| All original CSS. No third-party or game artwork; the only external asset is
+| the Cinzel webfont, under the SIL Open Font License.
+|
+*/
+
+/* ---------------------------------------------------------------------------
+| The ground
+| -------------------------------------------------------------------------- */
+
+[data-theme-slug='fantasy'] body {
+    /*
+     * Two very low-opacity radial washes give the page a lit centre and
+     * darker edges, so a full-width layout does not read as a flat slab. Both
+     * are gradients rather than images: nothing to download, nothing to
+     * licence, and they scale to any viewport.
+     */
+    background-image:
+        radial-gradient(
+            1200px 600px at 50% -10%,
+            color-mix(in oklab, var(--color-accent-700) 9%, transparent),
+            transparent 70%
+        ),
+        radial-gradient(
+            900px 500px at 50% 110%,
+            color-mix(in oklab, var(--theme-arcane) 7%, transparent),
+            transparent 70%
+        );
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+/* ---------------------------------------------------------------------------
+| Typography
+| -------------------------------------------------------------------------- */
+
+[data-theme-slug='fantasy'] h1,
+[data-theme-slug='fantasy'] h2,
+[data-theme-slug='fantasy'] h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    /*
+     * Engraved serifs sit better with a little air between the letters, and it
+     * reinforces the inscription feel without a decorative font in body copy.
+     */
+    letter-spacing: 0.01em;
+}
+
+[data-theme-slug='fantasy'] h1 {
+    letter-spacing: 0.02em;
+}
+
+/*
+| Table headers as small inscriptions. Data cells are left in the body font --
+| a display face in a column of numbers is where fantasy interfaces usually
+| stop being readable.
+*/
+[data-theme-slug='fantasy'] thead th {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    letter-spacing: 0.09em;
+    color: var(--color-accent-300);
+}
+
+/* ---------------------------------------------------------------------------
+| Panels
+| -------------------------------------------------------------------------- */
+
+[data-theme-slug='fantasy'] .panel {
+    position: relative;
+    /*
+     * A single hairline of light along the top edge, as though the plate
+     * catches a lamp. Cheaper and quieter than a shadow, and it survives on
+     * both appearances.
+     */
+    box-shadow: inset 0 1px 0 color-mix(in oklab, var(--color-accent-300) 12%, transparent);
+}
+
+/*
+| The framed plate: thin gold brackets at the corners.
+|
+| Opt-in, applied by this theme's own components to a small number of places.
+*/
+[data-theme-slug='fantasy'] .theme-framed {
+    position: relative;
+}
+
+[data-theme-slug='fantasy'] .theme-framed::before,
+[data-theme-slug='fantasy'] .theme-framed::after {
+    content: '';
+    position: absolute;
+    width: var(--theme-bracket-size);
+    height: var(--theme-bracket-size);
+    border-color: var(--color-accent-600);
+    border-style: solid;
+    pointer-events: none;
+}
+
+[data-theme-slug='fantasy'] .theme-framed::before {
+    top: -1px;
+    left: -1px;
+    border-width: 1px 0 0 1px;
+}
+
+[data-theme-slug='fantasy'] .theme-framed::after {
+    right: -1px;
+    bottom: -1px;
+    border-width: 0 1px 1px 0;
+}
+
+/* ---------------------------------------------------------------------------
+| Rules and separators
+| -------------------------------------------------------------------------- */
+
+/*
+| A hairline that fades out at both ends with a small lozenge at its centre.
+| Used between major sections instead of a plain border.
+*/
+[data-theme-slug='fantasy'] .theme-rule {
+    position: relative;
+    height: 1px;
+    border: 0;
+    background: linear-gradient(
+        to right,
+        transparent,
+        var(--theme-rule-color) 20%,
+        var(--theme-rule-color) 80%,
+        transparent
+    );
+}
+
+[data-theme-slug='fantasy'] .theme-rule::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.3rem;
+    height: 0.3rem;
+    background: var(--color-accent-600);
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* ---------------------------------------------------------------------------
+| Forms
+| -------------------------------------------------------------------------- */
+
+[data-theme-slug='fantasy'] .field-input {
+    background-color: var(--surface-sunken);
+    /* Recessed, as though cut into the plate rather than sitting on it. */
+    box-shadow: inset 0 1px 2px oklch(0 0 0 / 0.25);
+}
+
+[data-theme-slug='fantasy'] .field-input:focus {
+    border-color: var(--color-accent-500);
+}
+
+[data-theme-slug='fantasy'] .field-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------------
+| Focus
+| -------------------------------------------------------------------------- */
+
+/*
+| Gold rather than the core's accent, and kept at two pixels with an offset:
+| a focus ring that is hard to see is an accessibility regression dressed up
+| as a design decision.
+*/
+[data-theme-slug='fantasy'] :focus-visible {
+    outline: 2px solid var(--color-accent-400);
+    outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+| Live indicator
+| -------------------------------------------------------------------------- */
+
+/*
+| Marks a figure that updates by itself. Arcane violet, so it is distinct from
+| both the status colours and the gold used for actions.
+*/
+[data-theme-slug='fantasy'] .theme-live {
+    position: relative;
+    padding-left: 0.85rem;
+}
+
+[data-theme-slug='fantasy'] .theme-live::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 0.4rem;
+    height: 0.4rem;
+    margin-top: -0.2rem;
+    border-radius: 50%;
+    background: var(--theme-arcane);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--theme-arcane) 60%, transparent);
+    animation: theme-pulse 2.4s ease-out infinite;
+}
+
+@keyframes theme-pulse {
+    70% {
+        box-shadow: 0 0 0 0.35rem transparent;
+    }
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+| Scrollbars
+| -------------------------------------------------------------------------- */
+
+[data-theme-slug='fantasy'] * {
+    scrollbar-color: var(--border-strong) transparent;
+    scrollbar-width: thin;
+}
+
+/* ---------------------------------------------------------------------------
+| Motion
+| -------------------------------------------------------------------------- */
+
+/*
+| The core stylesheet already neutralises transitions under reduced motion.
+| The pulse above is this theme's own addition, so it is this theme's job to
+| stop it: an indefinitely animating dot is exactly what the preference is for.
+*/
+@media (prefers-reduced-motion: reduce) {
+    [data-theme-slug='fantasy'] .theme-live::before {
+        animation: none;
+    }
+}

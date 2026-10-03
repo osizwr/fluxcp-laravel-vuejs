@@ -1,0 +1,81 @@
+/*
+|--------------------------------------------------------------------------
+| Slate
+|--------------------------------------------------------------------------
+|
+| A second theme that exists to prove a point: this file is the whole theme.
+|
+| There is no components.css, and no override in layouts/, pages/ or
+| components/. Because every core component reads the semantic tokens below
+| rather than a palette directly, redefining them restyles the entire panel --
+| masthead, tables, buttons, forms, status pills, empty states.
+|
+| That is the cheap path for a derivative skin. Overrides are for when a theme
+| wants to restructure something, not recolour it; see the fantasy theme for
+| that.
+|
+| Scoped to `:root[data-theme-slug='slate']` so it wins on specificity rather
+| than on stylesheet order, and so installing it cannot affect another theme.
+|
+*/
+
+:root[data-theme-slug='slate'] {
+    /* Cool neutrals, light-first. */
+    --surface-page: oklch(0.975 0.003 250);
+    --surface-raised: oklch(1 0 0);
+    --surface-sunken: oklch(0.955 0.005 250);
+    --surface-hover: oklch(0.945 0.007 250);
+
+    --border-subtle: oklch(0.9 0.008 250);
+    --border-strong: oklch(0.82 0.012 250);
+
+    --text-primary: oklch(0.22 0.015 255);
+    --text-secondary: oklch(0.48 0.015 255);
+    --text-muted: oklch(0.6 0.014 255);
+
+    /* A single restrained blue, rather than fantasy's gold. */
+    --color-accent-300: oklch(0.76 0.1 250);
+    --color-accent-400: oklch(0.68 0.13 250);
+    --color-accent-500: oklch(0.6 0.15 252);
+    --color-accent-600: oklch(0.52 0.16 254);
+    --color-accent-700: oklch(0.44 0.15 256);
+
+    --color-up: oklch(0.6 0.14 150);
+    --color-down: oklch(0.56 0.19 25);
+    --color-warn: oklch(0.7 0.14 75);
+
+    --status-up-bg: oklch(0.95 0.035 150);
+    --status-down-bg: oklch(0.95 0.03 25);
+    --status-warn-bg: oklch(0.96 0.035 75);
+
+    /* Softer geometry than fantasy's near-square plates. */
+    --radius-panel: 0.5rem;
+}
+
+:root[data-theme-slug='slate'][data-appearance='dark'] {
+    --surface-page: oklch(0.17 0.012 255);
+    --surface-raised: oklch(0.215 0.014 255);
+    --surface-sunken: oklch(0.15 0.012 255);
+    --surface-hover: oklch(0.26 0.016 255);
+
+    --border-subtle: oklch(0.3 0.014 255);
+    --border-strong: oklch(0.4 0.018 255);
+
+    --text-primary: oklch(0.96 0.004 255);
+    --text-secondary: oklch(0.74 0.012 255);
+    --text-muted: oklch(0.6 0.014 255);
+
+    --color-accent-300: oklch(0.82 0.1 250);
+    --color-accent-400: oklch(0.75 0.12 250);
+    --color-accent-500: oklch(0.68 0.14 252);
+    --color-accent-600: oklch(0.6 0.15 254);
+    --color-accent-700: oklch(0.52 0.14 256);
+
+    --color-up: oklch(0.7 0.14 150);
+    --color-down: oklch(0.66 0.18 25);
+    --color-warn: oklch(0.78 0.13 78);
+
+    --status-up-bg: oklch(0.27 0.05 150);
+    --status-down-bg: oklch(0.28 0.06 25);
+    --status-warn-bg: oklch(0.29 0.05 78);
+}

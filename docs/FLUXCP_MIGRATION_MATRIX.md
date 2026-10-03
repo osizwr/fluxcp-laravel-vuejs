@@ -373,8 +373,9 @@ concerns are tracked in their own tables below.
 | Database connections | 4 handles per server group | `VERIFIED` | Runtime registration (D5), plus co-location detection for the login/char join. |
 | Application schema | 25 `cp_*` tables, 44 SQL files | `VERIFIED` | `panel:install-schema` (D4). 196 columns compared against the legacy end state; 11 benign type differences recorded in the compatibility report. |
 | Configuration | 361 options in one array | `IMPLEMENTING` | Split by audience (D12). The options the built features read are ported; database-backed admin-editable settings are not built. |
-| Themes | PHP template inheritance, 3 themes | `IMPLEMENTING` | Design tokens, light/dark, replaceable shell (D7). No theme-selection UI beyond appearance. |
+| Themes | PHP template inheritance, 3 themes | `VERIFIED` | Design tokens plus file-resolution overrides for pages, layouts and components, selected by APP_THEME (D7). Two themes ship. Covered by 28 tests, including that the API is byte-identical whichever theme is active and that no theme file fetches data. |
 | Add-ons | `addons/` loader, 1 example | `NOT_STARTED` | Laravel packages (D8). |
+| Game branding | Hardcoded strings + SiteName config | `VERIFIED` | config/game.php consumed through useGame(). A test fails if any .vue file hardcodes the game name. |
 | Localisation | 4 languages, `Flux::message()` | `NOT_STARTED` | Laravel translations + client catalogue. |
 | Mail | Bundled PHPMailer 5.x | `NOT_STARTED` | Queued mailables. |
 | Realtime | None (XML status feed, page refresh) | `VERIFIED` | Reverb broadcasting with a polling fallback (D14). Verified end to end with a WebSocket client. |
