@@ -273,6 +273,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Guilds
+    |--------------------------------------------------------------------------
+    */
+
+    'guilds' => [
+        /*
+         * Serve guild emblems. Needs the GD extension; turn it off rather
+         * than have every emblem request fail on a server without it.
+         */
+        'emblems' => (bool) env('PANEL_GUILD_EMBLEMS', true),
+
+        /*
+         * How long a decoded emblem is cached. Decoding means inflating and
+         * re-encoding an image per request, and emblems change rarely.
+         * FluxCP's EmblemCacheInterval, in seconds rather than minutes. 0
+         * disables caching.
+         */
+        'emblem_cache_seconds' => (int) env('PANEL_EMBLEM_CACHE_SECONDS', 600),
+
+        // Cap on a member-list export, so one request cannot stream a very
+        // large guild's roster repeatedly.
+        'export_limit' => (int) env('PANEL_GUILD_EXPORT_LIMIT', 500),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Account maintenance
     |--------------------------------------------------------------------------
     |

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CaptchaController;
 use App\Http\Controllers\Api\CharacterController;
 use App\Http\Controllers\Api\CharacterManagementController;
 use App\Http\Controllers\Api\EmailController;
+use App\Http\Controllers\Api\GuildController;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\MonsterController;
 use App\Http\Controllers\Api\NewsController;
@@ -115,6 +116,27 @@ Route::middleware('permission')->group(function (): void {
     Route::get('news/{article}', [NewsController::class, 'show'])
         ->whereNumber('article')
         ->name('news.view');
+
+    /*
+     * Guilds. The emblem is a PNG decoded from the gzip-compressed BMP
+     * rAthena stores as hex, and 404s rather than serving a placeholder when
+     * a guild has none -- the client decides what to draw instead, and a
+     * placeholder behind a 200 cannot be told apart from a real emblem by a
+     * cache.
+     */
+    Route::get('guilds', [GuildController::class, 'index'])->name('guild.index');
+
+    Route::get('guilds/{guild}', [GuildController::class, 'show'])
+        ->whereNumber('guild')
+        ->name('guild.view');
+
+    Route::get('guilds/{guild}/emblem', [GuildController::class, 'emblem'])
+        ->whereNumber('guild')
+        ->name('guild.emblem');
+
+    Route::get('guilds/{guild}/members.csv', [GuildController::class, 'export'])
+        ->whereNumber('guild')
+        ->name('guild.export');
 
     /*
      * The item and monster databases.

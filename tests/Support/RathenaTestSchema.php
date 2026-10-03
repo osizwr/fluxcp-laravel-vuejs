@@ -341,6 +341,15 @@ final class RathenaTestSchema
             $table->index('char_id');
         });
 
+        $schema->create('guild_alliance', function (Blueprint $table): void {
+            $table->unsignedInteger('guild_id')->default(0);
+            $table->unsignedInteger('alliance_id')->default(0);
+            // 0 is an ally, 1 an enemy.
+            $table->tinyInteger('opposition')->default(0);
+            $table->string('name', 24)->default('');
+            $table->primary(['guild_id', 'alliance_id']);
+        });
+
         $schema->create('guild_castle', function (Blueprint $table): void {
             $table->unsignedInteger('castle_id')->primary();
             $table->unsignedInteger('guild_id')->default(0);
