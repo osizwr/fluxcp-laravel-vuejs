@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CaptchaController;
 use App\Http\Controllers\Api\CharacterController;
 use App\Http\Controllers\Api\CharacterManagementController;
+use App\Http\Controllers\Api\DonationController;
 use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\GuildController;
 use App\Http\Controllers\Api\IpBanController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\Api\ServerStatusXmlController;
 use App\Http\Controllers\Api\ServiceDeskController;
 use App\Http\Controllers\Api\StaticPageController;
 use App\Http\Controllers\Api\WorldController;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -196,6 +198,31 @@ Route::middleware('permission')->group(function (): void {
     Route::get('pages/{path}', [StaticPageController::class, 'show'])
         ->where('path', '[A-Za-z0-9][A-Za-z0-9\-\/]*')
         ->name('pages.content');
+
+    /*
+     * Donations.
+     *
+     * `donate/notify` is the only unauthenticated write in this application,
+     * because the payment provider calls it rather than a person. Nothing in
+     * it is believed until it has been posted back to the provider and
+     * confirmed; see App\Services\Donations\PaymentNotification.
+     */
+    Route::get('donate', [DonationController::class, 'index'])->name('donate.index');
+    Route::get('donate/complete', [DonationController::class, 'complete'])
+        ->name('donate.complete');
+    Route::post('donate/notify', [DonationController::class, 'notify'])
+        // Exempt from CSRF: the caller is the payment provider, which has no
+        // session and no token. Its authenticity is established by the
+        // verification call-back instead.
+        ->withoutMiddleware([PreventRequestForgery::class])
+        ->name('donate.notify');
+    Route::get('donate/history', [DonationController::class, 'history'])->name('donate.history');
+
+    /*
+     * The account's own trusted payer addresses, and anything still on hold.
+     * The legacy action was the player's own list, not an admin screen.
+     */
+    Route::get('donate/trusted', [DonationController::class, 'trusted'])->name('donate.trusted');
 
     /*
      * The credit shop.

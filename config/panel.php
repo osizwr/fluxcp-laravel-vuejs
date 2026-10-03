@@ -366,6 +366,76 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Donations
+    |--------------------------------------------------------------------------
+    |
+    | Turning payments into shop credits. FluxCP's AcceptDonations,
+    | CreditExchangeRate, MinDonationAmount, DonationCurrency, PayPalIpnUrl,
+    | PayPalBusinessEmail and PayPalReceiverEmails.
+    |
+    | Off by default. Crediting an account cannot be undone in practice -- the
+    | player spends the credits and the items are delivered in game -- so this
+    | is something an operator turns on deliberately after setting the
+    | addresses below, not something that is live because the panel was
+    | installed.
+    |
+    | NOTE on IPN: this implements PayPal's Instant Payment Notification
+    | because that is what FluxCP used and what existing rAthena servers have
+    | configured. PayPal has since moved to webhooks and IPN is maintained
+    | rather than recommended. Check whether your account still supports it.
+    |
+    */
+
+    'donations' => [
+        'enabled' => (bool) env('PANEL_DONATIONS_ENABLED', false),
+
+        /*
+         * The verification endpoint. HTTPS, and not configurable down to
+         * plain HTTP: this request is the only thing standing between a forged
+         * POST and free credits, and FluxCP made it over port 80.
+         */
+        'verify_url' => env('PANEL_DONATIONS_VERIFY_URL', 'https://ipnpb.paypal.com/cgi-bin/webscr'),
+
+        // Where the donate form sends people.
+        'payment_url' => env('PANEL_DONATIONS_PAYMENT_URL', 'https://www.paypal.com/cgi-bin/webscr'),
+
+        'business_email' => env('PANEL_DONATIONS_BUSINESS_EMAIL'),
+
+        /*
+         * Addresses this server owns. A notification naming anything else is
+         * refused -- otherwise a payment made to somebody else credits a
+         * player here. Comma separated.
+         */
+        'receiver_emails' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('PANEL_DONATIONS_RECEIVER_EMAILS', '')),
+        ))),
+
+        'currency' => env('PANEL_DONATIONS_CURRENCY', 'USD'),
+
+        // Credits per unit of currency.
+        'credits_per_unit' => (float) env('PANEL_DONATIONS_CREDITS_PER_UNIT', 1.0),
+
+        'minimum_amount' => (float) env('PANEL_DONATIONS_MINIMUM', 2.0),
+
+        /*
+         * How long a payment from an unseen address is held before its credits
+         * become spendable, in hours. 0 credits immediately.
+         *
+         * The hold is what makes a chargeback survivable: if the payment is
+         * reversed inside the window the credits are cancelled and nothing was
+         * ever spent. Without it, a reversal leaves the server having
+         * delivered items for money it no longer has.
+         *
+         * Once a payer's first donation clears, their address is trusted and
+         * later ones are immediate. `panel:release-held-credits` runs hourly
+         * and does both halves.
+         */
+        'hold_hours' => (int) env('PANEL_DONATIONS_HOLD_HOURS', 72),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Account maintenance
     |--------------------------------------------------------------------------
     |

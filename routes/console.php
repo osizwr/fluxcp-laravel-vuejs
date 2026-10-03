@@ -37,3 +37,13 @@ Schedule::command('panel:broadcast-server-status')
 Schedule::command('panel:prune-unconfirmed')
     ->dailyAt('04:10')
     ->withoutOverlapping();
+
+/*
+ * Donation credits held pending a possible chargeback. Hourly, because the
+ * hold window is measured in hours and a payer waiting on their credits
+ * should not also wait on a daily batch. The command refuses to do anything
+ * unless donations are enabled.
+ */
+Schedule::command('panel:release-held-credits')
+    ->hourly()
+    ->withoutOverlapping();

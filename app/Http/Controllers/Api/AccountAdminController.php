@@ -60,6 +60,12 @@ final class AccountAdminController
             'group_id' => ['sometimes', 'integer', 'min:0', 'max:99'],
             'birthdate' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'state' => ['sometimes', 'integer', 'min:0'],
+            /*
+             * Shop credits, which the legacy edit form also carried. Guarded
+             * by its own ability below, because adjusting a balance is giving
+             * somebody money rather than correcting a detail.
+             */
+            'balance' => ['sometimes', 'integer', 'min:0'],
             // Not editable: userid, user_pass, logincount, lastlogin, last_ip.
             // The first two are credentials; the rest are facts the emulator
             // records, and rewriting them would be falsifying an audit trail.
@@ -71,6 +77,25 @@ final class AccountAdminController
 
         if (array_key_exists('group_id', $validated)) {
             $this->assertMayGrant($actor, (int) $validated['group_id']);
+        }
+
+        if (array_key_exists('balance', $validated)) {
+            abort_unless(
+                $actor->can('EditAccountBalance'),
+                403,
+                'You may not change account balances.',
+            );
+
+            $this->setBalance($account, (int) $validated['balance'], $actor);
+
+            unset($validated['balance']);
+
+            if ($validated === []) {
+                return response()->json([
+                    'message' => 'The account has been updated.',
+                    'data' => ['changed' => ['balance']],
+                ]);
+            }
         }
 
         $changes = [];
@@ -91,6 +116,53 @@ final class AccountAdminController
             'message' => 'The account has been updated.',
             'data' => ['changed' => array_keys($changes)],
         ]);
+    }
+
+    /**
+     * Set an account's credit balance, recording who did it.
+     *
+     * The adjustment goes into `cp_txnlog` alongside real payments, so the
+     * account's donation history shows it with the name of whoever made it.
+     * A balance that changes with no record is the thing an operator cannot
+     * answer a question about later.
+     */
+    private function setBalance(Account $account, int $balance, Account $actor): void
+    {
+        $connection = $this->connections->connection(
+            $this->servers->current()->loginConnection(),
+        );
+
+        $current = (int) ($connection->table('cp_credits')
+            ->where('account_id', $account->account_id)
+            ->value('balance') ?? 0);
+
+        if ($current === $balance) {
+            return;
+        }
+
+        $connection->transaction(function () use ($connection, $account, $balance, $current, $actor): void {
+            $connection->table('cp_credits')->updateOrInsert(
+                ['account_id' => $account->account_id],
+                ['balance' => $balance],
+            );
+
+            $connection->table('cp_txnlog')->insert([
+                'account_id' => $account->account_id,
+                'credits' => $balance - $current,
+                'payment_status' => 'Completed',
+                'txn_id' => 'manual-'.bin2hex(random_bytes(8)),
+                'txn_type' => 'manual_adjustment',
+                'mc_gross' => '0.00',
+                'mc_currency' => (string) config('panel.donations.currency', 'USD'),
+                'item_name' => sprintf(
+                    'Balance set to %d by %s (was %d)',
+                    $balance,
+                    $actor->userid,
+                    $current,
+                ),
+                'process_date' => now(),
+            ]);
+        });
     }
 
     /**

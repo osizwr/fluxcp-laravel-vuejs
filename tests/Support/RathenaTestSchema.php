@@ -279,15 +279,44 @@ final class RathenaTestSchema
             $table->index('account_id');
         });
 
+        /*
+         * The full production shape, not a subset. The donation flow writes
+         * most of these, and `hold_until` is what makes a chargeback
+         * survivable.
+         */
         $schema->create('cp_txnlog', function (Blueprint $table): void {
             $table->increments('id');
-            $table->unsignedInteger('account_id')->default(0);
-            $table->string('txn_id', 32)->default('');
-            $table->string('payer_email', 128)->default('');
-            $table->decimal('mc_gross', 10, 2)->default(0);
-            $table->string('mc_currency', 3)->default('USD');
-            $table->string('payment_status', 32)->default('');
+            $table->unsignedInteger('account_id')->nullable()->default(0);
+            $table->string('server_name', 255)->nullable();
+            $table->integer('credits')->nullable()->default(0);
+            $table->string('receiver_email', 60)->nullable();
+            $table->string('item_name', 100)->nullable();
+            $table->string('item_number', 10)->nullable();
+            $table->string('quantity', 6)->nullable();
+            $table->string('payment_status', 20)->nullable();
+            $table->string('pending_reason', 20)->nullable();
+            $table->string('payment_date', 40)->nullable();
+            $table->string('mc_gross', 20)->nullable();
+            $table->string('mc_fee', 20)->nullable();
+            $table->string('tax', 20)->nullable();
+            $table->string('mc_currency', 3)->nullable();
+            $table->string('parent_txn_id', 20)->nullable();
+            $table->string('txn_id', 20)->nullable();
+            $table->string('txn_type', 20)->nullable();
+            $table->string('payer_email', 60)->nullable();
             $table->dateTime('process_date')->nullable();
+            $table->dateTime('hold_until')->nullable();
+            $table->index('account_id');
+            $table->index('txn_id');
+        });
+
+        $schema->create('cp_trusted', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('account_id')->default(0);
+            $table->string('email', 255)->default('');
+            $table->dateTime('create_date')->nullable();
+            $table->dateTime('delete_date')->nullable();
+            $table->index('account_id');
         });
 
         $schema->create('cp_cmsnews', function (Blueprint $table): void {
