@@ -103,6 +103,20 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'My characters', requiresAuth: true },
     },
     {
+        path: '/characters/:id(\\d+)',
+        name: 'character',
+        component: themedRoute('character', 'CharacterPage', () =>
+            import('../pages/CharacterPage.vue'),
+        ),
+        meta: { title: 'Character', requiresAuth: true },
+    },
+    {
+        path: '/maps',
+        name: 'maps',
+        component: themedRoute('maps', 'MapsPage', () => import('../pages/MapsPage.vue')),
+        meta: { title: 'Map activity' },
+    },
+    {
         path: '/who-is-online',
         name: 'online',
         component: themedRoute('online', 'OnlinePage', () => import('../pages/OnlinePage.vue')),

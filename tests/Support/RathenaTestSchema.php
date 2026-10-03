@@ -297,6 +297,27 @@ final class RathenaTestSchema
          * death ladder joins rather than selects. `key` is reserved in MySQL
          * and stays quoted.
          */
+        /*
+         * A subset of rAthena's inventory table. Resetting a look unequips
+         * everything, and a divorce removes the wedding rings, so both need
+         * the card columns the rings are identified by.
+         */
+        $schema->create('inventory', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('char_id')->default(0);
+            $table->unsignedInteger('nameid')->default(0);
+            $table->smallInteger('amount')->default(0);
+            $table->unsignedInteger('equip')->default(0);
+            $table->boolean('identify')->default(false);
+            $table->tinyInteger('refine')->default(0);
+            $table->unsignedInteger('card0')->default(0);
+            $table->unsignedInteger('card1')->default(0);
+            $table->integer('card2')->default(0);
+            $table->integer('card3')->default(0);
+            $table->boolean('favorite')->default(false);
+            $table->index('char_id');
+        });
+
         $schema->create('char_reg_num', function (Blueprint $table): void {
             $table->unsignedInteger('char_id')->default(0);
             $table->string('key', 32)->default('');
@@ -368,6 +389,13 @@ final class RathenaTestSchema
             $table->unsignedSmallInteger('hair')->default(0);
             $table->unsignedSmallInteger('hair_color')->default(0);
             $table->unsignedSmallInteger('clothes_color')->default(0);
+            // The rest of the appearance, which resetting a look clears.
+            $table->unsignedSmallInteger('weapon')->default(0);
+            $table->unsignedSmallInteger('shield')->default(0);
+            $table->unsignedSmallInteger('head_top')->default(0);
+            $table->unsignedSmallInteger('head_mid')->default(0);
+            $table->unsignedSmallInteger('head_bottom')->default(0);
+            $table->unsignedSmallInteger('body')->default(0);
 
             $table->unique('name');
             $table->index('account_id');

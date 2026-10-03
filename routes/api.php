@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CaptchaController;
 use App\Http\Controllers\Api\CharacterController;
+use App\Http\Controllers\Api\CharacterManagementController;
 use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\MonsterController;
@@ -175,6 +176,47 @@ Route::middleware('permission')->group(function (): void {
         ->name('character.online');
 
     Route::get('characters/mine', [CharacterController::class, 'mine'])->name('character.mine');
+
+    /*
+     * How many players are on each map. Public, as in the legacy panel, and
+     * it honours the per-character "hide my map" preference.
+     */
+    Route::get('characters/maps', [CharacterManagementController::class, 'mapStatistics'])
+        ->name('character.mapstats');
+
+    /*
+     * One character, and the maintenance a player may do to it.
+     *
+     * Each of these refuses while the character is online. rAthena holds the
+     * character in memory and writes it back on logout, so a change made
+     * meanwhile is silently reverted.
+     *
+     * Acting on somebody else's character needs the matching ability; acting
+     * on your own never does.
+     */
+    Route::get('characters/{character}', [CharacterManagementController::class, 'show'])
+        ->whereNumber('character')
+        ->name('character.view');
+
+    Route::put('characters/{character}/slot', [CharacterManagementController::class, 'changeSlot'])
+        ->whereNumber('character')
+        ->name('character.changeslot');
+
+    Route::post('characters/{character}/reset-look', [CharacterManagementController::class, 'resetLook'])
+        ->whereNumber('character')
+        ->name('character.resetlook');
+
+    Route::post('characters/{character}/reset-position', [CharacterManagementController::class, 'resetPosition'])
+        ->whereNumber('character')
+        ->name('character.resetpos');
+
+    Route::post('characters/{character}/divorce', [CharacterManagementController::class, 'divorce'])
+        ->whereNumber('character')
+        ->name('character.divorce');
+
+    Route::match(['get', 'put'], 'characters/{character}/preferences', [CharacterManagementController::class, 'preferences'])
+        ->whereNumber('character')
+        ->name('character.prefs');
 
     /*
      * Character counts per job class, for the class showcase. A public

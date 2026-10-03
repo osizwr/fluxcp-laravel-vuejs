@@ -58,7 +58,12 @@ onMounted(load)
             </template>
 
             <template #[`cell:name`]="{ row }">
-                <span class="font-medium">{{ row.name }}</span>
+                <RouterLink
+                    :to="`/characters/${row.id}`"
+                    class="font-medium underline underline-offset-2"
+                >
+                    {{ row.name }}
+                </RouterLink>
                 <span
                     v-if="row.guild?.name"
                     class="block text-[0.8125rem] text-[var(--text-muted)]"

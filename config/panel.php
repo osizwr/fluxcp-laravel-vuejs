@@ -251,6 +251,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Characters
+    |--------------------------------------------------------------------------
+    |
+    | What a player may do to their own characters from the panel. FluxCP's
+    | DivorceKeepChild and DivorceKeepRings.
+    |
+    | Every one of these actions refuses while the character is online, which
+    | is not configurable: rAthena holds the character in memory and writes it
+    | back on logout, so a change made meanwhile is silently reverted.
+    |
+    */
+
+    'characters' => [
+        'divorce_keeps_child' => (bool) env('PANEL_DIVORCE_KEEPS_CHILD', false),
+        'divorce_keeps_rings' => (bool) env('PANEL_DIVORCE_KEEPS_RINGS', false),
+
+        // How many maps the map statistics page lists.
+        'map_statistics_limit' => (int) env('PANEL_MAP_STATS_LIMIT', 50),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Account maintenance
     |--------------------------------------------------------------------------
     |
