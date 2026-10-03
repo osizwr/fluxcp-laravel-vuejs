@@ -83,6 +83,14 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Confirm your e-mail address', requiresAuth: true, layout: 'auth' },
     },
     {
+        path: '/account/history/:tab(panel-logins|game-logins|password-changes|password-resets|email-changes)?',
+        name: 'account-history',
+        component: themedRoute('account-history', 'AccountHistoryPage', () =>
+            import('../pages/AccountHistoryPage.vue'),
+        ),
+        meta: { title: 'Account history', requiresAuth: true },
+    },
+    {
         path: '/account/security',
         name: 'account-security',
         component: themedRoute('account-security', 'AccountSecurityPage', () =>

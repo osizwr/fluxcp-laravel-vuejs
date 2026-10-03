@@ -101,7 +101,10 @@ function formatDate(value: string | null): string {
             </dl>
 
             <div class="mt-5 border-t border-[var(--border-subtle)] pt-4">
-                <AppButton to="/account/security">Change password or e-mail</AppButton>
+                <div class="flex flex-wrap gap-2">
+                    <AppButton to="/account/security">Change password or e-mail</AppButton>
+                    <AppButton to="/account/history/panel-logins">View account history</AppButton>
+                </div>
             </div>
         </section>
     </div>

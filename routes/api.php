@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\AccountHistoryController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CaptchaController;
 use App\Http\Controllers\Api\CharacterController;
@@ -89,6 +90,29 @@ Route::middleware('permission')->group(function (): void {
 
     Route::post('account/email/confirm', [EmailController::class, 'confirm'])
         ->name('account.confirmemail');
+
+    /*
+     * The signed-in account's own history.
+     *
+     * Every one of these is scoped to the session's account and takes no id
+     * from the request. They hold sign-in addresses and the times somebody was
+     * at a keyboard, so an endpoint that accepted an id would be a way to
+     * follow another player around.
+     */
+    Route::get('account/history/panel-logins', [AccountHistoryController::class, 'panelLogins'])
+        ->name('history.cplogin');
+
+    Route::get('account/history/game-logins', [AccountHistoryController::class, 'gameLogins'])
+        ->name('history.gamelogin');
+
+    Route::get('account/history/password-changes', [AccountHistoryController::class, 'passwordChanges'])
+        ->name('history.passchange');
+
+    Route::get('account/history/password-resets', [AccountHistoryController::class, 'passwordResets'])
+        ->name('history.passreset');
+
+    Route::get('account/history/email-changes', [AccountHistoryController::class, 'emailChanges'])
+        ->name('history.emailchange');
 
     /*
      * The CAPTCHA image, when the self-hosted driver is in use. Open to

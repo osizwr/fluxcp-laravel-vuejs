@@ -477,6 +477,19 @@ final class RathenaTestSchema
             $table->index('type');
         });
 
+        /*
+         * rAthena's own sign-in log. Keyed on the account *name* rather than
+         * its id, which is why the history query matches on `user`.
+         */
+        $schema->create('loginlog', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->dateTime('time')->useCurrent();
+            $table->string('ip', 39)->default('');
+            $table->string('user', 23)->default('');
+            $table->tinyInteger('rcode')->default(0);
+            $table->string('log', 255)->default('');
+        });
+
         $schema->create('mvplog', function (Blueprint $table): void {
             $table->increments('mvp_id');
             $table->dateTime('mvp_date')->useCurrent();
