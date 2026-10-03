@@ -185,6 +185,12 @@ return [
         'news.delete' => AccountLevel::Administrator,
         'news.edit' => AccountLevel::Administrator,
         'news.index' => AccountLevel::Anyone,
+        /*
+         * The legacy `edit` action both rendered the form and saved it. Split
+         * into a GET and a PUT here, which needs a key for each; both stay at
+         * the legacy level.
+         */
+        'news.update' => AccountLevel::Administrator,
         'news.manage' => AccountLevel::Administrator,
         'news.view' => AccountLevel::Anyone,
 

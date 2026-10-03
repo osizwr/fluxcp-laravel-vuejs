@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Models\NewsArticle;
+use App\Services\Content\ContentRenderer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -34,11 +35,26 @@ final class NewsArticleResource extends JsonResource
             'updated_at' => $this->modified?->toIso8601String(),
 
             /*
-             * Rich text from the legacy editor. Included only when a single
-             * article was requested, and the client must render it as HTML
-             * deliberately rather than by accident -- see the news page.
+             * Two forms, on the single-article view only.
+             *
+             * `body` is what the operator typed, unchanged, for the editor.
+             * `body_html` is that run through ContentRenderer: Markdown with
+             * raw HTML stripped and unsafe links refused, which is the form
+             * the client displays.
+             *
+             * The legacy templates echoed this column straight into the page,
+             * making the news editor a stored-XSS vector reachable by every
+             * administrator. See docs/MIGRATION_DECISIONS.md (D20).
              */
-            'body' => $this->when($request->routeIs('news.view'), fn (): string => $this->body),
+            'body' => $this->when(
+                $request->routeIs('news.view') || $request->routeIs('news.edit'),
+                fn (): string => $this->body,
+            ),
+
+            'body_html' => $this->when(
+                $request->routeIs('news.view'),
+                fn (): string => app(ContentRenderer::class)->toHtml($this->body),
+            ),
         ];
     }
 }

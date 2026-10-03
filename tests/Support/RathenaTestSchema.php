@@ -289,6 +289,14 @@ final class RathenaTestSchema
             $table->dateTime('modified')->nullable();
         });
 
+        $schema->create('cp_cmspages', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->string('path', 100);
+            $table->string('title', 100);
+            $table->text('body');
+            $table->dateTime('modified')->nullable();
+        });
+
         $schema->create('cp_loginprefs', function (Blueprint $table): void {
             $table->increments('id');
             $table->unsignedInteger('account_id');

@@ -696,3 +696,57 @@ deliberate limit of the port, written down rather than discovered.
 with off-the-shelf OCR. The self-hosted driver exists to stop casual scripted
 registration, and the class comment says so. Rate limiting, which the legacy
 panel had none of, is the control that actually bounds abuse here.
+
+---
+
+## D20 — Operator-authored content is Markdown, not raw HTML
+
+**Legacy behaviour.** The news and static-page templates echoed their body
+columns into the page with no escaping:
+
+```php
+<?php echo $news->body ?>
+<?php echo $page->body ?>
+```
+
+Whatever an administrator typed into the editor was executed in every
+visitor's browser.
+
+**Why this is worse than it sounds.** It is stored cross-site scripting, and
+the editor is reachable by *every* administrator rather than only by whoever
+set the server up. One careless or compromised staff account reaches every
+player who loads the front page, and the payload persists until somebody
+notices and edits the row. On a panel whose whole job is handling game
+accounts, the thing an injected script would most usefully steal is a session.
+
+**Decision.** Bodies are stored exactly as typed and rendered through
+`ContentRenderer` for display: Markdown, with raw HTML **stripped** and unsafe
+link schemes refused.
+
+The API serves both forms. `body` is the operator's text, unchanged, for the
+editor. `body_html` is the rendered, safe version, and is the only one the
+client displays. Nothing in the database is rewritten, so an existing FluxCP
+install's content is left exactly as it was found.
+
+`news.link`, which the listing renders as an anchor, is restricted to `http`
+and `https` for the same reason — with the body handled, the link field would
+otherwise be the remaining way in.
+
+**The cost, stated plainly.** Content already written as HTML renders with its
+tags removed rather than as formatted markup. An operator migrating from
+FluxCP will want to rewrite those entries as Markdown; the raw body is
+preserved, so nothing is lost while they do.
+
+**Why not allow a safe subset of HTML.** That means shipping a sanitiser and
+maintaining an allow-list of tags and attributes. Allow-lists of this kind fail
+quietly — a missed attribute, a new HTML feature, an SVG payload — and the
+failure is invisible until somebody exploits it. Markdown with HTML off has a
+much smaller surface, and `league/commonmark` already ships with Laravel, so
+it adds no dependency.
+
+**Also fixed here.** The legacy stored a page's `path` as typed and looked it
+up with an exact match, so a page whose link and row disagreed about a trailing
+slash or a capital letter was simply unreachable. Paths are normalised to
+lower case without surrounding slashes, and validated to letters, digits,
+dashes and slashes — which also refuses anything that could be read as a
+traversal or a query string.

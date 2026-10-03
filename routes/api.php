@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\RankingController;
 use App\Http\Controllers\Api\RegistrationController;
 use App\Http\Controllers\Api\ServerStatisticsController;
 use App\Http\Controllers\Api\ServerStatusController;
+use App\Http\Controllers\Api\StaticPageController;
 use App\Http\Controllers\Api\WorldController;
 use Illuminate\Support\Facades\Route;
 
@@ -140,9 +141,47 @@ Route::middleware('permission')->group(function (): void {
      * so there is no write path rather than a stub that looks like one.
      */
     Route::get('news', [NewsController::class, 'index'])->name('news.index');
+
+    /*
+     * The operator's side. Declared before the public `news/{article}` route
+     * so `news/manage` is not swallowed by it -- although the numeric
+     * constraint would prevent that anyway, the order makes it not depend on
+     * remembering the constraint.
+     */
+    Route::get('news/manage', [NewsController::class, 'manage'])->name('news.manage');
+    Route::post('news', [NewsController::class, 'store'])->name('news.add');
+    Route::get('news/{article}/edit', [NewsController::class, 'edit'])
+        ->whereNumber('article')
+        ->name('news.edit');
+    Route::put('news/{article}', [NewsController::class, 'update'])
+        ->whereNumber('article')
+        ->name('news.update');
+    Route::delete('news/{article}', [NewsController::class, 'destroy'])
+        ->whereNumber('article')
+        ->name('news.delete');
+
     Route::get('news/{article}', [NewsController::class, 'show'])
         ->whereNumber('article')
         ->name('news.view');
+
+    /*
+     * Operator-authored static pages.
+     *
+     * `pages/{path}` is public and reached by path rather than id, so a page
+     * keeps a stable URL across edits. The rest is the administrator's side.
+     */
+    Route::get('pages', [StaticPageController::class, 'index'])->name('pages.index');
+    Route::post('pages', [StaticPageController::class, 'store'])->name('pages.add');
+    Route::put('pages/{page}', [StaticPageController::class, 'update'])
+        ->whereNumber('page')
+        ->name('pages.edit');
+    Route::delete('pages/{page}', [StaticPageController::class, 'destroy'])
+        ->whereNumber('page')
+        ->name('pages.delete');
+
+    Route::get('pages/{path}', [StaticPageController::class, 'show'])
+        ->where('path', '[A-Za-z0-9][A-Za-z0-9\-\/]*')
+        ->name('pages.content');
 
     /*
      * IP bans.
