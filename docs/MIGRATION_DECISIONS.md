@@ -971,3 +971,32 @@ the emulator either.
 
 An explicit unban still clears the column, because that is a deliberate act
 with an audit row behind it.
+
+## D28 — The panel does not police its own file ownership
+
+FluxCP's `RequireOwnership` made `index.php` refuse to run unless the executing
+user owned `FLUX_ROOT/data/`, and `Flux_PermissionError` carried the `chown` and
+`chmod` commands to fix it.
+
+**Not ported.** There is no equivalent directory — the panel writes to
+`storage/`, which Laravel owns and which a deployment configures once — and a
+running application checking `posix_geteuid()` against a directory's owner on
+every request is a deployment concern answered at the wrong time. It also
+cannot be made to work in the places this is likely to run: a container, a
+shared host, or anything where the web user and the deploying user differ by
+design.
+
+The requirement itself is real and belongs in the deployment documentation,
+where `storage/` and `bootstrap/cache` permissions are already covered.
+
+---
+
+This is the last of the legacy's 199 configuration options to be accounted for.
+Every other one is either ported to `config/panel.php`, answered by Laravel's
+own configuration, recorded as a decision above, or carried in
+`config/rathena_reference.php`. The reconciliation is a script rather than a
+reading, and worth re-running rather than trusting this paragraph:
+
+```
+rg -o "Flux::config\('([A-Za-z][\w.]*)'\)" -r '$1' legacy --glob '!legacy/config/**' | sort -u
+```

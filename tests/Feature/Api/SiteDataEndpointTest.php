@@ -10,6 +10,8 @@ use App\Models\Guild;
 use App\Models\NewsArticle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Concerns\InteractsWithRathena;
 use Tests\TestCase;
@@ -164,15 +166,44 @@ final class SiteDataEndpointTest extends TestCase
     }
 
     #[Test]
-    public function a_missing_party_table_reports_null_rather_than_zero(): void
+    public function parties_are_counted_when_the_table_exists(): void
     {
-        // Zero would read as "nobody has a party" on a server whose schema
-        // simply does not have the table.
         Cache::flush();
+
+        DB::connection($this->serverGroup()->charMapConnection())->table('party')->insert([
+            ['name' => 'One', 'leader_char' => 0],
+            ['name' => 'Two', 'leader_char' => 0],
+        ]);
 
         $this->getJson('/api/server/statistics')
             ->assertOk()
-            ->assertJsonPath('data.parties', null);
+            ->assertJsonPath('data.parties', 2);
+    }
+
+    /**
+     * Zero would read as "nobody has a party" on a server whose schema simply
+     * does not have the table.
+     *
+     * The table is renamed rather than dropped, and restored whatever happens,
+     * because the schema is built once for the class and a test that destroys
+     * part of it fails every test after it.
+     */
+    #[Test]
+    public function a_missing_party_table_reports_null_rather_than_zero(): void
+    {
+        Cache::flush();
+
+        $schema = Schema::connection($this->serverGroup()->charMapConnection());
+
+        $schema->rename('party', 'party_hidden_for_test');
+
+        try {
+            $this->getJson('/api/server/statistics')
+                ->assertOk()
+                ->assertJsonPath('data.parties', null);
+        } finally {
+            $schema->rename('party_hidden_for_test', 'party');
+        }
     }
 
     #[Test]

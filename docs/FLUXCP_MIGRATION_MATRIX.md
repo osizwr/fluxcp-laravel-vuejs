@@ -35,16 +35,26 @@ the migration being finished — see the cross-cutting table below and
 [FINAL_MIGRATION_AUDIT.md](FINAL_MIGRATION_AUDIT.md) §3, which list what is
 still outstanding outside the module actions.
 
-**A row marked `VERIFIED` has been wrong before.** Three were found by
-measuring rather than re-reading this table: `character/view` and `guild/view`
-returned four and three data sets respectively that the port did not, and
-`item/iteminfo` was described as the filter-vocabulary endpoint when it is the
-itemInfo.lua importer, which was not ported at all. What found them was
-checking every table the legacy reads against whether any code here touches it
-— `cp_itemdesc`, `friends`, `guild_expulsion` and `guild_storage` came back
-with no readers — and the same sweep over the legacy's 199 configuration
-options. Both sweeps are cheap to repeat and worth repeating before this table
-is trusted again.
+**A row marked `VERIFIED` has been wrong before**, and `character/view` was
+wrong twice — the first correction restored four of its ten data sets and
+claimed the row finished. What finds these is not re-reading this table but two
+scripted sweeps:
+
+1. every table the legacy reads, against whether any code here touches it.
+   `cp_itemdesc`, `friends`, `guild_expulsion`, `guild_storage` and `pet` came
+   back with no readers.
+2. every one of the legacy's 199 configuration options, against the new
+   configuration and the decision log.
+
+The first sweep has to match quoted identifiers, not substrings: an earlier
+run missed `pet` because the word appears inside `competitive`, and missed
+`inventory` because it appears in a comment. The second has to be triaged by
+hand, because almost everything is renamed — but it is what turned up ten
+missing game vocabularies, the staff exclusions, the ticket credit reward and
+the RSS news source.
+
+Both sweeps now come back empty. They are cheap to repeat and worth repeating
+before this table is trusted again.
 
 ## Module actions
 
@@ -108,7 +118,7 @@ is trusted again.
 | `prefs` | `modules/character/prefs.php` | `NORMAL` | `VERIFIED` | Read and write the three per-character preferences. Hiding from the zeny ladder needs its own ability and is dropped from the submission rather than refusing the rest. |
 | `resetlook` | `modules/character/resetlook.php` | `NORMAL` | `VERIFIED` | Unequips everything and clears the appearance. `body` is set to the class, not zero, matching the legacy statement. |
 | `resetpos` | `modules/character/resetpos.php` | `NORMAL` | `VERIFIED` | Returns the character to their save point. The operator's deny list is matched without the `.gat` extension, which rAthena writes inconsistently. |
-| `view` | `modules/character/view.php` | `NORMAL` | `VERIFIED` | `GET /api/characters/{id}` plus `/characters/{id}`. Own character always; somebody else's needs ViewCharacter. |
+| `view` | `modules/character/view.php` | `NORMAL` | `VERIFIED` | `GET /api/characters/{id}` plus `/characters/{id}`. Own character always; somebody else's needs ViewCharacter. The legacy assembled ten data sets here and two earlier revisions of this row claimed it done while returning the character alone: equipment and inventory, cart, friends, party roster, pet, homunculus with its stat block, partner/parents/child by name, the party's name and leader, the guild rank with its tax, and the death count rAthena keeps in `char_reg_num` rather than as a column. All ten are present. Unidentified items are staff-only, as the legacy had them. 22 tests cover this action alone. |
 
 ### `cplog`
 

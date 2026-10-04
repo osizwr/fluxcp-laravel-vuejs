@@ -309,8 +309,8 @@ final class CharacterManagementTest extends TestCase
 
         $this->getJson("/api/characters/{$character->char_id}")
             ->assertOk()
-            ->assertJsonCount(1, 'meta.party')
-            ->assertJsonPath('meta.party.0.name', 'Leader');
+            ->assertJsonCount(1, 'meta.party_members')
+            ->assertJsonPath('meta.party_members.0.name', 'Leader');
     }
 
     #[Test]
@@ -320,7 +320,230 @@ final class CharacterManagementTest extends TestCase
 
         $this->getJson("/api/characters/{$character->char_id}")
             ->assertOk()
-            ->assertJsonCount(0, 'meta.party');
+            ->assertJsonCount(0, 'meta.party_members');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pet, homunculus, family, party and deaths
+    |--------------------------------------------------------------------------
+    |
+    | All of these were in the single query modules/character/view.php ran and
+    | none were in this port. They were found by checking every table the
+    | legacy reads against whether anything here touches it.
+    |
+    */
+
+    #[Test]
+    public function a_character_page_shows_its_pet(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        DB::connection($this->charMap())->table('mob_db_re')->insert([
+            'ID' => 1002, 'Sprite' => 'PORING', 'kName' => 'Poring', 'iName' => 'Poring',
+        ]);
+
+        $petId = DB::connection($this->charMap())->table('pet')->insertGetId([
+            'class' => 1002, 'name' => 'Blobby', 'char_id' => $character->char_id,
+            'account_id' => $character->account_id, 'level' => 12,
+            'intimate' => 900, 'hungry' => 50,
+        ]);
+
+        DB::connection($this->charMap())->table('char')
+            ->where('char_id', $character->char_id)
+            ->update(['pet_id' => $petId]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.pet.name', 'Blobby')
+            // The species comes through the monster merge, so a pet of a mob
+            // the server added itself is named by that server's entry.
+            ->assertJsonPath('meta.pet.species', 'Poring')
+            ->assertJsonPath('meta.pet.level', 12)
+            ->assertJsonPath('meta.pet.intimacy', 900);
+    }
+
+    #[Test]
+    public function a_character_with_no_pet_reports_null(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.pet', null);
+    }
+
+    #[Test]
+    public function a_character_page_shows_its_homunculus_with_its_stats(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $homunId = DB::connection($this->charMap())->table('homunculus')->insertGetId([
+            'char_id' => $character->char_id, 'class' => 6001, 'name' => 'Lif',
+            'level' => 40, 'exp' => 5000, 'intimacy' => 100_000, 'hunger' => 70,
+            'str' => 12, 'agi' => 20, 'vit' => 15, 'int' => 30, 'dex' => 18, 'luk' => 9,
+            'hp' => 900, 'max_hp' => 1000, 'sp' => 80, 'max_sp' => 100,
+            'skill_point' => 3, 'alive' => true,
+        ]);
+
+        DB::connection($this->charMap())->table('char')
+            ->where('char_id', $character->char_id)
+            ->update(['homun_id' => $homunId]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.homunculus.name', 'Lif')
+            ->assertJsonPath('meta.homunculus.level', 40)
+            ->assertJsonPath('meta.homunculus.stats.int', 30)
+            ->assertJsonPath('meta.homunculus.hp.current', 900)
+            ->assertJsonPath('meta.homunculus.hp.max', 1000)
+            ->assertJsonPath('meta.homunculus.skill_points', 3)
+            ->assertJsonPath('meta.homunculus.alive', true);
+    }
+
+    /**
+     * A released homunculus stays in the table with `alive` cleared. Reported
+     * rather than hidden: a player asking where it went is answered by seeing
+     * it listed as not alive.
+     */
+    #[Test]
+    public function a_released_homunculus_is_reported_as_not_alive(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $homunId = DB::connection($this->charMap())->table('homunculus')->insertGetId([
+            'char_id' => $character->char_id, 'class' => 6001, 'name' => 'Gone',
+            'level' => 5, 'alive' => false,
+        ]);
+
+        DB::connection($this->charMap())->table('char')
+            ->where('char_id', $character->char_id)
+            ->update(['homun_id' => $homunId]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.homunculus.name', 'Gone')
+            ->assertJsonPath('meta.homunculus.alive', false);
+    }
+
+    #[Test]
+    public function a_character_page_names_its_family(): void
+    {
+        [$account, $character] = $this->signedInWithCharacter();
+
+        $partner = Character::factory()->forAccount($account)->named('Spouse')->create();
+        $child = Character::factory()->forAccount($account)->named('Offspring')->create();
+
+        DB::connection($this->charMap())->table('char')
+            ->where('char_id', $character->char_id)
+            ->update(['partner_id' => $partner->char_id, 'child' => $child->char_id]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.family.partner.name', 'Spouse')
+            ->assertJsonPath('meta.family.child.name', 'Offspring')
+            ->assertJsonPath('meta.family.mother', null)
+            ->assertJsonPath('meta.family.father', null);
+    }
+
+    /**
+     * rAthena leaves these columns set after the other character is deleted,
+     * so a character can carry a partner id and have no partner.
+     */
+    #[Test]
+    public function a_family_id_that_names_nobody_is_reported_as_absent(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        DB::connection($this->charMap())->table('char')
+            ->where('char_id', $character->char_id)
+            ->update(['partner_id' => 999_999]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.family.partner', null);
+    }
+
+    #[Test]
+    public function a_character_page_names_its_party_and_leader(): void
+    {
+        [$account, $character] = $this->signedInWithCharacter();
+
+        $leader = Character::factory()->forAccount($account)->named('Captain')->create();
+
+        $partyId = DB::connection($this->charMap())->table('party')->insertGetId([
+            'name' => 'The Expedition', 'leader_char' => $leader->char_id,
+            'leader_id' => $leader->account_id, 'exp' => true, 'item' => false,
+        ]);
+
+        DB::connection($this->charMap())->table('char')
+            ->where('char_id', $character->char_id)
+            ->update(['party_id' => $partyId]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.party.name', 'The Expedition')
+            ->assertJsonPath('meta.party.leader.name', 'Captain')
+            ->assertJsonPath('meta.party.shares_experience', true)
+            ->assertJsonPath('meta.party.shares_items', false);
+    }
+
+    /**
+     * rAthena keeps this in char_reg_num under PC_DIE_COUNTER rather than as a
+     * column, and a character who has never died has no row at all.
+     */
+    #[Test]
+    public function a_character_page_reports_its_death_count(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        DB::connection($this->charMap())->table('char_reg_num')->insert([
+            'char_id' => $character->char_id, 'key' => 'PC_DIE_COUNTER',
+            'index' => 0, 'value' => 17,
+        ]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.deaths', 17);
+    }
+
+    #[Test]
+    public function a_character_who_has_never_died_reports_zero_deaths(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.deaths', 0);
+    }
+
+    #[Test]
+    public function a_character_page_reports_its_guild_rank(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $guild = \App\Models\Guild::factory()->named('Valkyrie')->create();
+
+        DB::connection($this->charMap())->table('char')
+            ->where('char_id', $character->char_id)
+            ->update(['guild_id' => $guild->guild_id]);
+
+        DB::connection($this->charMap())->table('guild_member')->insert([
+            'guild_id' => $guild->guild_id, 'char_id' => $character->char_id,
+            'exp' => 320, 'position' => 2,
+        ]);
+
+        DB::connection($this->charMap())->table('guild_position')->insert([
+            'guild_id' => $guild->guild_id, 'position' => 2,
+            'name' => 'Treasurer|00', 'mode' => 1, 'exp_mode' => 30,
+        ]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            // The terminator rAthena pads the column with is stripped.
+            ->assertJsonPath('meta.guild_position.name', 'Treasurer')
+            ->assertJsonPath('meta.guild_position.guild_tax', 30)
+            ->assertJsonPath('meta.guild_position.devotion', 320);
     }
 
     /**

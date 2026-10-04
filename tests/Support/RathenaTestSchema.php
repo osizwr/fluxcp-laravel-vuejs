@@ -506,10 +506,59 @@ final class RathenaTestSchema
             $table->unsignedInteger('exp')->default(0);
             $table->unsignedInteger('intimacy')->default(0);
             $table->unsignedSmallInteger('hunger')->default(0);
+            /*
+             * The stat block a character's page shows. The ladder only needs
+             * the level and intimacy, which is why an earlier revision of
+             * this schema stopped there.
+             */
+            $table->unsignedSmallInteger('str')->default(0);
+            $table->unsignedSmallInteger('agi')->default(0);
+            $table->unsignedSmallInteger('vit')->default(0);
+            $table->unsignedSmallInteger('int')->default(0);
+            $table->unsignedSmallInteger('dex')->default(0);
+            $table->unsignedSmallInteger('luk')->default(0);
+            $table->unsignedInteger('hp')->default(0);
+            $table->unsignedInteger('max_hp')->default(0);
+            $table->unsignedInteger('sp')->default(0);
+            $table->unsignedInteger('max_sp')->default(0);
+            $table->unsignedSmallInteger('skill_point')->default(0);
             // A released homunculus stays in the table, so the ladder filters
             // on this rather than assuming every row is live.
             $table->boolean('alive')->default(true);
             $table->index('char_id');
+        });
+
+        /*
+         * A character's pet. The mob it is a pet of is named through the
+         * monster merge, so a server's own mob_db2 entries name their pets
+         * correctly.
+         */
+        $schema->create('pet', function (Blueprint $table): void {
+            $table->increments('pet_id');
+            $table->unsignedSmallInteger('class')->default(0);
+            $table->string('name', 24)->default('');
+            $table->unsignedInteger('account_id')->default(0);
+            $table->unsignedInteger('char_id')->default(0);
+            $table->unsignedSmallInteger('level')->default(1);
+            $table->unsignedInteger('egg_id')->default(0);
+            $table->unsignedInteger('equip')->default(0);
+            $table->smallInteger('intimate')->default(0);
+            $table->smallInteger('hungry')->default(0);
+            $table->boolean('rename_flag')->default(false);
+            $table->boolean('incubate')->default(false);
+        });
+
+        /*
+         * Parties. Only the name and the leader are read, but the leader is
+         * read as a character id and joined for a name.
+         */
+        $schema->create('party', function (Blueprint $table): void {
+            $table->increments('party_id');
+            $table->string('name', 24)->default('');
+            $table->boolean('exp')->default(false);
+            $table->boolean('item')->default(false);
+            $table->unsignedInteger('leader_id')->default(0);
+            $table->unsignedInteger('leader_char')->default(0);
         });
 
         /*

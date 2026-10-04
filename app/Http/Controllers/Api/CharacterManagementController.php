@@ -64,7 +64,13 @@ final class CharacterManagementController
                 'inventory' => $this->belongings->inventory($character, $unidentified),
                 'cart' => $this->belongings->cart($character, $unidentified),
                 'friends' => $this->belongings->friends($character),
-                'party' => $this->belongings->partyMembers($character),
+                'party_members' => $this->belongings->partyMembers($character),
+                'pet' => $this->belongings->pet($character),
+                'homunculus' => $this->belongings->homunculus($character),
+                'family' => $this->belongings->family($character),
+                'party' => $this->belongings->party($character),
+                'guild_position' => $this->belongings->guildPosition($character),
+                'deaths' => $this->belongings->deathCount($character),
                 'shows_unidentified' => $unidentified,
             ]])
             ->response();

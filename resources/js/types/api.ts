@@ -109,13 +109,78 @@ export interface CharacterCompanion {
     guild: { id: number; name: string; emblem_url: string | null } | null
 }
 
+export interface CharacterPet {
+    id: number
+    name: string
+    species_id: number
+    /** Named through the monster merge, so a server's own mob entries count. */
+    species: string | null
+    level: number
+    /** As rAthena stores them: the ceilings are server configuration the panel cannot see. */
+    intimacy: number
+    hunger: number
+    has_accessory: boolean
+}
+
+export interface CharacterHomunculus {
+    id: number
+    name: string
+    class_id: number
+    class: string | null
+    level: number
+    experience: number
+    intimacy: number
+    hunger: number
+    /** A released homunculus stays in the table with this cleared. */
+    alive: boolean
+    skill_points: number
+    stats: { str: number; agi: number; vit: number; int: number; dex: number; luk: number }
+    hp: { current: number; max: number }
+    sp: { current: number; max: number }
+}
+
+export interface CharacterRelative {
+    id: number
+    name: string
+}
+
+export interface CharacterParty {
+    id: number
+    name: string
+    leader: CharacterRelative | null
+    shares_experience: boolean
+    shares_items: boolean
+}
+
+export interface CharacterGuildRank {
+    position: number
+    name: string
+    mode: number
+    /** The share of experience this rank pays into the guild, as a percentage. */
+    guild_tax: number
+    devotion: number
+}
+
 /** What comes beside a character on its own page. */
 export interface CharacterBelongings {
     preferences: Record<string, boolean>
     inventory: ItemStack[]
     cart: ItemStack[]
     friends: CharacterCompanion[]
-    party: CharacterCompanion[]
+    /** The other members of the character's party. */
+    party_members: CharacterCompanion[]
+    pet: CharacterPet | null
+    homunculus: CharacterHomunculus | null
+    /** Each is null when the character has no such relative, or the id names nobody. */
+    family: {
+        partner: CharacterRelative | null
+        mother: CharacterRelative | null
+        father: CharacterRelative | null
+        child: CharacterRelative | null
+    }
+    party: CharacterParty | null
+    guild_position: CharacterGuildRank | null
+    deaths: number
     /** False for a viewer without SeeUnknownItems, whose lists are filtered. */
     shows_unidentified: boolean
 }
