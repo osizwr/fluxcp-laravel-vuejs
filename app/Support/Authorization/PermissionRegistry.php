@@ -173,6 +173,43 @@ final class PermissionRegistry
     }
 
     /**
+     * The account group ids below a panel level.
+     *
+     * Several public aggregates hide staff: a ladder should not be headed by a
+     * game master with developer-granted levels, a map count should not locate
+     * one, and the total-zeny figure an operator watches for inflation should
+     * not move because somebody granted themselves two billion for a test.
+     * FluxCP spelled this three times -- RankingHideGroupLevel,
+     * HideFromMapStats and InfoHideZenyGroupLevel -- and it is one question
+     * here, asked with a different cutoff.
+     *
+     * An empty result means "do not filter", which is the legacy behaviour
+     * when the group list came back empty, and is what a caller wants when
+     * nothing is configured: hiding everybody would turn every aggregate into
+     * a zero.
+     *
+     * @param  int|null  $cutoff  Groups at or above this level are excluded.
+     *                            Null disables the filter.
+     * @return list<int>
+     */
+    public function accountGroupIdsBelowLevel(?int $cutoff): array
+    {
+        if ($cutoff === null) {
+            return [];
+        }
+
+        $visible = [];
+
+        foreach ($this->accountGroupMap() as $groupId => $group) {
+            if ($group['level']->value < $cutoff) {
+                $visible[] = $groupId;
+            }
+        }
+
+        return $visible;
+    }
+
+    /**
      * @return array<string, AccountLevel>
      */
     private function normalise(string $configKey): array

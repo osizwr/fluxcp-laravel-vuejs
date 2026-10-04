@@ -796,6 +796,42 @@ final class CharacterManagementTest extends TestCase
             ->assertJsonCount(0, 'data');
     }
 
+    /**
+     * The per-character preference does not cover staff: a game master alone
+     * on a map is located by a count of one whether or not they set one.
+     * FluxCP's HideFromMapStats.
+     */
+    #[Test]
+    public function a_staff_characters_map_is_not_counted(): void
+    {
+        Character::factory()->forAccount(Account::factory()->create())->online()
+            ->state(['last_map' => 'prontera'])->create();
+
+        Character::factory()->forAccount(Account::factory()->administrator()->create())
+            ->online()->state(['last_map' => 'gm_island'])->create();
+
+        $response = $this->getJson('/api/characters/maps')->assertOk();
+
+        $maps = array_column($response->json('data'), 'map');
+
+        $this->assertContains('prontera', $maps);
+        $this->assertNotContains('gm_island', $maps);
+        $this->assertSame(1, $response->json('meta.total_online'));
+    }
+
+    #[Test]
+    public function staff_are_counted_when_the_operator_turns_the_filter_off(): void
+    {
+        config(['panel.characters.hide_maps_at_or_above_level' => null]);
+
+        Character::factory()->forAccount(Account::factory()->administrator()->create())
+            ->online()->state(['last_map' => 'gm_island'])->create();
+
+        $this->getJson('/api/characters/maps')
+            ->assertOk()
+            ->assertJsonPath('data.0.map', 'gm_island');
+    }
+
     #[Test]
     public function map_statistics_are_public(): void
     {

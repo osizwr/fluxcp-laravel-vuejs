@@ -6,6 +6,7 @@ namespace App\Services\Server;
 
 use App\Enums\Gender;
 use App\Services\Rathena\ReferenceData;
+use App\Services\Rathena\StaffVisibility;
 use App\Support\Rathena\ServerRegistry;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\ConnectionResolverInterface;
@@ -35,6 +36,7 @@ final readonly class ServerStatisticsService
         private ConnectionResolverInterface $connections,
         private CacheRepository $cache,
         private ReferenceData $reference,
+        private StaffVisibility $staff,
     ) {}
 
     /**
@@ -87,11 +89,30 @@ final readonly class ServerStatisticsService
      */
     private function totalZeny(): int
     {
-        return (int) $this->connections
-            ->connection($this->servers->currentCharMapServer()->connectionName())
-            ->table('char')
-            ->where(fn ($q) => $q->where('delete_date', 0)->orWhereNull('delete_date'))
-            ->sum('zeny');
+        $server = $this->servers->currentCharMapServer();
+
+        $query = $this->connections
+            ->connection($server->connectionName())
+            ->table('char as ch')
+            ->where(fn ($q) => $q->where('ch.delete_date', 0)->orWhereNull('ch.delete_date'));
+
+        /*
+         * Staff zeny is left out, as FluxCP's InfoHideZenyGroupLevel did. This
+         * is the figure an operator watches for inflation, and a game master
+         * who granted themselves two billion for a test moves it further than
+         * the economy does.
+         */
+        $threshold = config('panel.statistics.hide_zeny_at_or_above_level');
+
+        $this->staff->excludeStaff(
+            $query,
+            $this->servers->current(),
+            $server->key,
+            'ch',
+            $threshold === null ? null : (int) $threshold,
+        );
+
+        return (int) $query->sum('ch.zeny');
     }
 
     /**
@@ -115,7 +136,16 @@ final readonly class ServerStatisticsService
                 ->selectRaw('class, COUNT(*) as characters')
                 ->where(fn ($query) => $query->where('delete_date', 0)->orWhereNull('delete_date'))
                 ->groupBy('class')
-                ->orderByDesc('characters')
+                /*
+                 * By how many hold each job, or by job id. FluxCP's
+                 * SortJobsByAmount, which defaulted to job id; a chart is read
+                 * for which job is popular, so this defaults the other way.
+                 */
+                ->when(
+                    (bool) config('panel.statistics.sort_classes_by_count', true),
+                    fn ($query) => $query->orderByDesc('characters'),
+                    fn ($query) => $query->orderBy('class'),
+                )
                 ->limit($limit)
                 ->get()
                 ->map(fn (object $row): array => [

@@ -128,6 +128,41 @@ final class SiteDataEndpointTest extends TestCase
         $this->assertIsBool($response->json('data.rates.declared'));
     }
 
+    /**
+     * The total-zeny figure is what an operator watches for inflation, so a
+     * game master who granted themselves two billion for a test must not move
+     * it. FluxCP's InfoHideZenyGroupLevel.
+     */
+    #[Test]
+    public function staff_zeny_is_left_out_of_the_total(): void
+    {
+        Character::factory()->forAccount(Account::factory()->create())
+            ->state(['zeny' => 1000])->create();
+
+        Character::factory()->forAccount(Account::factory()->administrator()->create())
+            ->state(['zeny' => 2_000_000_000])->create();
+
+        $this->getJson('/api/server/info')
+            ->assertOk()
+            ->assertJsonPath('data.zeny', 1000);
+    }
+
+    #[Test]
+    public function staff_zeny_is_counted_when_the_operator_turns_the_filter_off(): void
+    {
+        config(['panel.statistics.hide_zeny_at_or_above_level' => null]);
+
+        Character::factory()->forAccount(Account::factory()->create())
+            ->state(['zeny' => 1000])->create();
+
+        Character::factory()->forAccount(Account::factory()->administrator()->create())
+            ->state(['zeny' => 500])->create();
+
+        $this->getJson('/api/server/info')
+            ->assertOk()
+            ->assertJsonPath('data.zeny', 1500);
+    }
+
     #[Test]
     public function a_missing_party_table_reports_null_rather_than_zero(): void
     {

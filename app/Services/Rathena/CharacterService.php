@@ -45,6 +45,7 @@ final readonly class CharacterService
     public function __construct(
         private ConnectionResolverInterface $connections,
         private ServerRegistry $servers,
+        private StaffVisibility $staff,
     ) {}
 
     /**
@@ -390,16 +391,33 @@ final readonly class CharacterService
         $server = $this->servers->currentCharMapServer();
         $connection = $this->connections->connection($server->connectionName());
 
+        $query = $connection->table('char as ch')
+            ->selectRaw('ch.last_map as map, count(*) as players')
+            ->leftJoin('cp_charprefs as hidden', function ($join): void {
+                $join->on('hidden.char_id', '=', 'ch.char_id')
+                    ->where('hidden.name', '=', 'HideMapFromWhosOnline');
+            })
+            ->where('ch.online', 1)
+            ->where(fn ($q) => $q->whereNull('hidden.value')->orWhere('hidden.value', '!=', '1'));
+
+        /*
+         * Staff are left off the counts as well, which the per-character
+         * preference does not cover: a game master alone on a map is located
+         * by a count of one whether or not they set a preference. FluxCP's
+         * HideFromMapStats.
+         */
+        $threshold = config('panel.characters.hide_maps_at_or_above_level');
+
+        $this->staff->excludeStaff(
+            $query,
+            $this->servers->current(),
+            $server->key,
+            'ch',
+            $threshold === null ? null : (int) $threshold,
+        );
+
         return Collection::make(
-            $connection->table('char as ch')
-                ->selectRaw('ch.last_map as map, count(*) as players')
-                ->leftJoin('cp_charprefs as hidden', function ($join): void {
-                    $join->on('hidden.char_id', '=', 'ch.char_id')
-                        ->where('hidden.name', '=', 'HideMapFromWhosOnline');
-                })
-                ->where('ch.online', 1)
-                ->where(fn ($q) => $q->whereNull('hidden.value')->orWhere('hidden.value', '!=', '1'))
-                ->groupBy('ch.last_map')
+            $query->groupBy('ch.last_map')
                 ->orderByDesc('players')
                 ->orderBy('ch.last_map')
                 ->limit($limit)

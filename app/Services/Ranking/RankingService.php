@@ -546,14 +546,13 @@ final readonly class RankingService
     }
 
     /**
-     * rAthena group ids whose characters may appear in a ladder.
+     * The account groups a player ladder may show.
      *
      * Staff are hidden above a configured level, as FluxCP's
      * RankingHideGroupLevel did, so a game master with developer-granted
-     * levels or zeny does not sit at the top of a player ladder.
-     *
-     * An empty result means "no filtering", matching the legacy behaviour of
-     * skipping the clause when the group list came back empty.
+     * levels or zeny does not sit at the top of a player ladder. The same
+     * question is asked of map statistics and the total-zeny figure, which is
+     * why it lives on the registry.
      *
      * @return list<int>
      */
@@ -561,22 +560,8 @@ final readonly class RankingService
     {
         $threshold = config('panel.rankings.hide_at_or_above_level');
 
-        if ($threshold === null) {
-            return [];
-        }
-
-        $cutoff = (int) $threshold;
-        $visible = [];
-
-        foreach ($this->permissions->accountGroupMap() as $groupId => $group) {
-            /** @var AccountLevel $level */
-            $level = $group['level'];
-
-            if ($level->value < $cutoff) {
-                $visible[] = $groupId;
-            }
-        }
-
-        return $visible;
+        return $this->permissions->accountGroupIdsBelowLevel(
+            $threshold === null ? null : (int) $threshold,
+        );
     }
 }

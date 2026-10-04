@@ -271,6 +271,17 @@ return [
         'map_statistics_limit' => (int) env('PANEL_MAP_STATS_LIMIT', 50),
 
         /*
+         * Leave staff off the map counts. FluxCP's HideFromMapStats. Without
+         * it a game master sitting on a map nobody else is on is located by a
+         * count of one, which is the same leak the per-character "hide my map"
+         * preference exists to prevent. Null counts everybody; 1 is the junior
+         * game master tier.
+         */
+        'hide_maps_at_or_above_level' => env('PANEL_MAP_STATS_HIDE_AT_LEVEL', 1) === null
+            ? null
+            : (int) env('PANEL_MAP_STATS_HIDE_AT_LEVEL', 1),
+
+        /*
          * Credits charged for a gender change. 0 is free. FluxCP's
          * ChargeGenderChange.
          */
@@ -600,6 +611,23 @@ return [
 
     'statistics' => [
         'cache_seconds' => (int) env('PANEL_STATISTICS_CACHE_SECONDS', 300),
+
+        /*
+         * Leave staff zeny out of the total. FluxCP's InfoHideZenyGroupLevel.
+         * The figure is watched for inflation, and a game master who granted
+         * themselves two billion for a test moves it more than the economy
+         * does. Null counts everybody; 1 is the junior game master tier.
+         */
+        'hide_zeny_at_or_above_level' => env('PANEL_STATS_HIDE_ZENY_AT_LEVEL', 1) === null
+            ? null
+            : (int) env('PANEL_STATS_HIDE_ZENY_AT_LEVEL', 1),
+
+        /*
+         * Sort the class distribution by how many characters hold each job
+         * rather than by job id. FluxCP's SortJobsByAmount, defaulting the
+         * other way: a chart is read for which job is popular.
+         */
+        'sort_classes_by_count' => (bool) env('PANEL_STATS_SORT_CLASSES_BY_COUNT', true),
     ],
 
     /*
