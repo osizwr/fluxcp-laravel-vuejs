@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\GuildController;
 use App\Http\Controllers\Api\IpBanController;
 use App\Http\Controllers\Api\ItemController;
+use App\Http\Controllers\Api\ItemDescriptionController;
 use App\Http\Controllers\Api\ItemShopAdminController;
 use App\Http\Controllers\Api\ItemShopController;
 use App\Http\Controllers\Api\LogBrowserController;
@@ -283,6 +284,19 @@ Route::middleware('permission')->group(function (): void {
         ->name('itemshop.imagedel');
 
     /*
+     * Item descriptions, imported from the client's own itemInfo.lua.
+     *
+     * The legacy named this action `iteminfo` and gated it at ADMIN, which is
+     * kept: it replaces the description of every item the file mentions.
+     */
+    Route::get('admin/items/descriptions', [ItemDescriptionController::class, 'index'])
+        ->name('item.iteminfo');
+    Route::post('admin/items/descriptions', [ItemDescriptionController::class, 'store'])
+        ->name('item.iteminfo.import');
+    Route::delete('admin/items/descriptions', [ItemDescriptionController::class, 'destroy'])
+        ->name('item.iteminfo.clear');
+
+    /*
      * Support tickets.
      *
      * A player sees their own and nobody else's: every player-facing query is
@@ -461,14 +475,15 @@ Route::middleware('permission')->group(function (): void {
      * mob_db2 entries appear with their custom stats rather than the stock
      * ones (D6).
      *
-     * `item.iteminfo` is the legacy name for the filter vocabulary the search
-     * form is built from. It is held at ADMIN in the permission map, matching
-     * the legacy access level.
+     * The vocabulary endpoint is this port's own: the search form is built
+     * from it so the client keeps no copy of the item types and equip
+     * locations. It is not the legacy `iteminfo` action, which is the
+     * itemInfo.lua importer and lives with the other admin routes.
      */
     Route::get('items', [ItemController::class, 'index'])->name('item.index');
 
     Route::get('items/vocabulary', [ItemController::class, 'vocabulary'])
-        ->name('item.iteminfo');
+        ->name('item.vocabulary');
 
     Route::get('items/{item}', [ItemController::class, 'show'])
         ->whereNumber('item')

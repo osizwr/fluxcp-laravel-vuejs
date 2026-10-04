@@ -101,9 +101,17 @@ final class GuildController
 
         abort_if($row === null, 404, 'No such guild.');
 
+        $roster = $this->members($guild);
+
         return response()->json([
             'data' => [
                 ...$this->asSummary($row),
+                /*
+                 * `members` is the roster here and a count in the listing, so
+                 * the count is restated rather than left at the zero
+                 * asSummary() produces from a query that does not compute it.
+                 */
+                'member_count' => count($roster),
                 'members_online' => (int) ($row->connect_member ?? 0),
                 'experience' => (int) ($row->exp ?? 0),
                 'next_experience' => (int) ($row->next_exp ?? 0),
@@ -112,7 +120,7 @@ final class GuildController
                     'title' => $this->clean($row->mes1 ?? ''),
                     'body' => $this->clean($row->mes2 ?? ''),
                 ],
-                'members' => $this->members($guild),
+                'members' => $roster,
                 'allies' => $this->relations($guild, opposition: 0),
                 'enemies' => $this->relations($guild, opposition: 1),
                 'castles' => $this->castles($guild),

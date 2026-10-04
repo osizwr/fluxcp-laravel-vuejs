@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Services\Rathena\AttributeDecoder;
+use App\Services\Rathena\ItemDescriptionImporter;
 use App\Services\Rathena\ReferenceTables;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -80,6 +81,23 @@ final class ItemResource extends JsonResource
             'script' => $this->when(
                 $request->routeIs('item.view'),
                 fn (): ?string => $row['script'] ?? null,
+            ),
+
+            /*
+             * The description imported from the client's itemInfo.lua, when
+             * the operator has turned it on. FluxCP's ShowItemDesc, and the
+             * reason that import exists: stored descriptions nothing reads are
+             * no use to anybody.
+             *
+             * Generated HTML, built by ItemDescriptionImporter from escaped
+             * text and its own colour spans -- see that class for why it is
+             * the one stored value that is not Markdown.
+             */
+            'description' => $this->when(
+                $request->routeIs('item.view')
+                    && (bool) config('panel.items.show_descriptions', true),
+                fn (): ?string => app(ItemDescriptionImporter::class)
+                    ->describe((int) ($row['id'] ?? 0)),
             ),
         ];
     }

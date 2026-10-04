@@ -153,7 +153,19 @@ return [
 
         // item
         'item.index' => AccountLevel::Anyone,
+        /*
+         * The itemInfo.lua importer, at the legacy's level: one upload
+         * replaces the description of every item the file mentions.
+         */
         'item.iteminfo' => AccountLevel::Administrator,
+        'item.iteminfo.clear' => AccountLevel::Administrator,
+        'item.iteminfo.import' => AccountLevel::Administrator,
+        /*
+         * This port's own: the search form's vocabulary. Public, because the
+         * form it builds is public and the values are in this repository's
+         * configuration, not in anybody's data.
+         */
+        'item.vocabulary' => AccountLevel::Anyone,
         'item.view' => AccountLevel::Anyone,
 
         // itemshop

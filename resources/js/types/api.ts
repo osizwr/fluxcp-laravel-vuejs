@@ -66,6 +66,135 @@ export interface Character {
     last_login_at: string | null
 }
 
+/** A card in a slot, or the one real card on a forged item. */
+export interface ItemCard {
+    item_id: number
+    name: string | null
+}
+
+/** One stack in an inventory, a cart or a guild store. */
+export interface ItemStack {
+    id: number
+    item_id: number
+    name: string | null
+    type: string | null
+    slots: number
+    amount: number
+    refine: number
+    identified: boolean
+    broken: boolean
+    equipped: boolean
+    equip_location: number
+    favourite: boolean
+    bound: number
+    expires_at: string | null
+    cards: ItemCard[]
+    /** How many cards are slotted beyond the item's own slot count. */
+    cards_over: number
+    created_by_char_id: number | null
+    created_by: string | null
+    creation_kind: 'forged' | 'brewed' | null
+    random_options: { id: number; value: number }[]
+}
+
+/** A friend or a party member; both lists carry the same shape. */
+export interface CharacterCompanion {
+    id: number
+    name: string
+    job_id: number
+    base_level: number
+    job_level: number
+    online: boolean
+    guild: { id: number; name: string; emblem_url: string | null } | null
+}
+
+/** What comes beside a character on its own page. */
+export interface CharacterBelongings {
+    preferences: Record<string, boolean>
+    inventory: ItemStack[]
+    cart: ItemStack[]
+    friends: CharacterCompanion[]
+    party: CharacterCompanion[]
+    /** False for a viewer without SeeUnknownItems, whose lists are filtered. */
+    shows_unidentified: boolean
+}
+
+/* -------------------------------------------------------------------------- */
+/* Guilds                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export interface GuildSummary {
+    id: number
+    name: string
+    level: number
+    average_level: number
+    members: number
+    max_members: number
+    emblem_id: number
+    master: string
+    emblem_url: string | null
+}
+
+export interface GuildMember {
+    id: number
+    name: string
+    job_id: number
+    base_level: number
+    job_level: number
+    online: boolean
+    position: number
+    position_name: string
+    position_mode: number
+    /** The share of experience this rank pays into the guild, as a percentage. */
+    guild_tax: number
+    devotion: number
+}
+
+export interface GuildPosition {
+    position: number
+    name: string
+    mode: number
+    guild_tax: number
+}
+
+export interface GuildExpulsion {
+    account_id: number
+    name: string
+    reason: string
+}
+
+/**
+ * One guild's page.
+ *
+ * Deliberately not an extension of GuildSummary: `members` is a count in the
+ * listing and the roster here, so the two responses are different shapes and
+ * are declared as such rather than forced into one.
+ */
+export interface Guild {
+    id: number
+    name: string
+    level: number
+    average_level: number
+    max_members: number
+    emblem_id: number
+    master: string
+    emblem_url: string | null
+    member_count: number
+    members_online: number
+    experience: number
+    next_experience: number
+    skill_points: number
+    notice: { title: string; body: string }
+    members: GuildMember[]
+    allies: { id: number; name: string }[]
+    enemies: { id: number; name: string }[]
+    castles: number[]
+    expulsions: GuildExpulsion[]
+    positions: GuildPosition[]
+    /** Null when the viewer may not see the store, which is not the same as empty. */
+    storage: ItemStack[] | null
+}
+
 export interface CharMapServerStatus {
     key: string
     name: string
@@ -189,6 +318,15 @@ export interface Item {
     flags: string[]
     /** Only sent on the detail view; the listing omits it. */
     script?: string | null
+    /**
+     * The description imported from the client's itemInfo.lua, on the detail
+     * view only and only when the operator has it turned on.
+     *
+     * Server-generated HTML: the item's own text is escaped and the only
+     * markup is a colour span built from matched hex digits, which is why this
+     * one field is rendered rather than interpolated as text.
+     */
+    description?: string | null
 }
 
 export interface Monster {

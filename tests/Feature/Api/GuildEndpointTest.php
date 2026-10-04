@@ -187,6 +187,29 @@ final class GuildEndpointTest extends TestCase
             ->assertJsonPath('data.members.0.name', 'Active');
     }
 
+    /**
+     * `members` is a count in the listing and the roster on the page, so the
+     * page restates the count rather than leaving it at the zero the summary
+     * projection produces.
+     */
+    #[Test]
+    public function a_guild_page_reports_the_member_count_as_well_as_the_roster(): void
+    {
+        $guild = Guild::factory()->create();
+        $account = Account::factory()->create();
+
+        Character::factory()->forAccount($account)->named('One')
+            ->state(['guild_id' => $guild->guild_id])->create();
+        Character::factory()->forAccount($account)->named('Two')
+            ->state(['guild_id' => $guild->guild_id])->create();
+
+        $this->actingAs($account)
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.members')
+            ->assertJsonPath('data.member_count', 2);
+    }
+
     #[Test]
     public function a_guild_page_carries_rank_titles_tax_and_devotion(): void
     {

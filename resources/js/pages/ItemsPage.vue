@@ -116,12 +116,13 @@ watch(
 
 void (async () => {
     try {
-        // Staff-only; a player simply gets the plain text filter instead.
         const response = await api.get<{ data: { types: Record<string, string> } }>(
             'items/vocabulary',
         )
         types.value = response.data.types
     } catch {
+        // The type filter falls back to the plain name search rather than
+        // leaving the form half-rendered.
         types.value = {}
     }
 })()

@@ -402,6 +402,28 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Items
+    |--------------------------------------------------------------------------
+    */
+
+    'items' => [
+        /*
+         * Show the description imported from the client's itemInfo.lua on an
+         * item's page. FluxCP's ShowItemDesc. Off when nothing has been
+         * imported costs a query per item page, so it is a switch rather than
+         * a guess.
+         */
+        'show_descriptions' => (bool) env('PANEL_SHOW_ITEM_DESCRIPTIONS', true),
+
+        /*
+         * Cap on an uploaded itemInfo.lua, in kilobytes. A full file for a
+         * current client is around 4 MB.
+         */
+        'item_info_max_kilobytes' => (int) env('PANEL_ITEM_INFO_MAX_KB', 16_384),
+    ],
+
     'item_shop' => [
         'enabled' => (bool) env('PANEL_ITEM_SHOP_ENABLED', true),
 

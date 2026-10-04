@@ -369,15 +369,21 @@ final class ItemEndpointTest extends TestCase
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * This endpoint is not the legacy `iteminfo` action and must not inherit
+     * its ADMIN level. It publishes the item types and equip locations from
+     * this repository's own configuration so the public search form can be
+     * built from them -- held at ADMIN, that form's type filter was empty for
+     * every visitor who was not an administrator.
+     */
     #[Test]
-    public function the_filter_vocabulary_is_staff_only(): void
+    public function the_filter_vocabulary_is_public(): void
     {
-        // ADMIN in the legacy access map, preserved.
-        $this->getJson('/api/items/vocabulary')->assertStatus(401);
+        $this->getJson('/api/items/vocabulary')->assertOk();
 
         $this->actingAs(Account::factory()->create())
             ->getJson('/api/items/vocabulary')
-            ->assertStatus(403);
+            ->assertOk();
     }
 
     #[Test]

@@ -789,6 +789,16 @@ final class RathenaTestSchema
             $table->string('log', 255)->default('');
         });
 
+        /*
+         * Item descriptions imported from the client's itemInfo.lua. `itemid`
+         * is the primary key, as FluxCP declared it, which is what lets an
+         * import replace a description rather than duplicate it.
+         */
+        $schema->create('cp_itemdesc', function (Blueprint $table): void {
+            $table->increments('itemid');
+            $table->text('itemdesc');
+        });
+
         $schema->create('cp_charprefs', function (Blueprint $table): void {
             $table->increments('id');
             $table->unsignedInteger('account_id');
