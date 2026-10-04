@@ -52,7 +52,7 @@ const total = computed(() =>
 </script>
 
 <template>
-    <section class="yata-air yata-air--violet" aria-labelledby="yata-classes-title">
+    <section aria-labelledby="yata-classes-title">
         <div class="mx-auto max-w-7xl px-4 py-16 sm:py-20">
             <SectionHeading
                 eyebrow="Paths"

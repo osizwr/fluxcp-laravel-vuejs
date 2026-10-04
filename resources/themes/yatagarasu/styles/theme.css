@@ -10,20 +10,21 @@
 |   components.css  how the application's own components look
 |   blocks.css      the decorative language this theme's sections are built from
 |
-| Fonts are loaded here rather than from the page shell so that a theme owns its
-| own typography. Both are licensed under the SIL Open Font License 1.1 and are
-| recorded in resources/themes/README.md.
+| Fonts are loaded here rather than from the page shell so that a theme owns
+| its own typography. All four are licensed under the SIL Open Font License 1.1
+| and are recorded in resources/themes/README.md.
 |
-|   Cinzel    display -- the game's name, section titles, ranks
-|   Manrope   interface -- navigation, body, figures, controls
+|   Cinzel              display -- section titles, navigation, controls
+|   Cinzel Decorative   the brand and the two largest titles
+|   Crimson Text        prose, set in italic where it is a voice
+|   Share Tech Mono     figures, counts and timestamps
 |
-| `display=swap` on purpose: the first paint showing fallback text is better
-| than a hero with no words in it, and the layout shift is small because the
-| fallback stack is metric-adjacent.
+| `display=swap` on purpose: a first paint in the fallback stack is better than
+| a hero with no words in it.
 |
 */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&family=Share+Tech+Mono&display=swap');
 
 @import './variables.css';
 @import './components.css';

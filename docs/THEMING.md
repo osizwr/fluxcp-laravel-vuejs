@@ -35,7 +35,7 @@ Three themes ship:
 | --- | --- |
 | `fantasy` | The default. Dark, warm, antique gold — an adventurer's guild ledger. |
 | `slate` | A cool, light-first skin that ships **nothing but a palette**, as a worked example. |
-| `yatagarasu` | Dark Japanese fantasy, art-directed for a cinematic front page. The worked example at the other end of the scale: thirteen blocks, two of them its own, and a composed home page of ten sections. |
+| `yatagarasu` | Dark fantasy in gold and blood on black, art-directed for a game's front page. The worked example at the other end of the scale: thirteen blocks, two of them its own, and a composed home page of ten sections. |
 
 ```bash
 php artisan theme:list     # what is installed, and which is active

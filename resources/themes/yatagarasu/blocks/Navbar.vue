@@ -1,109 +1,347 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useGame } from '@/composables/useGame'
-import { useShell } from '@/composables/useShell'
+import { useShell, type ShellLink } from '@/composables/useShell'
 import { useAuthStore } from '@/stores/auth'
 import { useServerStore } from '@/stores/server'
 import CrowMark from '../components/CrowMark.vue'
 
 /**
- * Yatagarasu — navigation.
+ * Yatagarasu — the navigation.
+ *
+ * Brand on the left, grouped links in the middle, the state of the world and
+ * the account on the right. It sits directly beneath the ticker and sticks
+ * there, so both bands stay on screen as the page moves.
  *
  * All the behaviour comes from useShell(): which links exist, which is
  * current, and the sign-out sequence. This block decides only how that looks,
- * which is what lets a theme replace the navbar without reimplementing any of
- * it — and why there is no fetch, no guard and no route list here.
- *
- * Two states. Over the hero it is transparent, so the artwork runs to the top
- * of the window and the navigation appears to float on it. Once the page has
- * moved it becomes a solid dark band with a gold hairline, because white
- * capitals over whatever artwork happens to be beneath them is not legible at
- * any scroll position.
+ * which is why there is no route list, no guard and no fetch here.
  */
 const auth = useAuthStore()
 const servers = useServerStore()
 const { game, title } = useGame()
 const { links, isActive, menuOpen, signingOut, signOut } = useShell()
 
-/*
- * Past roughly the first screenful. Not a precise measurement — it only has
- * to be far enough that the bar has left the hero's top band.
+/**
+ * Which group each route belongs under.
+ *
+ * Grouping is presentation — it says nothing about what exists — so it lives
+ * here rather than in the application. It is keyed by path, and a link with no
+ * entry renders at the top level, which means a route added to the application
+ * later appears in the bar rather than disappearing from it.
  */
-const lifted = ref(false)
-
-function onScroll(): void {
-    lifted.value = window.scrollY > 24
+const groupFor: Record<string, string> = {
+    '/rankings/level': 'Realm',
+    '/who-is-online': 'Realm',
+    '/characters': 'Realm',
+    '/items': 'Database',
+    '/monsters': 'Database',
 }
 
-onMounted(() => {
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
+/** The order groups appear in, once they have anything in them. */
+const groupOrder = ['Realm', 'Database']
+
+interface NavNode {
+    label: string
+    to?: string
+    children?: ShellLink[]
+}
+
+const nav = computed<NavNode[]>(() => {
+    const ungrouped: NavNode[] = []
+    const grouped = new Map<string, ShellLink[]>()
+
+    for (const link of links.value) {
+        const group = groupFor[link.to]
+
+        if (group === undefined) {
+            ungrouped.push({ label: link.label, to: link.to })
+
+            continue
+        }
+
+        const bucket = grouped.get(group) ?? []
+        bucket.push(link)
+        grouped.set(group, bucket)
+    }
+
+    /*
+     * A group with one entry is not a group: a dropdown that opens onto a
+     * single item is two clicks where one would do, so it is promoted back to
+     * the top level.
+     */
+    const groups: NavNode[] = []
+
+    for (const label of groupOrder) {
+        const children = grouped.get(label)
+
+        if (children === undefined || children.length === 0) {
+            continue
+        }
+
+        groups.push(
+            children.length === 1
+                ? { label: children[0].label, to: children[0].to }
+                : { label, children },
+        )
+    }
+
+    return [...ungrouped, ...groups]
 })
 
-onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
+/** A group is current when any of its children is. */
+function groupActive(node: NavNode): boolean {
+    return node.to !== undefined
+        ? isActive(node.to)
+        : (node.children?.some((child) => isActive(child.to)) ?? false)
+}
+
+/**
+ * The line under the brand.
+ *
+ * The world's own name where the operator has configured one, which is what
+ * the reference shows; the short name otherwise, and nothing at all when that
+ * is only the title repeated.
+ */
+const worldName = computed(() => {
+    const configured = servers.groups[0]?.name
+
+    if (typeof configured === 'string' && configured.trim() !== '') {
+        return configured
+    }
+
+    return game.value.shortName.toLowerCase() === title.value.toLowerCase()
+        ? null
+        : game.value.shortName
+})
 </script>
 
 <template>
-    <header class="yata-nav" :class="{ 'yata-nav--lifted': lifted || menuOpen }">
-        <div class="mx-auto flex w-full max-w-7xl items-center gap-6 px-4">
+    <header class="yata-nav">
+        <nav
+            class="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 lg:px-6"
+            aria-label="Primary"
+        >
             <!-- Brand. The operator's logo wins; the crow is the fallback. -->
-            <RouterLink to="/" class="yata-nav__brand">
+            <RouterLink to="/" class="yata-nav__brand" @click="menuOpen = false">
                 <img
                     v-if="game.logo"
                     :src="game.logo"
                     :alt="title"
-                    class="h-7 w-auto"
+                    class="h-9 w-auto"
                     decoding="async"
                 />
-                <template v-else>
-                    <CrowMark :size="26" class="text-[var(--color-accent-500)]" />
+                <CrowMark v-else :size="34" class="text-[var(--color-accent-500)]" />
+
+                <span class="flex flex-col leading-none">
                     <span class="yata-nav__wordmark">{{ title }}</span>
-                </template>
+                    <span v-if="worldName" class="yata-nav__world">{{ worldName }}</span>
+                </span>
             </RouterLink>
 
-            <!-- Centre: the world's sections. -->
-            <nav class="yata-nav__links" aria-label="Primary">
-                <RouterLink
-                    v-for="link in links"
-                    :key="link.to"
-                    :to="link.to"
-                    class="yata-nav__link"
-                    :class="{ 'yata-nav__link--active': isActive(link.to) }"
-                    :aria-current="isActive(link.to) ? 'page' : undefined"
-                >
-                    {{ link.label }}
-                </RouterLink>
-            </nav>
+            <!-- Centre: the sections of the world. -->
+            <ul class="yata-nav__links">
+                <li v-for="node in nav" :key="node.label" class="yata-nav__item">
+                    <RouterLink
+                        v-if="node.to"
+                        :to="node.to"
+                        class="yata-nav__link"
+                        :class="{ 'is-active': groupActive(node) }"
+                        :aria-current="isActive(node.to) ? 'page' : undefined"
+                    >
+                        {{ node.label }}
+                    </RouterLink>
 
-            <div class="ml-auto flex items-center gap-3">
-                <!--
-                    The live count, as a quiet figure rather than a pill. It is
-                    the one piece of state the navbar carries, and it is fed by
-                    the store the broadcast updates.
-                -->
-                <p v-if="servers.groups.length > 0" class="yata-nav__count">
-                    <span
-                        class="yata-nav__dot"
-                        :class="servers.anyServerUp ? 'is-up' : 'is-down'"
-                        aria-hidden="true"
-                    />
-                    <span class="tabular">
-                        {{
-                            servers.anyServerUp
-                                ? `${servers.playersOnline.toLocaleString()} online`
-                                : 'Offline'
-                        }}
+                    <template v-else>
+                        <!--
+                            A button rather than a link: the group itself goes
+                            nowhere, and a link that does nothing is a trap for
+                            anyone navigating by keyboard.
+                        -->
+                        <button
+                            type="button"
+                            class="yata-nav__link yata-nav__link--group"
+                            :class="{ 'is-active': groupActive(node) }"
+                        >
+                            {{ node.label }}
+                            <svg
+                                class="yata-nav__chevron"
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="m6 9 6 6 6-6"
+                                    stroke="currentColor"
+                                    stroke-width="2.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                />
+                            </svg>
+                        </button>
+
+                        <div class="yata-nav__menu">
+                            <div class="yata-nav__menu-inner">
+                                <RouterLink
+                                    v-for="child in node.children"
+                                    :key="child.to"
+                                    :to="child.to"
+                                    class="yata-nav__menu-link"
+                                    :class="{ 'is-active': isActive(child.to) }"
+                                    :aria-current="isActive(child.to) ? 'page' : undefined"
+                                >
+                                    {{ child.label }}
+                                </RouterLink>
+                            </div>
+                        </div>
+                    </template>
+                </li>
+            </ul>
+
+            <!-- Right: the state of the world, then the account. -->
+            <div class="yata-nav__aside">
+                <p v-if="servers.groups.length > 0" class="yata-nav__status">
+                    <span class="yata-nav__state">
+                        <span
+                            class="yata-nav__dot"
+                            :class="servers.anyServerUp ? 'is-up' : 'is-down'"
+                            aria-hidden="true"
+                        />
+                        <span :class="servers.anyServerUp ? 'is-up' : 'is-down'">
+                            {{ servers.anyServerUp ? 'Online' : 'Offline' }}
+                        </span>
+                    </span>
+                    <span class="yata-nav__players">
+                        Players:
+                        <span class="yata-nav__players-count">
+                            {{ servers.playersOnline.toLocaleString() }}
+                        </span>
                     </span>
                 </p>
 
+                <span class="yata-nav__divider" aria-hidden="true" />
+
+                <div v-if="auth.isAuthenticated" class="yata-nav__item">
+                    <button type="button" class="yata-btn yata-btn--secondary yata-btn--compact">
+                        {{ auth.account?.username ?? 'Account' }}
+                        <svg
+                            class="yata-nav__chevron"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+                    </button>
+
+                    <div class="yata-nav__menu yata-nav__menu--right">
+                        <div class="yata-nav__menu-inner">
+                            <RouterLink to="/account" class="yata-nav__menu-link">
+                                My account
+                            </RouterLink>
+                            <RouterLink to="/account/security" class="yata-nav__menu-link">
+                                Security
+                            </RouterLink>
+                            <button
+                                type="button"
+                                class="yata-nav__menu-link"
+                                :disabled="signingOut"
+                                @click="signOut"
+                            >
+                                {{ signingOut ? 'Leaving…' : 'Sign out' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <RouterLink
+                    v-else
+                    to="/sign-in"
+                    class="yata-btn yata-btn--secondary yata-btn--compact"
+                >
+                    Log in
+                </RouterLink>
+            </div>
+
+            <!-- Mobile trigger. -->
+            <button
+                type="button"
+                class="yata-nav__toggle"
+                :aria-expanded="menuOpen"
+                aria-controls="yata-nav-drawer"
+                @click="menuOpen = !menuOpen"
+            >
+                <span class="sr-only">{{ menuOpen ? 'Close menu' : 'Open menu' }}</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                        v-if="menuOpen"
+                        d="M18 6 6 18M6 6l12 12"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                    />
+                    <path
+                        v-else
+                        d="M4 7h16M4 12h16M4 17h16"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                    />
+                </svg>
+            </button>
+        </nav>
+
+        <!-- Mobile drawer: groups become headings with their children indented. -->
+        <div v-if="menuOpen" id="yata-nav-drawer" class="yata-nav__drawer">
+            <div v-for="node in nav" :key="node.label">
+                <RouterLink
+                    v-if="node.to"
+                    :to="node.to"
+                    class="yata-nav__drawer-link"
+                    :class="{ 'is-active': groupActive(node) }"
+                    @click="menuOpen = false"
+                >
+                    {{ node.label }}
+                </RouterLink>
+                <p v-else class="yata-nav__drawer-heading">{{ node.label }}</p>
+
+                <div v-if="node.children" class="yata-nav__drawer-children">
+                    <RouterLink
+                        v-for="child in node.children"
+                        :key="child.to"
+                        :to="child.to"
+                        class="yata-nav__drawer-link yata-nav__drawer-link--child"
+                        :class="{ 'is-active': isActive(child.to) }"
+                        @click="menuOpen = false"
+                    >
+                        {{ child.label }}
+                    </RouterLink>
+                </div>
+            </div>
+
+            <div class="yata-nav__drawer-foot">
                 <template v-if="auth.isAuthenticated">
-                    <RouterLink to="/account" class="yata-nav__link yata-nav__link--wide">
-                        Account
+                    <RouterLink
+                        to="/account"
+                        class="yata-btn yata-btn--secondary yata-btn--compact flex-1"
+                        @click="menuOpen = false"
+                    >
+                        {{ auth.account?.username ?? 'Account' }}
                     </RouterLink>
                     <button
                         type="button"
-                        class="yata-btn yata-btn--secondary yata-btn--compact yata-nav__cta"
+                        class="yata-btn yata-btn--secondary yata-btn--compact"
                         :disabled="signingOut"
                         @click="signOut"
                     >
@@ -111,328 +349,343 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
                     </button>
                 </template>
 
-                <template v-else>
-                    <RouterLink to="/sign-in" class="yata-nav__link yata-nav__link--wide">
-                        Log in
-                    </RouterLink>
-                    <RouterLink
-                        to="/register"
-                        class="yata-btn yata-btn--primary yata-btn--compact yata-nav__cta"
-                    >
-                        Play now
-                    </RouterLink>
-                </template>
-
-                <!-- Mobile trigger. Three rules, not a hamburger glyph. -->
-                <button
-                    type="button"
-                    class="yata-nav__toggle"
-                    :aria-expanded="menuOpen"
-                    aria-controls="yata-nav-menu"
-                    @click="menuOpen = !menuOpen"
-                >
-                    <span class="sr-only">{{ menuOpen ? 'Close menu' : 'Open menu' }}</span>
-                    <span class="yata-nav__bars" :class="{ 'is-open': menuOpen }" aria-hidden="true">
-                        <i /><i /><i />
-                    </span>
-                </button>
-            </div>
-        </div>
-
-        <!--
-            The mobile panel. A full dark sheet rather than a dropdown: at this
-            width the navigation is the page while it is open, and a translucent
-            overlay over artwork is unreadable.
-        -->
-        <nav v-if="menuOpen" id="yata-nav-menu" class="yata-nav__sheet" aria-label="Primary">
-            <RouterLink
-                v-for="link in links"
-                :key="link.to"
-                :to="link.to"
-                class="yata-nav__sheet-link"
-                :class="{ 'yata-nav__link--active': isActive(link.to) }"
-                :aria-current="isActive(link.to) ? 'page' : undefined"
-                @click="menuOpen = false"
-            >
-                {{ link.label }}
-            </RouterLink>
-
-            <hr class="yata-rule my-3" />
-
-            <template v-if="auth.isAuthenticated">
-                <RouterLink to="/account" class="yata-nav__sheet-link" @click="menuOpen = false">
-                    Account
-                </RouterLink>
-                <button
-                    type="button"
-                    class="yata-btn yata-btn--secondary mt-2 w-full"
-                    :disabled="signingOut"
-                    @click="signOut"
-                >
-                    {{ signingOut ? 'Leaving…' : 'Sign out' }}
-                </button>
-            </template>
-
-            <template v-else>
-                <RouterLink to="/sign-in" class="yata-nav__sheet-link" @click="menuOpen = false">
-                    Log in
-                </RouterLink>
                 <RouterLink
-                    to="/register"
-                    class="yata-btn yata-btn--primary mt-2 w-full"
+                    v-else
+                    to="/sign-in"
+                    class="yata-btn yata-btn--secondary yata-btn--compact w-full"
                     @click="menuOpen = false"
                 >
-                    Play now
+                    Log in
                 </RouterLink>
-            </template>
-        </nav>
+            </div>
+        </div>
     </header>
 </template>
 
 <style>
 /*
- * `.yata-nav` is a flex container, which is why its inner row carries `w-full`
- * as well as `mx-auto`: an auto inline margin on a flex item cancels the
- * default cross-axis stretch, so without it the bar shrink-wraps to its
- * content and floats in the middle of the window instead of spanning it.
+ * Responsive visibility is done here rather than with Tailwind's `lg:flex` and
+ * friends. Those utilities are a single class, and every rule in this theme is
+ * scoped to an attribute selector on :root, which outranks them — so an
+ * `lg:hidden` on an element this stylesheet also gives a `display` to is
+ * silently ignored. It is the one trap in scoping a theme this way.
  */
 :root[data-theme-slug='yatagarasu'] .yata-nav {
     position: sticky;
-    top: 0;
+    /* Directly beneath the ticker, so both bands stay on screen. */
+    top: var(--yata-ticker-height);
     z-index: 40;
-    min-height: 64px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    border-bottom: 1px solid transparent;
-    transition:
-        background-color 260ms var(--yata-ease),
-        border-color 260ms var(--yata-ease),
-        backdrop-filter 260ms var(--yata-ease);
-}
-
-/*
- * The scrolled state. Not fully opaque — a trace of the artwork behind keeps
- * the bar part of the page rather than a lid on it — but dark enough that
- * text on it is legible whatever is underneath.
- */
-:root[data-theme-slug='yatagarasu'] .yata-nav--lifted {
-    background-color: color-mix(in oklab, var(--yata-void) 88%, transparent);
-    border-bottom-color: var(--yata-rule);
-    backdrop-filter: blur(14px) saturate(130%);
+    border-bottom: 1px solid var(--border-subtle);
+    background-color: rgb(8 8 11 / 95%);
+    backdrop-filter: blur(12px);
 }
 
 :root[data-theme-slug='yatagarasu'] .yata-nav__brand {
     display: inline-flex;
     align-items: center;
-    gap: 0.625rem;
+    gap: 0.75rem;
     text-decoration: none;
     flex-shrink: 0;
 }
 
 :root[data-theme-slug='yatagarasu'] .yata-nav__wordmark {
-    font-family: var(--font-display);
-    font-size: 1.0625rem;
+    font-family: var(--yata-font-deco);
+    font-size: 1rem;
     font-weight: 700;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--yata-ivory);
+    color: var(--color-accent-500);
 }
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__world {
+    margin-top: 0.3rem;
+    font-family: var(--font-display);
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* ---- Links ------------------------------------------------------------- */
 
 :root[data-theme-slug='yatagarasu'] .yata-nav__links {
     display: none;
     align-items: center;
-    gap: 1.75rem;
+    gap: 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
-@media (min-width: 768px) {
-    :root[data-theme-slug='yatagarasu'] .yata-nav__links {
-        display: flex;
-    }
+:root[data-theme-slug='yatagarasu'] .yata-nav__item {
+    position: relative;
 }
 
 :root[data-theme-slug='yatagarasu'] .yata-nav__link {
-    position: relative;
-    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0;
+    font-family: var(--font-display);
+    font-size: 0.875rem;
     font-weight: 600;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: color-mix(in oklab, var(--yata-ivory) 72%, transparent);
-    text-decoration: none;
-    padding-block: 0.5rem;
-    transition: color 180ms var(--yata-ease);
     white-space: nowrap;
+    color: var(--text-muted);
+    text-decoration: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    transition: color 200ms var(--yata-ease);
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-nav__link:hover {
-    color: var(--yata-ivory);
+:root[data-theme-slug='yatagarasu'] .yata-nav__link:hover,
+:root[data-theme-slug='yatagarasu'] .yata-nav__link.is-active {
+    color: var(--color-accent-500);
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-nav__link--active {
-    color: var(--color-accent-300);
+:root[data-theme-slug='yatagarasu'] .yata-nav__chevron {
+    transition: rotate 200ms var(--yata-ease);
 }
+
+/* ---- Dropdowns ---------------------------------------------------------- */
 
 /*
- * The current item is marked with a rule and a diamond above it rather than a
- * underline below. It reads as a tab in a plate instead of a hyperlink.
+ * Opened on hover and on focus-within, so the keyboard reaches them. The
+ * padding on the wrapper is deliberate: it bridges the gap between the trigger
+ * and the panel, so the pointer can travel between them without the menu
+ * closing underneath it.
  */
-:root[data-theme-slug='yatagarasu'] .yata-nav__link--active::after {
-    content: '';
+:root[data-theme-slug='yatagarasu'] .yata-nav__menu {
     position: absolute;
+    top: 100%;
     left: 50%;
-    bottom: 0;
-    width: 100%;
-    height: 1px;
     translate: -50% 0;
-    background: linear-gradient(90deg, transparent, var(--color-accent-500), transparent);
+    z-index: 50;
+    min-width: 11rem;
+    padding-top: 0.75rem;
+    visibility: hidden;
+    opacity: 0;
+    transition:
+        opacity 150ms var(--yata-ease),
+        visibility 150ms var(--yata-ease);
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-nav__count {
+:root[data-theme-slug='yatagarasu'] .yata-nav__menu--right {
+    left: auto;
+    right: 0;
+    translate: none;
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__item:hover .yata-nav__menu,
+:root[data-theme-slug='yatagarasu'] .yata-nav__item:focus-within .yata-nav__menu {
+    visibility: visible;
+    opacity: 1;
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__item:hover .yata-nav__chevron,
+:root[data-theme-slug='yatagarasu'] .yata-nav__item:focus-within .yata-nav__chevron {
+    rotate: 180deg;
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__menu-inner {
+    border: 1px solid var(--border-subtle);
+    background-color: var(--surface-raised);
+    box-shadow: 0 10px 40px rgb(0 0 0 / 50%);
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__menu-link {
+    display: block;
+    width: 100%;
+    padding: 0.625rem 1rem;
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: left;
+    white-space: nowrap;
+    color: var(--text-muted);
+    text-decoration: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    transition:
+        background-color 160ms var(--yata-ease),
+        color 160ms var(--yata-ease);
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__menu-link:hover {
+    background-color: rgb(28 27 34 / 60%);
+    color: var(--color-accent-500);
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__menu-link.is-active {
+    background-color: rgb(201 153 58 / 15%);
+    color: var(--color-accent-500);
+}
+
+/* ---- The aside ---------------------------------------------------------- */
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__aside {
     display: none;
     align-items: center;
-    gap: 0.45rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    white-space: nowrap;
+    gap: 1rem;
 }
 
-@media (min-width: 1024px) {
-    :root[data-theme-slug='yatagarasu'] .yata-nav__count {
-        display: inline-flex;
-    }
+:root[data-theme-slug='yatagarasu'] .yata-nav__status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.15rem;
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__state {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--yata-font-tech);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__state .is-up {
+    color: var(--color-up);
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__state .is-down {
+    color: var(--color-down);
 }
 
 :root[data-theme-slug='yatagarasu'] .yata-nav__dot {
-    width: 6px;
-    height: 6px;
+    width: 0.5rem;
+    height: 0.5rem;
     border-radius: 50%;
     flex-shrink: 0;
 }
 
 :root[data-theme-slug='yatagarasu'] .yata-nav__dot.is-up {
     background-color: var(--color-up);
-    box-shadow: 0 0 8px color-mix(in oklab, var(--color-up) 60%, transparent);
+    box-shadow: 0 0 6px var(--color-up);
+    animation: yata-pulse 2s ease-in-out infinite;
 }
 
 :root[data-theme-slug='yatagarasu'] .yata-nav__dot.is-down {
     background-color: var(--color-down);
 }
 
-/* A smaller control, for the bar only. */
-:root[data-theme-slug='yatagarasu'] .yata-btn--compact {
-    padding: 0.5rem 1rem;
-    font-size: 0.6875rem;
-    letter-spacing: 0.12em;
+@keyframes yata-pulse {
+    50% {
+        opacity: 0.45;
+    }
 }
 
-/*
- * Responsive visibility is done here rather than with Tailwind's `md:hidden`
- * and friends.
- *
- * Those utilities are a single class, and every rule in this file is scoped to
- * an attribute selector on :root, which outranks them -- so a `md:hidden` on
- * an element this stylesheet also gives a `display` to is silently ignored.
- * It is the one trap in scoping a theme this way, and the fix is to not mix
- * the two on the same element.
- */
+:root[data-theme-slug='yatagarasu'] .yata-nav__players {
+    font-family: var(--yata-font-tech);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__players-count {
+    color: var(--color-accent-500);
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__divider {
+    width: 1px;
+    height: 2rem;
+    background-color: var(--border-subtle);
+}
+
+/* ---- Mobile -------------------------------------------------------------- */
+
 :root[data-theme-slug='yatagarasu'] .yata-nav__toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    padding: 0.25rem;
+    color: var(--color-accent-500);
     background: none;
-    border: 1px solid var(--yata-rule);
-    border-radius: var(--radius-panel);
+    border: 0;
     cursor: pointer;
 }
 
-/* The toggle is for narrow windows only; the links take over at md. */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
+    :root[data-theme-slug='yatagarasu'] .yata-nav__links,
+    :root[data-theme-slug='yatagarasu'] .yata-nav__aside {
+        display: flex;
+    }
+
     :root[data-theme-slug='yatagarasu'] .yata-nav__toggle,
-    :root[data-theme-slug='yatagarasu'] .yata-nav__sheet {
+    :root[data-theme-slug='yatagarasu'] .yata-nav__drawer {
         display: none;
     }
 }
 
-/* A second label that only appears when there is room for it. */
-:root[data-theme-slug='yatagarasu'] .yata-nav__link--wide {
-    display: none;
+:root[data-theme-slug='yatagarasu'] .yata-nav__drawer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-subtle);
+    background-color: var(--surface-page);
 }
 
-@media (min-width: 1024px) {
-    :root[data-theme-slug='yatagarasu'] .yata-nav__link--wide {
-        display: inline-flex;
-    }
+:root[data-theme-slug='yatagarasu'] .yata-nav__drawer > div + div {
+    margin-top: 1rem;
 }
 
-/* The call to action is hidden on the narrowest windows, where the sheet
- * carries it instead. */
-:root[data-theme-slug='yatagarasu'] .yata-nav__cta {
-    display: none;
-}
-
-@media (min-width: 640px) {
-    :root[data-theme-slug='yatagarasu'] .yata-nav__cta {
-        display: inline-flex;
-    }
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-nav__bars {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    width: 16px;
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-nav__bars i {
+:root[data-theme-slug='yatagarasu'] .yata-nav__drawer-link {
     display: block;
-    height: 1.5px;
-    background-color: var(--color-accent-400);
-    transition: translate 200ms var(--yata-ease), opacity 200ms var(--yata-ease);
-}
-
-/* Collapses to a cross while open, so the control says what it will do. */
-:root[data-theme-slug='yatagarasu'] .yata-nav__bars.is-open i:nth-child(1) {
-    translate: 0 5.5px;
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-nav__bars.is-open i:nth-child(2) {
-    opacity: 0;
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-nav__bars.is-open i:nth-child(3) {
-    translate: 0 -5.5px;
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-nav__sheet {
-    padding: 0.5rem 1rem 1.25rem;
-    background-color: color-mix(in oklab, var(--yata-void) 97%, transparent);
-    border-top: 1px solid var(--yata-rule);
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-nav__sheet-link {
-    display: block;
-    padding: 0.75rem 0.25rem;
-    font-size: 0.8125rem;
+    padding: 0.375rem 0;
+    font-family: var(--font-display);
+    font-size: 0.875rem;
     font-weight: 600;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: color-mix(in oklab, var(--yata-ivory) 80%, transparent);
+    color: var(--text-muted);
     text-decoration: none;
-    border-bottom: 1px solid var(--border-subtle);
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-nav__sheet-link:hover {
-    color: var(--color-accent-300);
+:root[data-theme-slug='yatagarasu'] .yata-nav__drawer-link.is-active {
+    color: var(--color-accent-500);
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__drawer-heading {
+    padding: 0.375rem 0;
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgb(201 153 58 / 80%);
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__drawer-children {
+    margin: 0.25rem 0 0 0.75rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--border-subtle);
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__drawer-link--child {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    padding: 0.25rem 0;
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-nav__drawer-foot {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-subtle);
 }
 
 @media (prefers-reduced-motion: reduce) {
-    :root[data-theme-slug='yatagarasu'] .yata-nav,
-    :root[data-theme-slug='yatagarasu'] .yata-nav__bars i {
+    :root[data-theme-slug='yatagarasu'] .yata-nav__dot.is-up {
+        animation: none;
+    }
+
+    :root[data-theme-slug='yatagarasu'] .yata-nav__menu,
+    :root[data-theme-slug='yatagarasu'] .yata-nav__chevron {
         transition: none;
     }
 }

@@ -2,131 +2,124 @@
 import StateBlock from '@/components/ui/StateBlock.vue'
 import { useStatisticsData } from '@/blocks/data'
 import type { StatisticsProps } from '@/blocks/contracts'
-import SectionHeading from '../components/SectionHeading.vue'
 
 /**
- * Yatagarasu — the realm in numbers.
+ * Yatagarasu — the pulse.
  *
- * Four counts over the live game tables, already formatted by the composable.
- * The block chooses the arrangement and nothing else — which is why it has no
- * formatting logic of its own and no fallback figures: a statistic the server
- * cannot answer is shown as unavailable rather than as a plausible number.
+ * The headline counts, directly under the hero and with no section heading:
+ * one bordered band divided by hairlines, read at a glance on the way down
+ * the page. It is the reference's arrangement, and it works because these
+ * figures need no introduction — a number under the word "Characters" is
+ * self-explanatory in a way that a chart is not.
+ *
+ * The figures are counted over the live game tables and formatted by the
+ * composable. A statistic the server cannot answer is shown as unavailable
+ * rather than as a plausible number.
  */
-const props = withDefaults(defineProps<StatisticsProps>(), {
-    heading: 'The Realm in Numbers',
-})
+withDefaults(defineProps<StatisticsProps>(), { heading: 'The Realm in Numbers' })
 
 const statistics = useStatisticsData()
 </script>
 
 <template>
-    <section class="yata-air" aria-labelledby="yata-stats-title">
-        <div class="mx-auto max-w-7xl px-4 pb-16 sm:pb-20">
-            <SectionHeading
-                eyebrow="A living world"
-                :title="props.heading"
-                title-id="yata-stats-title"
-            />
+    <section class="relative z-10 mx-auto max-w-7xl px-6 py-12" aria-label="Server statistics">
+        <StateBlock
+            v-if="statistics.state.error"
+            variant="error"
+            title="The archives are unavailable"
+            :description="statistics.state.error"
+        />
+        <StateBlock
+            v-else-if="statistics.state.loading && statistics.state.empty"
+            variant="loading"
+            title="Reading the archives…"
+        />
 
-            <div class="mt-12">
-                <StateBlock
-                    v-if="statistics.state.error"
-                    variant="error"
-                    title="The archives are unavailable"
-                    :description="statistics.state.error"
-                />
-                <StateBlock
-                    v-else-if="statistics.state.loading && statistics.state.empty"
-                    variant="loading"
-                    title="Reading the archives…"
-                />
-
-                <dl v-else class="yata-figures">
-                    <div
-                        v-for="(item, index) in statistics.items"
-                        :key="item.key"
-                        class="yata-figure yata-rise"
-                        :class="`yata-rise-${Math.min(index + 1, 4)}`"
-                    >
-                        <dt class="yata-figure__label">{{ item.label }}</dt>
-                        <dd class="yata-figure__value tabular">{{ item.formatted }}</dd>
-                    </div>
-                </dl>
+        <dl v-else class="yata-pulse">
+            <div v-for="item in statistics.items" :key="item.key" class="yata-pulse__cell">
+                <dd class="yata-pulse__value">{{ item.formatted }}</dd>
+                <dt class="yata-pulse__label">{{ item.label }}</dt>
             </div>
-        </div>
+        </dl>
     </section>
 </template>
 
 <style>
 /*
- * A single bordered band divided by hairlines, not four separate cards. The
- * figures belong together — they are one reading of the world — and four
- * floating panels say they are four unrelated facts.
+ * One outer border with the cells divided by internal rules, rather than a row
+ * of separate cards. These figures are one reading of the world; four floating
+ * panels would say they are four unrelated facts.
+ *
+ * The dividers are drawn per cell and then trimmed with a negative margin on
+ * the container, which is what keeps a part-filled last row from leaving a
+ * stray rule hanging off the end.
  */
-:root[data-theme-slug='yatagarasu'] .yata-figures {
+:root[data-theme-slug='yatagarasu'] .yata-pulse {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-panel);
-    background-image: linear-gradient(
-        180deg,
-        color-mix(in oklab, var(--yata-navy) 70%, transparent),
-        transparent 70%
-    );
+    margin: 0;
+    overflow: hidden;
 }
 
-@media (min-width: 900px) {
-    :root[data-theme-slug='yatagarasu'] .yata-figures {
+@media (min-width: 768px) {
+    :root[data-theme-slug='yatagarasu'] .yata-pulse {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-figure {
-    padding: 2rem 1.25rem;
+:root[data-theme-slug='yatagarasu'] .yata-pulse__cell {
+    padding: 1.5rem;
     text-align: center;
+    border-right: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 /*
- * Dividers drawn per cell rather than with a gap-and-background trick, so the
- * two-column layout on a phone does not leave a stray rule down the middle of
- * the last row.
+ * The trailing edges are removed per row rather than with `:last-child`, which
+ * would only reach the final cell of the whole grid.
  */
-:root[data-theme-slug='yatagarasu'] .yata-figure:nth-child(n + 3) {
-    border-top: 1px solid var(--border-subtle);
+:root[data-theme-slug='yatagarasu'] .yata-pulse__cell:nth-child(2n) {
+    border-right: 0;
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-figure:nth-child(2n) {
-    border-left: 1px solid var(--border-subtle);
+:root[data-theme-slug='yatagarasu'] .yata-pulse__cell:nth-last-child(-n + 2) {
+    border-bottom: 0;
 }
 
-@media (min-width: 900px) {
-    :root[data-theme-slug='yatagarasu'] .yata-figure:nth-child(n + 3) {
-        border-top: 0;
+@media (min-width: 768px) {
+    :root[data-theme-slug='yatagarasu'] .yata-pulse__cell:nth-child(2n) {
+        border-right: 1px solid var(--border-subtle);
     }
 
-    :root[data-theme-slug='yatagarasu'] .yata-figure:nth-child(2n) {
-        border-left: 0;
+    :root[data-theme-slug='yatagarasu'] .yata-pulse__cell:nth-child(4n),
+    :root[data-theme-slug='yatagarasu'] .yata-pulse__cell:last-child {
+        border-right: 0;
     }
 
-    :root[data-theme-slug='yatagarasu'] .yata-figure + .yata-figure {
-        border-left: 1px solid var(--border-subtle);
+    :root[data-theme-slug='yatagarasu'] .yata-pulse__cell {
+        border-bottom: 0;
     }
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-figure__label {
-    font-size: 0.625rem;
+:root[data-theme-slug='yatagarasu'] .yata-pulse__value {
+    margin: 0;
+    font-family: var(--yata-font-deco);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--color-accent-500);
+    font-variant-numeric: tabular-nums;
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-pulse__label {
+    margin-top: 0.4rem;
+    font-family: var(--font-display);
+    font-size: 0.65rem;
     font-weight: 600;
-    letter-spacing: 0.24em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--text-muted);
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-figure__value {
-    margin: 0.75rem 0 0;
-    font-family: var(--font-display);
-    font-size: clamp(1.75rem, 4vw, 2.5rem);
-    font-weight: 700;
-    line-height: 1;
-    color: var(--color-accent-300);
 }
 </style>

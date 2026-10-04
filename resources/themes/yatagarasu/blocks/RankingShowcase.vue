@@ -34,7 +34,7 @@ function rankClass(rank: number): string {
 </script>
 
 <template>
-    <section class="yata-air" aria-labelledby="yata-hall-title">
+    <section aria-labelledby="yata-hall-title">
         <div class="mx-auto max-w-5xl px-4 py-16 sm:py-20">
             <SectionHeading
                 eyebrow="Rankings"

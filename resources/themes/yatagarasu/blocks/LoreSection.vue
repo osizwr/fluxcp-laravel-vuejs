@@ -22,7 +22,7 @@ const { title, game } = useGame()
 </script>
 
 <template>
-    <section class="yata-air yata-air--crimson yata-lore" aria-labelledby="yata-lore-title">
+    <section class="yata-lore" aria-labelledby="yata-lore-title">
         <!-- Artwork, full bleed. -->
         <div class="yata-lore__art">
             <ArtPlaceholder
@@ -38,7 +38,7 @@ const { title, game } = useGame()
         <div class="yata-lore__inner">
             <CrowMark :size="40" class="text-[var(--color-accent-500)]" :label="`The mark of ${title}`" />
 
-            <p class="yata-eyebrow mt-7">The legend</p>
+            <p class="yata-eyebrow mt-7"><span class="yata-eyebrow__text">The legend</span></p>
 
             <h2 id="yata-lore-title" class="yata-lore__title">The Legend of {{ title }}</h2>
 
@@ -101,11 +101,7 @@ const { title, game } = useGame()
             color-mix(in oklab, var(--yata-void) 72%, transparent) 78%,
             var(--surface-page) 100%
         ),
-        radial-gradient(
-            90% 80% at 50% 50%,
-            transparent 30%,
-            color-mix(in oklab, var(--yata-air-crimson) 70%, transparent) 100%
-        );
+        radial-gradient(90% 80% at 50% 50%, transparent 30%, rgb(139 0 0 / 28%) 100%);
 }
 
 :root[data-theme-slug='yatagarasu'] .yata-lore__inner {
@@ -127,9 +123,9 @@ const { title, game } = useGame()
 
 :root[data-theme-slug='yatagarasu'] .yata-lore__title {
     margin-top: 1rem;
-    font-family: var(--font-display);
+    font-family: var(--yata-font-deco);
     font-size: clamp(1.75rem, 5vw, 2.75rem);
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--yata-ivory);
     text-wrap: balance;
@@ -140,8 +136,9 @@ const { title, game } = useGame()
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    font-family: var(--font-display);
-    font-size: clamp(1.125rem, 2.6vw, 1.625rem);
+    font-family: var(--yata-font-body);
+    font-style: italic;
+    font-size: clamp(1.25rem, 2.8vw, 1.75rem);
     font-weight: 400;
     line-height: 1.4;
     letter-spacing: 0.06em;

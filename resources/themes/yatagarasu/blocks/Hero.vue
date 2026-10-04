@@ -9,48 +9,38 @@ import CrowMark from '../components/CrowMark.vue'
 /**
  * Yatagarasu — the hero.
  *
- * A near-full-height cinematic plate: key art behind, the game's name over
- * it, and the live state of the world along the bottom.
+ * A full-height cinematic plate: key art behind, the emblem centred over it
+ * with embers drifting past, and two controls beneath.
  *
- * The composition is deliberately asymmetric. The title sits left of centre
- * and the panel that frames it stops well short of the right edge, so the
- * artwork on that side is never covered. A centred title on a full-bleed
- * image is the arrangement every landing page uses and it wastes the half of
- * the picture it sits on.
+ * Centred rather than asymmetric, which is the reference's arrangement: the
+ * emblem is the subject and the artwork frames it, so anything off to one
+ * side would be competing with the thing it is meant to present.
  *
- * Everything written here is either configuration or live state. The name,
- * tagline and description come from the operator's GAME_* settings through
- * useHeroData(); the player count and server state come from the store the
- * broadcast feeds. Nothing is simulated, and no copy about the game is
- * hardcoded in this file.
+ * Everything written here is configuration or live state. The name, tagline
+ * and actions come from the operator's GAME_* settings through useHeroData();
+ * no copy about the game is hardcoded in this file.
  */
 const props = withDefaults(defineProps<HeroProps>(), { showStatus: true })
 
 const hero = useHeroData(props)
-const { game } = useGame()
-
-/**
- * The vertical index down the left edge.
- *
- * Four numbered words rather than links to sections that may not exist: this
- * is the hero of a page whose composition the theme controls, and a marker
- * pointing at a section an operator removed would be dead navigation. They
- * are labels for the chapters of the page, and the page scrolls past them.
- */
-const chapters = ['World', 'Adventure', 'Battle', 'Legends']
+const { game, title } = useGame()
 
 /*
- * Drifting motes. Positions are fixed rather than random so that the hero
- * renders identically on the server and the client, and so two visitors are
- * looking at the same picture.
+ * Embers around the emblem, and slow-turning stars further out. Positions are
+ * fixed rather than random so the hero renders identically everywhere and two
+ * visitors are looking at the same picture.
  */
-const motes = [
-    { left: '12%', delay: '0s', duration: '16s' },
-    { left: '26%', delay: '4s', duration: '13s' },
-    { left: '41%', delay: '8s', duration: '18s' },
-    { left: '58%', delay: '2s', duration: '15s' },
-    { left: '73%', delay: '6s', duration: '19s' },
-    { left: '88%', delay: '10s', duration: '14s' },
+const embers = [
+    { left: '12%', bottom: '30%', size: 5, delay: '0s', duration: '2.4s', colour: '#c9993a' },
+    { left: '22%', bottom: '45%', size: 4, delay: '0.6s', duration: '2.8s', colour: '#fff0a0' },
+    { left: '38%', bottom: '55%', size: 6, delay: '1.1s', duration: '2.2s', colour: '#c9993a' },
+    { left: '52%', bottom: '60%', size: 3, delay: '0.3s', duration: '3.0s', colour: '#e8d5a3' },
+    { left: '65%', bottom: '50%', size: 5, delay: '0.9s', duration: '2.5s', colour: '#fff0a0' },
+    { left: '78%', bottom: '38%', size: 4, delay: '1.5s', duration: '2.7s', colour: '#c9993a' },
+    { left: '88%', bottom: '55%', size: 3, delay: '0.2s', duration: '2.3s', colour: '#e8d5a3' },
+    { left: '30%', bottom: '70%', size: 4, delay: '1.8s', duration: '2.6s', colour: '#fff0a0' },
+    { left: '72%', bottom: '68%', size: 5, delay: '0.7s', duration: '2.9s', colour: '#c9993a' },
+    { left: '48%', bottom: '75%', size: 3, delay: '1.3s', duration: '2.1s', colour: '#e8d5a3' },
 ]
 </script>
 
@@ -67,137 +57,132 @@ const motes = [
             />
         </div>
 
-        <!-- Layer 2: the night. A vertical fall to black and a vignette. -->
+        <!--
+            Layer 2: the night. Three overlays rather than one scrim — a fall
+            to black down the page, a narrowing from the sides, and a pool at
+            the foot where the controls sit. A flat 50% wash over the whole
+            image would be easier and would throw the artwork away.
+        -->
         <div class="yata-hero__veil" aria-hidden="true" />
 
-        <!-- Layer 3: motes, drifting upward. -->
-        <div class="yata-hero__motes" aria-hidden="true">
-            <span
-                v-for="(mote, index) in motes"
-                :key="index"
-                class="yata-mote"
-                :style="{
-                    left: mote.left,
-                    bottom: '12%',
-                    animationDelay: mote.delay,
-                    animationDuration: mote.duration,
-                }"
-            />
-        </div>
-
-        <!-- Layer 4: the chapter index, desktop only. -->
-        <ol class="yata-hero__chapters" aria-hidden="true">
-            <li v-for="(chapter, index) in chapters" :key="chapter">
-                <span class="yata-hero__chapter-no">{{ String(index + 1).padStart(2, '0') }}</span>
-                <span class="yata-hero__chapter-name">{{ chapter }}</span>
-            </li>
-        </ol>
-
-        <!-- Layer 5: the words. -->
-        <div class="yata-hero__inner">
-            <div class="yata-hero__copy yata-rise">
-                <CrowMark :size="46" class="mb-6 text-[var(--color-accent-500)]" />
-
-                <h1 id="yata-hero-title" class="yata-hero__title">{{ hero.title }}</h1>
-
-                <!--
-                    The subtitle is the short name, by contract. It is printed
-                    only when it says something the title does not: on a server
-                    whose short name is just its name abbreviated, the slot is
-                    better empty than tautological.
-                -->
-                <p
-                    v-if="hero.subtitle && hero.subtitle.toLowerCase() !== hero.title.toLowerCase()"
-                    class="yata-hero__subtitle"
-                >
-                    {{ hero.subtitle }}
-                </p>
-
-                <hr class="yata-rule my-7 max-w-[18rem]" />
-
-                <p v-if="hero.description" class="yata-hero__lead">{{ hero.description }}</p>
-
-                <div class="yata-hero__actions">
-                    <RouterLink
-                        v-if="hero.primaryAction?.to"
-                        :to="hero.primaryAction.to"
-                        class="yata-btn yata-btn--primary"
-                    >
-                        {{ hero.primaryAction.label }}
-                    </RouterLink>
-                    <a
-                        v-else-if="hero.primaryAction?.href"
-                        :href="hero.primaryAction.href"
-                        class="yata-btn yata-btn--primary"
-                        rel="noreferrer noopener"
-                    >
-                        {{ hero.primaryAction.label }}
-                    </a>
-
-                    <RouterLink
-                        v-if="hero.secondaryAction?.to"
-                        :to="hero.secondaryAction.to"
-                        class="yata-btn yata-btn--secondary"
-                    >
-                        {{ hero.secondaryAction.label }}
-                    </RouterLink>
-                    <a
-                        v-else-if="hero.secondaryAction?.href"
-                        :href="hero.secondaryAction.href"
-                        class="yata-btn yata-btn--secondary"
-                        rel="noreferrer noopener"
-                    >
-                        {{ hero.secondaryAction.label }}
-                    </a>
-                </div>
+        <!--
+            Layer 3: the flourishes. Two pieces of character art flanking the
+            emblem, pinned to a capped stage rather than the viewport so that
+            on a very wide monitor they keep framing the content instead of
+            drifting into the corners.
+        -->
+        <div class="yata-hero__stage" aria-hidden="true">
+            <div class="yata-hero__flourish yata-hero__flourish--left">
+                <ArtPlaceholder
+                    path="/images/hero/flourish-left.webp"
+                    alt=""
+                    ratio="aspect-[3/4] w-full"
+                    decorative
+                />
+            </div>
+            <div class="yata-hero__flourish yata-hero__flourish--right">
+                <ArtPlaceholder
+                    path="/images/hero/flourish-right.webp"
+                    alt=""
+                    ratio="aspect-[3/4] w-full"
+                    decorative
+                />
             </div>
         </div>
 
-        <!--
-            Layer 6: the state of the world, along the foot of the hero.
+        <!-- Layer 4: the words. -->
+        <div class="yata-hero__inner">
+            <p class="yata-eyebrow yata-rise">
+                <span class="yata-eyebrow__rule" />
+                <span class="yata-eyebrow__text">Enter the realm</span>
+                <span class="yata-eyebrow__rule" />
+            </p>
 
-            Part of the artwork rather than a panel on top of it: one hairline
-            above, hairlines between, and no fill. The player count is the only
-            figure here that is not configuration, and it is live.
-        -->
-        <div v-if="props.showStatus" class="yata-hero__status">
-            <dl class="mx-auto flex max-w-7xl items-stretch px-4">
-                <div class="yata-hero__stat">
-                    <dt>Realm</dt>
-                    <dd>
-                        <span
-                            class="yata-nav__dot"
-                            :class="hero.serversUp ? 'is-up' : 'is-down'"
-                            aria-hidden="true"
-                        />
-                        {{ hero.serversUp ? 'Online' : 'Offline' }}
-                    </dd>
+            <!--
+                The emblem. An operator's own logo where they have set one,
+                and the mark and wordmark otherwise. The embers are positioned
+                against this wrapper, so they drift past the emblem rather
+                than across the whole section.
+            -->
+            <div class="yata-hero__emblem yata-rise">
+                <img
+                    v-if="game.logo"
+                    :src="game.logo"
+                    :alt="title"
+                    class="yata-glow w-full object-contain"
+                    decoding="async"
+                />
+                <div v-else class="yata-glow flex flex-col items-center">
+                    <CrowMark :size="78" class="text-[var(--color-accent-500)]" />
+                    <h1 id="yata-hero-title" class="yata-hero__title">{{ hero.title }}</h1>
                 </div>
 
-                <div class="yata-hero__stat">
-                    <dt>Adventurers</dt>
-                    <dd class="tabular">
-                        {{ hero.playersOnline === null ? '—' : hero.playersOnline.toLocaleString() }}
-                    </dd>
-                </div>
+                <span
+                    v-for="(ember, index) in embers"
+                    :key="index"
+                    class="yata-ember"
+                    aria-hidden="true"
+                    :style="{
+                        left: ember.left,
+                        bottom: ember.bottom,
+                        width: `${ember.size}px`,
+                        height: `${ember.size}px`,
+                        backgroundColor: ember.colour,
+                        boxShadow: `0 0 ${ember.size * 2}px ${ember.colour}`,
+                        animationDelay: ember.delay,
+                        animationDuration: ember.duration,
+                    }"
+                />
+            </div>
 
-                <div class="yata-hero__stat yata-hero__stat--wide">
-                    <dt>Client</dt>
-                    <dd>
-                        <a
-                            v-if="game.links.downloads"
-                            :href="game.links.downloads"
-                            class="yata-btn yata-btn--ghost"
-                            rel="noreferrer noopener"
-                        >
-                            Download
-                        </a>
-                        <RouterLink v-else to="/register" class="yata-btn yata-btn--ghost">
-                            Create an account
-                        </RouterLink>
-                    </dd>
-                </div>
-            </dl>
+            <!-- When a logo image stands in for the title, the name still has
+                 to reach a screen reader and the document outline. -->
+            <h1 v-if="game.logo" id="yata-hero-title" class="sr-only">{{ hero.title }}</h1>
+
+            <p v-if="hero.description" class="yata-hero__lead yata-rise yata-rise-2">
+                {{ hero.description }}
+            </p>
+
+            <p
+                v-if="hero.subtitle && hero.subtitle.toLowerCase() !== hero.title.toLowerCase()"
+                class="yata-hero__kicker yata-rise yata-rise-2"
+            >
+                {{ hero.subtitle }}
+            </p>
+
+            <div class="yata-hero__actions yata-rise yata-rise-3">
+                <RouterLink
+                    v-if="hero.primaryAction?.to"
+                    :to="hero.primaryAction.to"
+                    class="yata-btn yata-btn--primary"
+                >
+                    {{ hero.primaryAction.label }}
+                </RouterLink>
+                <a
+                    v-else-if="hero.primaryAction?.href"
+                    :href="hero.primaryAction.href"
+                    class="yata-btn yata-btn--primary"
+                    rel="noreferrer noopener"
+                >
+                    {{ hero.primaryAction.label }}
+                </a>
+
+                <RouterLink
+                    v-if="hero.secondaryAction?.to"
+                    :to="hero.secondaryAction.to"
+                    class="yata-btn yata-btn--secondary"
+                >
+                    {{ hero.secondaryAction.label }}
+                </RouterLink>
+                <a
+                    v-else-if="hero.secondaryAction?.href"
+                    :href="hero.secondaryAction.href"
+                    class="yata-btn yata-btn--secondary"
+                    rel="noreferrer noopener"
+                >
+                    {{ hero.secondaryAction.label }}
+                </a>
+            </div>
         </div>
     </section>
 </template>
@@ -206,16 +191,10 @@ const motes = [
 :root[data-theme-slug='yatagarasu'] .yata-hero {
     position: relative;
     display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: center;
     min-height: 88svh;
     overflow: hidden;
-    /*
-     * Pulled up under the navbar so the artwork runs to the top of the window
-     * and the transparent bar floats on it.
-     */
-    margin-top: -64px;
-    padding-top: 64px;
 }
 
 :root[data-theme-slug='yatagarasu'] .yata-hero__art,
@@ -224,217 +203,181 @@ const motes = [
     inset: 0;
     width: 100%;
     height: 100%;
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-hero__art figure {
     border: 0;
 }
 
-/*
- * The veil. Three stops rather than a single overlay: dark at the very top so
- * the navbar's white capitals hold, clear through the middle where the picture
- * is, and dark again at the foot so the title and the status strip sit on
- * something. A flat 50% scrim over the whole image would be easier and would
- * throw away the artwork.
- */
+:root[data-theme-slug='yatagarasu'] .yata-hero__art figure {
+    opacity: 0.7;
+}
+
 :root[data-theme-slug='yatagarasu'] .yata-hero__veil {
     position: absolute;
     inset: 0;
     background:
         linear-gradient(
             180deg,
-            color-mix(in oklab, var(--yata-void) 85%, transparent) 0%,
-            color-mix(in oklab, var(--yata-void) 20%, transparent) 26%,
-            color-mix(in oklab, var(--yata-void) 32%, transparent) 54%,
-            color-mix(in oklab, var(--yata-void) 94%, transparent) 100%
+            rgb(8 8 11 / 50%) 0%,
+            rgb(8 8 11 / 30%) 45%,
+            var(--surface-page) 100%
         ),
-        /* Weighted to the left, where the words are. */
-            linear-gradient(
-                90deg,
-                color-mix(in oklab, var(--yata-navy) 82%, transparent) 0%,
-                color-mix(in oklab, var(--yata-navy) 30%, transparent) 46%,
-                transparent 72%
-            ),
-        radial-gradient(
-            120% 100% at 50% 50%,
-            transparent 42%,
-            color-mix(in oklab, var(--yata-void) 62%, transparent) 100%
-        );
+        linear-gradient(90deg, rgb(8 8 11 / 70%) 0%, transparent 50%, rgb(8 8 11 / 50%) 100%),
+        radial-gradient(ellipse 70% 50% at 50% 80%, rgb(8 8 11 / 70%) 0%, transparent 70%);
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-hero__motes {
+/* ---- Flourishes --------------------------------------------------------- */
+
+:root[data-theme-slug='yatagarasu'] .yata-hero__stage {
     position: absolute;
     inset: 0;
+    z-index: 10;
+    display: none;
+    max-width: 120rem;
+    margin-inline: auto;
     pointer-events: none;
 }
 
-/* ---- The chapter index ------------------------------------------------- */
+/* Only where there is room for them beside the emblem. */
+@media (min-width: 1024px) {
+    :root[data-theme-slug='yatagarasu'] .yata-hero__stage {
+        display: block;
+    }
+}
 
-:root[data-theme-slug='yatagarasu'] .yata-hero__chapters {
-    display: none;
+:root[data-theme-slug='yatagarasu'] .yata-hero__flourish {
     position: absolute;
-    left: 2.5rem;
-    top: 50%;
-    translate: 0 -50%;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    gap: 1.5rem;
-    flex-direction: column;
+    width: 22rem;
+    filter: drop-shadow(0 14px 34px rgb(0 0 0 / 60%));
+    transform-origin: bottom center;
 }
 
 @media (min-width: 1280px) {
-    :root[data-theme-slug='yatagarasu'] .yata-hero__chapters {
-        display: flex;
+    :root[data-theme-slug='yatagarasu'] .yata-hero__flourish {
+        width: 28rem;
     }
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-hero__chapters li {
-    display: flex;
-    align-items: baseline;
-    gap: 0.625rem;
+:root[data-theme-slug='yatagarasu'] .yata-hero__flourish--left {
+    bottom: 5%;
+    left: 4%;
+    rotate: -6deg;
+    animation: yata-float-left 5s ease-in-out 1s infinite;
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-hero__chapter-no {
-    font-family: var(--font-display);
-    font-size: 0.625rem;
-    letter-spacing: 0.1em;
-    color: var(--color-accent-600);
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-hero__chapter-name {
-    font-size: 0.625rem;
-    font-weight: 600;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: color-mix(in oklab, var(--yata-ivory) 42%, transparent);
-    writing-mode: vertical-rl;
-}
-
-/* ---- The words --------------------------------------------------------- */
-
-:root[data-theme-slug='yatagarasu'] .yata-hero__inner {
-    position: relative;
-    width: 100%;
-    max-width: 80rem;
-    margin-inline: auto;
-    padding: 4rem 1rem 3rem;
-}
-
-@media (min-width: 1280px) {
-    :root[data-theme-slug='yatagarasu'] .yata-hero__inner {
-        padding-left: 7rem;
-    }
+:root[data-theme-slug='yatagarasu'] .yata-hero__flourish--right {
+    bottom: 30%;
+    right: -1%;
+    rotate: 5deg;
+    animation: yata-float-right 5s ease-in-out 1.4s infinite;
 }
 
 /*
- * Stops short of the right edge on purpose: the artwork on that side stays
- * visible, which is the whole reason for an asymmetric hero.
+ * Two keyframes rather than one, because each flourish keeps its own tilt
+ * through the float -- sharing a keyframe would snap them both to the same
+ * rotation on the first frame.
  */
-:root[data-theme-slug='yatagarasu'] .yata-hero__copy {
-    max-width: 38rem;
+@keyframes yata-float-left {
+    0%,
+    100% {
+        translate: 0 0;
+        rotate: -6deg;
+    }
+
+    50% {
+        translate: 0 -20px;
+        rotate: -7.5deg;
+    }
+}
+
+@keyframes yata-float-right {
+    0%,
+    100% {
+        translate: 0 0;
+        rotate: 5deg;
+    }
+
+    50% {
+        translate: 0 -20px;
+        rotate: 6.5deg;
+    }
+}
+
+/* ---- The words ---------------------------------------------------------- */
+
+:root[data-theme-slug='yatagarasu'] .yata-hero__inner {
+    position: relative;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 64rem;
+    margin-inline: auto;
+    padding: 6rem 1.5rem;
+    text-align: center;
+}
+
+:root[data-theme-slug='yatagarasu'] .yata-hero__emblem {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    max-width: 47.5rem;
+    margin-top: 1.5rem;
 }
 
 :root[data-theme-slug='yatagarasu'] .yata-hero__title {
-    font-family: var(--font-display);
-    font-size: clamp(2.75rem, 8vw, 5.25rem);
+    margin-top: 1rem;
+    font-family: var(--yata-font-deco);
+    font-size: clamp(2.5rem, 9vw, 5.5rem);
     font-weight: 700;
-    line-height: 1.02;
-    letter-spacing: 0.04em;
+    line-height: 1;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--yata-ivory);
     text-wrap: balance;
-    /*
-     * A long, soft shadow rather than a glow. It lifts the letters off
-     * whatever is behind them without looking lit.
-     */
-    text-shadow: 0 2px 30px color-mix(in oklab, var(--yata-void) 85%, transparent);
-    margin: 0;
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-hero__subtitle {
-    margin-top: 1rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    letter-spacing: 0.34em;
-    text-transform: uppercase;
-    color: var(--color-accent-400);
 }
 
 :root[data-theme-slug='yatagarasu'] .yata-hero__lead {
-    max-width: 32rem;
-    font-size: 1.0625rem;
+    max-width: 42rem;
+    margin-top: 2rem;
+    font-family: var(--yata-font-body);
+    font-style: italic;
+    font-size: 1.25rem;
     line-height: 1.7;
-    color: color-mix(in oklab, var(--yata-ivory) 82%, transparent);
+    color: rgb(232 213 163 / 80%);
+    text-wrap: balance;
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-hero__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.875rem;
-    margin-top: 2.25rem;
-}
-
-/* ---- The status strip -------------------------------------------------- */
-
-:root[data-theme-slug='yatagarasu'] .yata-hero__status {
-    position: relative;
-    border-top: 1px solid var(--yata-rule);
-    background: linear-gradient(
-        180deg,
-        transparent,
-        color-mix(in oklab, var(--yata-void) 55%, transparent)
-    );
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-hero__stat {
-    flex: 1 1 0;
-    padding: 1.125rem 1.25rem;
-    min-width: 0;
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-hero__stat + .yata-hero__stat {
-    border-left: 1px solid var(--yata-rule);
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-hero__stat dt {
-    font-size: 0.625rem;
-    font-weight: 600;
-    letter-spacing: 0.22em;
+:root[data-theme-slug='yatagarasu'] .yata-hero__kicker {
+    margin-top: 0.875rem;
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
     text-transform: uppercase;
     color: var(--text-muted);
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-hero__stat dd {
+:root[data-theme-slug='yatagarasu'] .yata-hero__actions {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0.4rem 0 0;
-    font-family: var(--font-display);
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--yata-ivory);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    margin-top: 2.5rem;
+    width: 100%;
+    max-width: 20rem;
 }
 
-/* The download cell carries a control, which needs no display face. */
-:root[data-theme-slug='yatagarasu'] .yata-hero__stat--wide dd {
-    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+@media (min-width: 640px) {
+    :root[data-theme-slug='yatagarasu'] .yata-hero__actions {
+        flex-direction: row;
+        justify-content: center;
+        width: auto;
+        max-width: none;
+    }
 }
 
-@media (max-width: 639px) {
-    :root[data-theme-slug='yatagarasu'] .yata-hero {
-        min-height: 94svh;
-    }
-
-    /* The third cell wraps to its own row rather than squeezing to nothing. */
-    :root[data-theme-slug='yatagarasu'] .yata-hero__status dl {
-        flex-wrap: wrap;
-    }
-
-    :root[data-theme-slug='yatagarasu'] .yata-hero__stat--wide {
-        flex-basis: 100%;
-        border-left: 0;
-        border-top: 1px solid var(--yata-rule);
+@media (prefers-reduced-motion: reduce) {
+    :root[data-theme-slug='yatagarasu'] .yata-hero__flourish {
+        animation: none;
     }
 }
 </style>

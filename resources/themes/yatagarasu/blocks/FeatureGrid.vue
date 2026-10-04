@@ -21,7 +21,7 @@ const features = useFeatureData()
 </script>
 
 <template>
-    <section class="yata-air" aria-labelledby="yata-features-title">
+    <section aria-labelledby="yata-features-title">
         <div class="mx-auto max-w-7xl px-4 py-16 sm:py-20">
             <SectionHeading
                 eyebrow="Codex"

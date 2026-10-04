@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import OrnamentDivider from './OrnamentDivider.vue'
+
 /**
  * The heading every section in this theme opens with.
  *
- * Eyebrow, title, diamond rule, optional lead. Centred by default and
- * left-aligned where a section is asymmetric, which is the only variation the
- * theme allows -- a page whose section headings each find their own
- * arrangement reads as several pages.
+ * Eyebrow between two short rules, a title in tracked capitals, then the
+ * ornament. Centred by default and left-aligned where a section is
+ * asymmetric — the only variation the theme allows, because a page whose
+ * headings each find their own arrangement reads as several pages.
  */
 withDefaults(
     defineProps<{
@@ -25,24 +27,24 @@ withDefaults(
         class="flex flex-col"
         :class="align === 'center' ? 'items-center text-center' : 'items-start text-left'"
     >
-        <p v-if="eyebrow" class="yata-eyebrow">{{ eyebrow }}</p>
+        <p v-if="eyebrow" class="yata-eyebrow">
+            <!-- The flanking rules are part of the mark when it is centred;
+                 beside a left-aligned title they would point at nothing. -->
+            <span v-if="align === 'center'" class="yata-eyebrow__rule" />
+            <span class="yata-eyebrow__text">{{ eyebrow }}</span>
+            <span v-if="align === 'center'" class="yata-eyebrow__rule" />
+        </p>
 
-        <h2
-            :id="titleId"
-            class="yata-title mt-3 text-2xl sm:text-3xl lg:text-[2.1rem]"
-        >
+        <h2 :id="titleId" class="yata-title mt-4 text-3xl sm:text-4xl">
             {{ title }}
         </h2>
 
-        <hr
-            class="mt-4 w-full max-w-[13rem]"
-            :class="align === 'center' ? 'yata-rule-diamond' : 'yata-rule'"
+        <OrnamentDivider
+            class="mt-5 w-full max-w-xs text-[var(--color-accent-500)]"
+            :class="align === 'start' ? 'max-w-[12rem]' : ''"
         />
 
-        <p
-            v-if="lead"
-            class="mt-4 max-w-2xl text-[0.9375rem] leading-relaxed text-[var(--text-secondary)]"
-        >
+        <p v-if="lead" class="yata-prose mt-5 max-w-2xl text-lg text-[var(--text-secondary)]">
             {{ lead }}
         </p>
     </header>

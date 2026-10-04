@@ -2,37 +2,60 @@
     "name": "Yatagarasu",
     "version": "1.0.0",
     "author": "",
-    "description": "A dark Japanese fantasy skin: void-black night, moonlit navy and warm gold, built around the three-legged crow.",
+    "description": "Dark fantasy in gold and blood on black: a scrolling ticker, grouped navigation, shared-border figure bands and cast-gold titles.",
     "supports": {
         "dark_mode": true,
         "light_mode": false,
         "mobile": true
     },
     "default_appearance": "dark",
-
     "layouts": {
         "public": "PublicLayout",
         "app": "AppLayout",
         "auth": "AuthLayout"
     },
-
     "pages": {
         "home": {
             "layout": "public",
             "blocks": [
                 "hero",
+                "statistics",
                 "promo-banner",
-                { "block": "server-status", "props": { "heading": "The Gates", "detailed": true } },
-                { "block": "statistics", "props": { "heading": "The Realm in Numbers" } },
-                { "block": "feature-grid", "props": { "heading": "The World Awaits" } },
-                { "block": "class-showcase", "props": { "heading": "Choose Your Path", "limit": 6 } },
                 {
-                    "block": "ranking-showcase",
-                    "props": { "heading": "Hall of Legends", "ladder": "level", "limit": 5, "showAll": true }
+                    "block": "server-status",
+                    "props": {
+                        "heading": "The Gates",
+                        "detailed": true
+                    }
                 },
                 {
                     "block": "news-section",
-                    "props": { "heading": "Latest Chronicles", "limit": 3, "featureFirst": true }
+                    "props": {
+                        "heading": "Latest Dispatches",
+                        "limit": 3
+                    }
+                },
+                {
+                    "block": "class-showcase",
+                    "props": {
+                        "heading": "Choose Your Path",
+                        "limit": 6
+                    }
+                },
+                {
+                    "block": "ranking-showcase",
+                    "props": {
+                        "heading": "Hall of Legends",
+                        "ladder": "level",
+                        "limit": 5,
+                        "showAll": true
+                    }
+                },
+                {
+                    "block": "feature-grid",
+                    "props": {
+                        "heading": "The World Awaits"
+                    }
                 },
                 "lore-section",
                 "call-to-action"

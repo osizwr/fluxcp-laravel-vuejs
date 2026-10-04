@@ -1,151 +1,141 @@
 <script setup lang="ts">
-import { useAnnouncement } from '@/blocks/data'
+import { computed } from 'vue'
+import { useAnnouncement, useNewsData } from '@/blocks/data'
 
 /**
- * The thin bar above everything.
+ * Yatagarasu — the ticker.
  *
- * A band of dark gold, around thirty pixels tall, in small tracked capitals.
- * Its job is to be noticed once and then ignored, so it carries no fill
- * bright enough to compete with the hero beneath it.
+ * The thin band above everything, scrolling the server's own headlines.
  *
- * Renders nothing when there is nothing to announce. Dismissal, tone and the
- * message itself all come from the composable, which is fed by the operator's
- * configuration — this block decides only how it looks.
+ * It takes the latest dispatches first, because a headline somebody wrote is
+ * worth more than a standing notice, and falls back to the operator's
+ * announcement when there are none. With neither it renders nothing — an
+ * empty bar is a placeholder, and a placeholder takes up space while saying
+ * nothing.
+ *
+ * Both sources come from composables. The block cannot fetch, which is what
+ * lets the ticker be swapped for a plain bar by changing themes.
+ *
+ * The scroll is a CSS animation rather than a requestAnimationFrame loop
+ * driving a transform through component state: it runs on the compositor
+ * instead of re-rendering sixty times a second, and it stops by itself under
+ * `prefers-reduced-motion` rather than needing to be told.
  */
-const { announcement, dismiss } = useAnnouncement()
+const { announcement } = useAnnouncement()
+const news = useNewsData(6)
+
+const items = computed<string[]>(() => {
+    const headlines = news.value.articles.map((article) => article.title).filter(Boolean)
+
+    if (headlines.length > 0) {
+        return headlines
+    }
+
+    return announcement.value ? [announcement.value.message] : []
+})
 
 /*
- * Three tones, three temperatures. Maintenance is the only one that gets any
- * real colour, because it is the only one that means "something is wrong".
+ * The strip is rendered twice and translated by exactly half its width, so the
+ * second copy arrives where the first began and the loop has no seam. With one
+ * copy the content would slide off and snap back.
  */
-const toneClass = {
-    info: 'yata-bar--info',
-    event: 'yata-bar--event',
-    maintenance: 'yata-bar--maintenance',
-}
+const marquee = computed(() => [...items.value, ...items.value])
+
+/* Long enough that the pace is a drift rather than a crawl at either length. */
+const duration = computed(() => `${Math.max(30, items.value.length * 12)}s`)
 </script>
 
 <template>
     <div
-        v-if="announcement"
-        class="yata-bar"
-        :class="toneClass[announcement.tone]"
-        :role="announcement.tone === 'maintenance' ? 'alert' : 'status'"
+        v-if="items.length > 0"
+        class="yata-ticker"
+        :role="announcement?.tone === 'maintenance' ? 'alert' : 'status'"
     >
-        <div class="mx-auto flex w-full max-w-7xl items-center gap-4 px-4">
-            <p class="yata-bar__text">
-                {{ announcement.message }}
-            </p>
-
-            <a
-                v-if="announcement.url"
-                :href="announcement.url"
-                class="yata-bar__link shrink-0"
-                rel="noreferrer noopener"
-            >
-                {{ announcement.label ?? 'Learn more' }}
-                <span aria-hidden="true">&rarr;</span>
-            </a>
-
-            <button
-                v-if="announcement.dismissible"
-                type="button"
-                class="yata-bar__close shrink-0"
-                @click="dismiss"
-            >
-                <span class="sr-only">Dismiss this announcement</span>
-                <span aria-hidden="true">&times;</span>
-            </button>
+        <div class="yata-ticker__track" :style="{ animationDuration: duration }" aria-hidden="true">
+            <span v-for="(item, index) in marquee" :key="index" class="yata-ticker__item">
+                <span class="yata-ticker__mark" />
+                {{ item }}
+            </span>
         </div>
+
+        <!--
+            The same headlines once, unanimated, for a screen reader. The moving
+            strip is hidden from the accessibility tree because it contains
+            every headline twice.
+        -->
+        <p class="sr-only">{{ items.join('. ') }}</p>
     </div>
 </template>
 
 <style>
-/*
- * Scoped by slug rather than by Vue's `scoped`, for consistency with the rest
- * of this theme's styling and so the rules are readable next to the markup
- * they belong to.
- */
-:root[data-theme-slug='yatagarasu'] .yata-bar {
+:root[data-theme-slug='yatagarasu'] .yata-ticker {
+    position: sticky;
+    top: 0;
+    z-index: 50;
     display: flex;
     align-items: center;
-    min-height: 32px;
-    border-bottom: 1px solid var(--yata-rule);
+    height: var(--yata-ticker-height);
+    overflow: hidden;
+    background-color: var(--yata-blood);
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-bar--info {
-    background-color: #130f08;
+:root[data-theme-slug='yatagarasu'] .yata-ticker__track {
+    display: flex;
+    flex-shrink: 0;
+    gap: 4rem;
+    padding-right: 4rem;
+    white-space: nowrap;
+    will-change: transform;
+    animation-name: yata-ticker-scroll;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-bar--event {
-    background-color: #1a1308;
-}
+@keyframes yata-ticker-scroll {
+    from {
+        translate: 0 0;
+    }
 
-:root[data-theme-slug='yatagarasu'] .yata-bar--maintenance {
-    background-color: var(--status-down-bg);
-    border-bottom-color: color-mix(in oklab, var(--color-down) 45%, transparent);
-}
-
-/*
- * One line with an ellipsis where there is room for one, and wrapping where
- * there is not.
- *
- * `min-width: 0` is the part that matters: a flex item will not shrink below
- * its own min-content width without it, and `white-space: nowrap` makes that
- * min-content width the whole sentence. Without it the bar pushed the page
- * 230px wider than the phone it was on.
- */
-:root[data-theme-slug='yatagarasu'] .yata-bar__text {
-    flex: 1 1 0;
-    min-width: 0;
-    padding-block: 0.4rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: color-mix(in oklab, var(--yata-ivory) 76%, transparent);
-}
-
-@media (min-width: 640px) {
-    :root[data-theme-slug='yatagarasu'] .yata-bar__text {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        padding-block: 0;
+    to {
+        /* Exactly one copy's width, which is half the doubled strip. */
+        translate: -50% 0;
     }
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-bar__link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.6875rem;
-    font-weight: 700;
+:root[data-theme-slug='yatagarasu'] .yata-ticker__item {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 600;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--color-accent-400);
-    text-decoration: none;
-    border-bottom: 1px solid transparent;
-    transition: color 160ms var(--yata-ease), border-color 160ms var(--yata-ease);
+    color: var(--yata-blood-ink);
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-bar__link:hover {
-    color: var(--color-accent-300);
-    border-bottom-color: currentColor;
+/*
+ * The separator between headlines. Drawn rather than set as a character:
+ * the display face has no crossed-swords glyph, so the reference's mark
+ * arrived as a missing-character box.
+ */
+:root[data-theme-slug='yatagarasu'] .yata-ticker__mark {
+    display: inline-block;
+    width: 0.3rem;
+    height: 0.3rem;
+    margin-right: 0.6rem;
+    vertical-align: middle;
+    rotate: 45deg;
+    background-color: currentColor;
+    opacity: 0.6;
 }
 
-:root[data-theme-slug='yatagarasu'] .yata-bar__close {
-    padding: 0 0.25rem;
-    font-size: 1rem;
-    line-height: 1;
-    color: var(--text-muted);
-    background: none;
-    border: 0;
-    cursor: pointer;
-    transition: color 160ms var(--yata-ease);
-}
-
-:root[data-theme-slug='yatagarasu'] .yata-bar__close:hover {
-    color: var(--yata-ivory);
+/*
+ * Motion is the whole point of a ticker, so without it the strip simply parks
+ * at its start and reads as a static band of headlines. The overflow stays
+ * hidden, which means only the first few are visible — the screen-reader copy
+ * carries the rest.
+ */
+@media (prefers-reduced-motion: reduce) {
+    :root[data-theme-slug='yatagarasu'] .yata-ticker__track {
+        animation: none;
+    }
 }
 </style>

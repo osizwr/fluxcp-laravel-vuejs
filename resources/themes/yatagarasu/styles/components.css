@@ -5,8 +5,7 @@
 |
 | The palette in variables.css already restyles everything that reads a
 | semantic token. This file is for the places where this theme wants different
-| *geometry* or *material* rather than a different colour: plates with inlaid
-| corners instead of rounded cards, recessed fields, a gold focus ring.
+| *geometry* or *material* rather than a different colour.
 |
 | Everything here is scoped to the theme slug, so none of it reaches another
 | theme regardless of stylesheet order.
@@ -17,34 +16,83 @@
 /* Typography                                                                 */
 /* -------------------------------------------------------------------------- */
 
+/*
+ * The body face is a serif. That is the single decision that sets this theme
+ * apart from every control panel: prose in Crimson Text reads as a chronicle,
+ * where the same words in a UI sans read as an admin tool.
+ */
 :root[data-theme-slug='yatagarasu'] body {
-    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-    /*
-     * A hair of extra letter-spacing at body size. On a dark ground type
-     * blooms slightly, and the default tracking reads tighter than it is.
-     */
-    letter-spacing: 0.006em;
+    font-family: var(--yata-font-body);
+    font-size: 1rem;
 }
 
 /*
- * The display face names things; it does not carry prose. Applied by element
- * rather than by class so a core page picks it up without being edited.
- *
- * h4 and below stay in the body face: Cinzel has no lower case worth reading
- * at 15px, and a table's column heading is a label, not a title.
+ * Headings are Cinzel, applied by element so a core page picks them up with
+ * no edit. h4 and below stay in the body face: Cinzel has no lower case worth
+ * reading at 15px, and a table's column heading is a label, not a title.
  */
 :root[data-theme-slug='yatagarasu'] h1,
 :root[data-theme-slug='yatagarasu'] h2,
 :root[data-theme-slug='yatagarasu'] h3 {
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.02em;
 }
 
-/* Figures line up in columns. A ranking where the digits drift is unreadable. */
+/* Figures line up in columns, and are set in the monospace face. */
 :root[data-theme-slug='yatagarasu'] .tabular {
+    font-family: var(--yata-font-tech);
     font-variant-numeric: tabular-nums;
-    font-feature-settings: 'tnum' 1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Page furniture                                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The ambient glow: three very wide, very faint radial washes — blood above
+ * and to the right, gold to the left — fixed so they do not travel with the
+ * scroll.
+ *
+ * This is what stops a long dark page reading as a stack of black rectangles.
+ * At these opacities (5–7%) no one can name the colour; they only notice that
+ * the dark is not flat.
+ */
+:root[data-theme-slug='yatagarasu'] body {
+    background-color: var(--surface-page);
+    background-image:
+        radial-gradient(
+            ellipse 70% 60% at 65% 0%,
+            rgb(139 0 0 / 7%) 0%,
+            transparent 70%
+        ),
+        radial-gradient(
+            ellipse 60% 60% at 0% 45%,
+            rgb(201 153 58 / 5%) 0%,
+            transparent 70%
+        ),
+        radial-gradient(
+            ellipse 55% 50% at 100% 85%,
+            rgb(139 0 0 / 6%) 0%,
+            transparent 70%
+        );
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+/* Selection in gold, because the browser default belongs to another palette. */
+:root[data-theme-slug='yatagarasu'] ::selection {
+    background-color: rgb(201 153 58 / 30%);
+    color: var(--yata-ivory);
+}
+
+/*
+ * A slim dark scrollbar. Left at the default it is a bright strip down the
+ * side of a dark page, which is the first thing the eye lands on.
+ */
+:root[data-theme-slug='yatagarasu'] {
+    scrollbar-color: rgb(201 153 58 / 30%) var(--surface-sunken);
+    scrollbar-width: thin;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -52,25 +100,15 @@
 /* -------------------------------------------------------------------------- */
 
 /*
- * A panel is a plate, not a card.
- *
- * Two things do the work: a one-pixel border that is barely lighter than the
- * fill, and a single inset highlight along the top edge. That highlight is
- * what makes it read as a physical surface catching light from above, and it
- * is the reason this theme needs no drop shadows -- which on a near-black
- * ground are either invisible or look like smoke.
+ * A panel is a plate: a flat card colour and a one-pixel gold hairline. No
+ * shadow — on a ground this dark a real shadow is invisible and a large one
+ * is smoke — and no gradient, because the ambient wash behind it is already
+ * doing that job.
  */
 :root[data-theme-slug='yatagarasu'] .panel {
-    position: relative;
     background-color: var(--surface-raised);
-    background-image: linear-gradient(
-        180deg,
-        color-mix(in oklab, var(--yata-blue) 34%, transparent) 0%,
-        transparent 46%
-    );
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-panel);
-    box-shadow: var(--yata-lift);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -78,15 +116,16 @@
 /* -------------------------------------------------------------------------- */
 
 /*
- * Fields are recessed rather than raised: an input is a slot cut into the
- * plate, so it is darker than its surroundings and its top edge is the one in
- * shadow -- the inverse of the panel above.
+ * Fields are recessed: an input is a slot cut into the plate, so it is darker
+ * than its surroundings and its top edge is the one in shadow — the inverse
+ * of a raised panel.
  */
 :root[data-theme-slug='yatagarasu'] .field-input {
-    background-color: var(--surface-sunken);
+    background-color: var(--yata-muted-bg);
     border-color: var(--border-subtle);
     border-radius: var(--radius-panel);
     box-shadow: inset 0 1px 0 0 rgb(0 0 0 / 45%);
+    font-family: var(--yata-font-body);
     transition:
         border-color 160ms var(--yata-ease),
         background-color 160ms var(--yata-ease);
@@ -98,17 +137,17 @@
 
 :root[data-theme-slug='yatagarasu'] .field-input:focus {
     border-color: var(--color-accent-500);
-    background-color: var(--surface-raised);
 }
 
 :root[data-theme-slug='yatagarasu'] .field-input::placeholder {
-    color: color-mix(in oklab, var(--text-muted) 72%, transparent);
+    color: rgb(122 109 90 / 75%);
 }
 
 :root[data-theme-slug='yatagarasu'] .field-label {
+    font-family: var(--font-display);
     font-size: 0.6875rem;
     font-weight: 600;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--text-muted);
 }
@@ -118,9 +157,8 @@
 /* -------------------------------------------------------------------------- */
 
 /*
- * Gold rather than the core's accent, and offset far enough to clear the
- * inset highlight on a panel. Keyboard focus has to be obvious on a ground
- * this dark, so this is brighter than the accent used for borders.
+ * Gold, and brighter than the accent used for borders: keyboard focus has to
+ * be obvious on a ground this dark.
  */
 :root[data-theme-slug='yatagarasu'] :focus-visible {
     outline: 2px solid var(--color-accent-300);
@@ -137,24 +175,26 @@
  * against the core's darker accent and the wrong one here: white on this gold
  * is about 3:1, below the threshold for the size it is used at.
  *
- * Dark text on gold is the fix, and it is also what the art direction asks
- * for -- a gold plate with the legend cut into it.
+ * Near-black on gold is the fix, and it is what the art direction asks for —
+ * a gold plate with the legend cut into it.
  *
- * This selects the utility class AppButton composes, which couples this rule
- * to that component's internals. It is the one place in this theme that does
- * so, and it is here rather than in the component because a theme may not
- * edit application code. If that class ever changes, this rule stops applying
- * and the button goes back to the core's appearance rather than breaking.
+ * This selects the utility class AppButton composes, which couples the rule to
+ * that component's internals. It is the one place in this theme that does so,
+ * and it is here rather than in the component because a theme may not edit
+ * application code. If that class ever changes the rule simply stops applying
+ * and the button reverts to the core's appearance rather than breaking.
  */
 :root[data-theme-slug='yatagarasu'] .bg-\[var\(--color-accent-600\)\] {
     background-color: var(--color-accent-500);
-    color: var(--yata-void);
-    font-weight: 600;
-    letter-spacing: 0.04em;
+    color: var(--yata-black);
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
 }
 
 :root[data-theme-slug='yatagarasu'] .bg-\[var\(--color-accent-600\)\]:hover {
-    background-color: var(--color-accent-400);
+    background-color: rgb(201 153 58 / 90%);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -166,9 +206,10 @@
  * and a full grid turns every figure into its own little cell to decode.
  */
 :root[data-theme-slug='yatagarasu'] thead th {
+    font-family: var(--font-display);
     font-size: 0.6875rem;
     font-weight: 600;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--text-muted);
     border-bottom: 1px solid var(--border-strong);
@@ -179,50 +220,5 @@
 }
 
 :root[data-theme-slug='yatagarasu'] tbody tr:hover {
-    background-color: color-mix(in oklab, var(--yata-gold) 4%, transparent);
-}
-
-/* -------------------------------------------------------------------------- */
-/* Page furniture                                                             */
-/* -------------------------------------------------------------------------- */
-
-/*
- * The page itself carries a faint atmosphere so that no section sits on flat
- * black. Two very wide, very low-opacity radial washes: one cool from the top
- * left, one gold from the lower right, as if the moon were on one side and a
- * city on the other.
- *
- * `fixed` so it does not travel with the scroll, which would read as a
- * gradient on a long page rather than as air.
- */
-:root[data-theme-slug='yatagarasu'] body {
-    background-color: var(--surface-page);
-    background-image:
-        radial-gradient(
-            120ch 70ch at 8% -10%,
-            color-mix(in oklab, var(--yata-blue) 46%, transparent),
-            transparent 62%
-        ),
-        radial-gradient(
-            100ch 60ch at 96% 108%,
-            color-mix(in oklab, var(--yata-gold) 7%, transparent),
-            transparent 58%
-        );
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-}
-
-/* Selection in gold, because the default blue belongs to another palette. */
-:root[data-theme-slug='yatagarasu'] ::selection {
-    background-color: color-mix(in oklab, var(--yata-gold) 32%, transparent);
-    color: var(--yata-ivory);
-}
-
-/*
- * A slim dark scrollbar. Left at the browser default it is a bright strip
- * down the side of a dark page, which is the first thing the eye lands on.
- */
-:root[data-theme-slug='yatagarasu'] {
-    scrollbar-color: var(--border-strong) var(--surface-sunken);
-    scrollbar-width: thin;
+    background-color: rgb(201 153 58 / 4%);
 }

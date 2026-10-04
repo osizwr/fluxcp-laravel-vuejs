@@ -18,7 +18,7 @@ const { game, title } = useGame()
 </script>
 
 <template>
-    <section class="yata-air yata-promo" aria-labelledby="yata-promo-title">
+    <section class="yata-promo" aria-labelledby="yata-promo-title">
         <div class="mx-auto max-w-7xl px-4 py-16 sm:py-20">
             <div class="yata-plate yata-promo__plate">
                 <!-- Artwork. Roughly 45% of the banner, as the brief asks. -->
@@ -33,7 +33,7 @@ const { game, title } = useGame()
 
                 <!-- Words. -->
                 <div class="yata-promo__copy">
-                    <p class="yata-eyebrow">Enter the realm</p>
+                    <p class="yata-eyebrow"><span class="yata-eyebrow__text">Enter the realm</span></p>
 
                     <h2 id="yata-promo-title" class="yata-title mt-4 text-2xl sm:text-[2rem]">
                         The World of {{ title }}

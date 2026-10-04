@@ -9,7 +9,7 @@ the practical checklist and the licence notes.
 resources/themes/
 ├── fantasy/     the default — dark, warm, antique gold; 8 blocks, composed home page
 ├── slate/       a cool, light-first skin; palette only, core pages throughout
-├── yatagarasu/  a dark Japanese fantasy skin; 13 blocks, cinematic composed home page
+├── yatagarasu/  dark fantasy in gold and blood; 13 blocks, composed home page
 └── README.md
 ```
 
@@ -162,12 +162,14 @@ No third-party assets.
 
 | Asset | Source | Licence |
 | --- | --- | --- |
-| Cinzel (display font) | Google Fonts | SIL Open Font License 1.1 |
-| Manrope (interface font) | Google Fonts | SIL Open Font License 1.1 |
+| Cinzel (display) | Google Fonts | SIL Open Font License 1.1 |
+| Cinzel Decorative (brand, large titles) | Google Fonts | SIL Open Font License 1.1 |
+| Crimson Text (prose) | Google Fonts | SIL Open Font License 1.1 |
+| Share Tech Mono (figures) | Google Fonts | SIL Open Font License 1.1 |
 
-Everything else is original. The three-legged crow is generated SVG that
-inherits `currentColor`, and the ornaments, washes and textures are CSS
-gradients and pseudo-elements, so the theme ships no binary assets.
+Everything else is original. The three-legged crow and the ornament star are
+generated SVG that inherit `currentColor`, and the washes, rules and textures
+are CSS gradients, so the theme ships no binary assets.
 
 **It ships no game artwork, and must not.** Every image in the design is a
 named slot that falls back to a labelled placeholder, listed below. Supplying
@@ -177,10 +179,12 @@ responsible for holding the rights to it.
 
 ```
 public/images/hero/yatagarasu-world.webp    the hero's key art
+public/images/hero/flourish-left.webp       character art flanking the emblem;
+public/images/hero/flourish-right.webp      purely decorative, so these two
+                                            render nothing at all when absent
 public/images/world/yatagarasu-gate.webp    the banner under the hero
 public/images/world/yatagarasu-lore.webp    the legend section
 public/images/world/yatagarasu-dawn.webp    the closing call to action
-public/images/news/latest.webp              the lead dispatch
 public/images/classes/<job-name>.webp       one per class, named after the job
                                             the server reports, lower-cased and
                                             hyphenated: `High Priest` resolves

@@ -9,18 +9,16 @@
 | Scoped to `:root[data-theme-slug='yatagarasu']` rather than plain `:root` so
 | the theme wins on specificity instead of on stylesheet order.
 |
-| Direction: a Japanese-inspired fantasy kingdom at night. The ground is very
-| nearly black and faintly blue, the way a clear night is never actually black.
-| Surfaces step up in luminance but barely in hue, so panels read as depth
-| rather than as colour. Gold is the single accent and carries meaning: it
-| marks what is actionable, what ranks first, and what divides one thing from
-| another. Violet and crimson exist for atmosphere in two sections and appear
-| nowhere in the interface.
+| Direction: gold and blood on black. The ground is very nearly black with a
+| trace of violet in it; the ink is a warm gold-tinted ivory rather than white,
+| so nothing on the page is a pure value. Gold is the single interface accent
+| and carries meaning — what is actionable, what ranks first, what divides one
+| thing from another. Blood red appears in exactly two places, the ticker and
+| the ambient wash, and never as an interface colour.
 |
-| Written in hex rather than the oklch the other two themes use, because this
-| palette was specified in hex and a conversion would be a silent reinterpretation
-| of somebody's art direction. Derived shades are oklch, where the perceptual
-| spacing is worth having.
+| Written in hex because this palette is a specification rather than something
+| derived, and a conversion to another colour space would be a quiet
+| reinterpretation of it.
 |
 */
 
@@ -30,117 +28,113 @@
      * The literal specification. Everything below is expressed in terms of
      * these, so a change here moves the whole theme.
      */
-    --yata-void: #07090d;
-    --yata-navy: #0b1220;
-    --yata-midnight: #101a2e;
-    --yata-blue: #17243a;
-    --yata-gold: #c9a45a;
-    --yata-gold-bright: #e6c875;
-    --yata-ivory: #e9e4d8;
-    --yata-muted: #8d96a6;
-    --yata-violet: #6e5aa8;
-    --yata-crimson: #7e2935;
+    --yata-black: #08080b;
+    --yata-card: #0f0f14;
+    --yata-well: #050507;
+    --yata-raised: #1a1720;
+    --yata-muted-bg: #1c1b22;
 
-    /* ---- Surfaces: night, in four steps -------------------------------
+    --yata-gold: #c9993a;
+    --yata-gold-bright: #e8d5a3;
+    --yata-ivory: #e8d5a3;
+    --yata-muted: #7a6d5a;
+
+    --yata-blood: #8b0000;
+    --yata-blood-ink: #ffd4c8;
+
+    /* ---- Surfaces ------------------------------------------------------
      *
-     * `page` is the void the whole site sits on. `sunken` is *darker* than
-     * the page on purpose -- a recessed well for tables and code -- which is
-     * the opposite of the light-theme convention and correct here, because on
-     * a dark ground recession reads as darker, not lighter.
+     * `sunken` is darker than the page on purpose — a recessed well for
+     * inputs and tables. On a dark ground recession reads as darker, which is
+     * the inverse of the light-theme convention and correct here.
      */
-    --surface-page: var(--yata-void);
-    --surface-sunken: #05070a;
-    --surface-raised: var(--yata-navy);
-    --surface-hover: var(--yata-midnight);
+    --surface-page: var(--yata-black);
+    --surface-sunken: var(--yata-well);
+    --surface-raised: var(--yata-card);
+    --surface-hover: var(--yata-raised);
 
-    /* ---- Borders: a hairline of cold steel, a stronger one of old gold -- */
-    --border-subtle: #1c2638;
-    --border-strong: #2f3d55;
+    /* ---- Borders -------------------------------------------------------
+     *
+     * Gold at low opacity rather than a grey. Every rule on the page is the
+     * accent seen faintly, which is what makes the interface read as one
+     * material instead of panels outlined in a different colour from their
+     * contents.
+     */
+    --border-subtle: rgb(201 153 58 / 18%);
+    --border-strong: rgb(201 153 58 / 38%);
 
-    /* ---- Ink: moonlight on paper, never pure white --------------------- */
+    /* ---- Ink: gold-tinted, never white --------------------------------- */
     --text-primary: var(--yata-ivory);
-    --text-secondary: #aab3c2;
+    --text-secondary: rgb(232 213 163 / 78%);
     --text-muted: var(--yata-muted);
 
     /*
      * Gold. The only accent in the interface.
      *
-     * Five steps so that a hover, a border and a filled button are relatives
-     * rather than three unrelated yellows. 500 is the specified warm gold and
-     * 300 the specified bright one; the rest are interpolated in oklch, where
-     * the steps are perceptually even.
+     * Five steps so a hover, a border and a filled button are relatives
+     * rather than three unrelated yellows. 500 is the specified gold and 300
+     * the ivory it lightens towards.
      */
-    --color-accent-300: var(--yata-gold-bright);
-    --color-accent-400: #d9b668;
+    --color-accent-300: #e8d5a3;
+    --color-accent-400: #dcb45f;
     --color-accent-500: var(--yata-gold);
-    --color-accent-600: #ad8b47;
-    --color-accent-700: #8a6e37;
+    --color-accent-600: #a87d2c;
+    --color-accent-700: #866222;
 
-    /* ---- Status: moss, rust, amber ------------------------------------
+    /* ---- Status --------------------------------------------------------- */
+    --color-up: #5a9a6a;
+    --color-down: #c0392b;
+    --color-warn: var(--yata-gold);
+
+    --status-up-bg: #14221a;
+    --status-down-bg: #26100e;
+    --status-warn-bg: #241c0e;
+
+    /* ---- Geometry -------------------------------------------------------
      *
-     * Green and red are desaturated well below the usual UI values. A saturated
-     * status dot on this ground looks like a notification badge; these look
-     * like a lamp that is lit or out.
+     * 2px, which is as close to square as a control can be without its
+     * corners looking chipped. A fantasy interface is built of plates and
+     * inlay, and a rounded corner reads as a web control rather than an
+     * object.
      */
-    --color-up: #6fbf8e;
-    --color-down: #c05a63;
-    --color-warn: var(--yata-gold-bright);
+    --radius-panel: 0.125rem;
 
-    --status-up-bg: #0f2419;
-    --status-down-bg: #2a1116;
-    --status-warn-bg: #2a2111;
-
-    /* ---- Geometry ------------------------------------------------------
+    /* ---- Typography ------------------------------------------------------
      *
-     * Near-square. The brief's upper bound is 6px and most things sit at 2:
-     * a fantasy interface is built of plates and inlay, and a rounded corner
-     * reads as a web control rather than as an object.
+     * Four faces, each with one job:
+     *
+     *   display   Cinzel, for anything that names something
+     *   deco      Cinzel Decorative, for the brand and the two largest titles
+     *   body      Crimson Text, for prose — set in italic where it is a voice
+     *   tech      Share Tech Mono, for figures and timestamps
+     *
+     * `--font-display` is the only one core components read; the rest are
+     * this theme's, used by its own blocks.
      */
-    --radius-panel: 2px;
+    --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
+    --yata-font-deco: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+    --yata-font-body: 'Crimson Text', Georgia, 'Times New Roman', serif;
+    --yata-font-tech: 'Share Tech Mono', ui-monospace, SFMono-Regular, monospace;
 
-    /* ---- Typography -----------------------------------------------------
-     *
-     * Cinzel for anything that names something -- the game, a section, a rank.
-     * Its capitals are Roman-inscriptional, which carries the weight the
-     * display type needs without being a "fantasy font".
-     *
-     * Everything a reader actually reads is in the body face, because a
-     * display serif at 14px in a table is unreadable and looks like a costume.
-     */
-    --font-display: 'Cinzel', 'Cormorant Garamond', ui-serif, Georgia, serif;
-
-    /* ---- Theme-only tokens ---------------------------------------------
+    /* ---- Theme-only tokens ----------------------------------------------
      *
      * Not read by core components. These drive the decorative language in
      * blocks.css, and live here so that language has one source.
      */
 
-    /* The hairline that separates things. Gold, at the opacity of a scratch. */
-    --yata-rule: color-mix(in oklab, var(--yata-gold) 28%, transparent);
-    --yata-rule-strong: color-mix(in oklab, var(--yata-gold) 55%, transparent);
+    /* The height of the ticker, which the navigation sticks beneath. */
+    --yata-ticker-height: 2rem;
 
-    /* Panel corner ornaments: how far the bracket runs along each edge. */
-    --yata-bracket: 14px;
-
-    /* Atmosphere, per section. Used as the base of a layered background. */
-    --yata-air-cool: #0a1120;
-    --yata-air-violet: #120e22;
-    --yata-air-crimson: #16090d;
-
-    /* Lift under a raised panel. Barely there: on a near-black ground a real
-     * shadow is invisible and a large one is smoke. */
-    --yata-lift: 0 1px 0 0 color-mix(in oklab, var(--yata-gold) 8%, transparent) inset;
-
-    /* How long a cinematic reveal takes, and its curve. */
+    /* How long a reveal takes, and its curve. */
     --yata-reveal: 620ms;
     --yata-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 /*
  * This theme is art-directed for one appearance, and says so in theme.json.
- * The guard is here as well because a visitor whose system asks for light
- * would otherwise get core's light values for any token this file does not
- * set, which is a half-light interface rather than a light one.
+ * The declaration is here as well so that form controls, scrollbars and
+ * anything else the browser draws for itself match rather than arriving in
+ * their light styling.
  */
 :root[data-theme-slug='yatagarasu'] {
     color-scheme: dark;

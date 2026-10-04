@@ -29,6 +29,16 @@ const props = withDefaults(
         /** The hero's art should not be lazy; everything below the fold should. */
         eager?: boolean
         /**
+         * A flourish rather than a subject.
+         *
+         * Decorative art renders nothing at all when the file is absent. A
+         * labelled box is the right placeholder for a slot the layout is
+         * built around — the reader can see where the picture goes — and the
+         * wrong one for an ornament, where it would be a large empty
+         * rectangle competing with the thing it was meant to frame.
+         */
+        decorative?: boolean
+        /**
          * Where the placeholder label sits.
          *
          * Centred is right for a slot that is its own box. Full-bleed art has
@@ -37,7 +47,7 @@ const props = withDefaults(
          */
         anchor?: 'center' | 'corner'
     }>(),
-    { ratio: 'aspect-[16/9]', eager: false, anchor: 'center' },
+    { ratio: 'aspect-[16/9]', eager: false, anchor: 'center', decorative: false },
 )
 
 /*
@@ -50,8 +60,13 @@ const missing = ref(false)
 
 <template>
     <figure
+        v-if="!(missing && props.decorative)"
         class="yata-art m-0"
-        :class="[ratio, props.anchor === 'corner' ? 'yata-art--corner' : '']"
+        :class="[
+            ratio,
+            props.anchor === 'corner' ? 'yata-art--corner' : '',
+            props.decorative ? 'yata-art--bare' : '',
+        ]"
     >
         <img
             v-if="!missing"
