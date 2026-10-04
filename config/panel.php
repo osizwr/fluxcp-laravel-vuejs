@@ -435,6 +435,29 @@ return [
         'item_info_max_kilobytes' => (int) env('PANEL_ITEM_INFO_MAX_KB', 16_384),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Support desk
+    |--------------------------------------------------------------------------
+    */
+
+    'service_desk' => [
+        /*
+         * Let staff award credits when replying to a ticket, for a player who
+         * reported a bug or an abuse. FluxCP's SDEnableCreditRewards and
+         * SDCreditReward.
+         *
+         * The maximum is this port's own. The legacy read the amount straight
+         * from the form with no ceiling, so a mistyped figure awarded a
+         * fortune and the only trace was a line of free text.
+         */
+        'credit_rewards' => [
+            'enabled' => (bool) env('PANEL_SD_CREDIT_REWARDS', true),
+            'default' => (int) env('PANEL_SD_CREDIT_REWARD', 5),
+            'maximum' => (int) env('PANEL_SD_CREDIT_REWARD_MAX', 500),
+        ],
+    ],
+
     'item_shop' => [
         'enabled' => (bool) env('PANEL_ITEM_SHOP_ENABLED', true),
 

@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Services\Support;
 
 use App\Models\Account;
+use App\Support\Rathena\LocalTransactionId;
 use App\Support\Rathena\ServerRegistry;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 
 /**
  * Support tickets.
@@ -35,13 +37,32 @@ final readonly class ServiceDesk
     /**
      * The statuses a ticket moves through.
      *
-     * Stored as the legacy strings so an existing FluxCP install's tickets
-     * keep their state, rather than as an enum column the old panel cannot
-     * read.
+     * Stored as strings rather than as an enum column, so an existing FluxCP
+     * install's tickets keep the state they are in and the old panel can still
+     * read the table.
+     *
+     * The legacy wrote three of these: `Pending` when a ticket is opened,
+     * `Resolved` when staff answer it, and `Closed`. An earlier revision of
+     * this port listed `In Progress` and `Answered` -- which the legacy never
+     * wrote -- and omitted `Resolved`, so a migrated install had tickets in a
+     * state this code could neither set nor recognise.
+     *
+     * The two additions are kept because they are useful and are not a
+     * replacement for anything: the legacy tracked whether a ticket was
+     * awaiting a player or awaiting staff through its `lastreply` column
+     * rather than its status, and these say it directly.
      */
-    public const STATUSES = ['Pending', 'In Progress', 'Answered', 'Closed'];
+    public const STATUSES = ['Pending', 'In Progress', 'Answered', 'Resolved', 'Closed'];
 
-    public const OPEN_STATUSES = ['Pending', 'In Progress', 'Answered'];
+    /**
+     * The statuses that keep a ticket in the queue.
+     *
+     * Everything but `Closed`, which is the legacy's own test -- its queue
+     * queries all read `status != 'Closed'`. A resolved ticket stays listed on
+     * purpose, so a player who is not satisfied can reply to it rather than
+     * open a second one.
+     */
+    public const OPEN_STATUSES = ['Pending', 'In Progress', 'Answered', 'Resolved'];
 
     public function __construct(
         private ConnectionResolverInterface $connections,
@@ -191,6 +212,97 @@ final readonly class ServiceDesk
                     'lastreply' => $this->displayName($author),
                 ]);
         });
+    }
+
+    /**
+     * Award credits to a ticket's owner.
+     *
+     * Ports the credit award on modules/servicedesk/staffview.php's resolve
+     * action, with two changes.
+     *
+     * The credited account is the ticket's owner, read from the ticket. The
+     * legacy credited `$_POST['account_id']`, so the account to be paid was
+     * whatever the submitted form said -- and the form was rendered for staff,
+     * who could change it. Nothing about a reward needs to be taken on trust
+     * from a request when the ticket already says whose it is.
+     *
+     * The amount is capped by configuration. The legacy took `intval($_POST)`
+     * with no ceiling, so a mistyped figure awarded a fortune and the only
+     * record of it was a line of free text.
+     *
+     * Returns the credited amount, which is zero when rewards are turned off.
+     *
+     * @throws InvalidArgumentException when the amount exceeds the cap.
+     */
+    public function awardCredits(int $ticketId, Account $staff, int $credits): int
+    {
+        if ($credits <= 0 || config('panel.service_desk.credit_rewards.enabled') !== true) {
+            return 0;
+        }
+
+        $maximum = max(0, (int) config('panel.service_desk.credit_rewards.maximum', 500));
+
+        if ($credits > $maximum) {
+            throw new InvalidArgumentException(
+                "A single award may not exceed {$maximum} credits."
+            );
+        }
+
+        $ticket = $this->find($ticketId);
+
+        if ($ticket === null) {
+            return 0;
+        }
+
+        $accountId = (int) ($ticket->account_id ?? 0);
+
+        if ($accountId <= 0) {
+            return 0;
+        }
+
+        $connection = $this->connection();
+
+        $connection->transaction(function () use ($connection, $accountId, $credits, $ticketId, $staff): void {
+            /*
+             * Added to whatever is there rather than set, and in SQL rather
+             * than read-then-write, so two awards in the same moment cannot
+             * lose one of them.
+             */
+            $updated = $connection->table('cp_credits')
+                ->where('account_id', $accountId)
+                ->update(['balance' => $connection->raw("balance + {$credits}")]);
+
+            if ($updated === 0) {
+                $connection->table('cp_credits')->insert([
+                    'account_id' => $accountId,
+                    'balance' => $credits,
+                ]);
+            }
+
+            /*
+             * Logged where every other credit movement is logged, so an
+             * operator asking "where did these credits come from" has one
+             * place to look rather than two.
+             */
+            $connection->table('cp_txnlog')->insert([
+                'account_id' => $accountId,
+                'credits' => $credits,
+                'payment_status' => 'Completed',
+                'txn_id' => LocalTransactionId::for('sd'),
+                'txn_type' => 'service_desk_reward',
+                'mc_gross' => '0.00',
+                'mc_currency' => (string) config('panel.donations.currency', 'USD'),
+                'item_name' => sprintf(
+                    'Ticket #%d resolved, %d credits awarded by %s',
+                    $ticketId,
+                    $credits,
+                    $staff->userid,
+                ),
+                'process_date' => now(),
+            ]);
+        });
+
+        return $credits;
     }
 
     /**

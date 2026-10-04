@@ -832,6 +832,41 @@ final class CharacterManagementTest extends TestCase
             ->assertJsonPath('data.0.map', 'gm_island');
     }
 
+    /**
+     * SeeHiddenMapStats was declared in the permission map and enforced
+     * nowhere. It is the ability somebody answering a report of a player stuck
+     * somewhere needs, which is what the legacy used it for.
+     */
+    #[Test]
+    public function staff_with_the_ability_see_hidden_characters_and_staff_maps(): void
+    {
+        $hidden = Character::factory()->forAccount(Account::factory()->create())->online()
+            ->state(['last_map' => 'lighthalzen'])->create();
+
+        DB::connection($this->charMap())->table('cp_charprefs')->insert([
+            'char_id' => $hidden->char_id, 'name' => 'HideMapFromWhosOnline', 'value' => '1',
+        ]);
+
+        Character::factory()->forAccount(Account::factory()->administrator()->create())
+            ->online()->state(['last_map' => 'gm_island'])->create();
+
+        // An ordinary visitor sees neither.
+        $this->getJson('/api/characters/maps')
+            ->assertOk()
+            ->assertJsonCount(0, 'data')
+            ->assertJsonPath('meta.includes_hidden', false);
+
+        $response = $this->actingAs(Account::factory()->juniorGameMaster()->create())
+            ->getJson('/api/characters/maps')
+            ->assertOk()
+            ->assertJsonPath('meta.includes_hidden', true);
+
+        $maps = array_column($response->json('data'), 'map');
+
+        $this->assertContains('lighthalzen', $maps);
+        $this->assertContains('gm_island', $maps);
+    }
+
     #[Test]
     public function map_statistics_are_public(): void
     {

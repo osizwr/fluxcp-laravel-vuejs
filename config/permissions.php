@@ -346,6 +346,12 @@ return [
     'abilities' => [
         'AddShopItem' => AccountLevel::Administrator,
         'AvoidSexChangeCost' => AccountLevel::JuniorGameMaster,
+        /*
+         * Awarding credits when answering a ticket. Separate from replying,
+         * because handing out currency is not the same act as answering a
+         * question and an operator may want the two at different ranks.
+         */
+        'AwardTicketCredits' => AccountLevel::SeniorGameMaster,
         'BanHigherPower' => AccountLevel::Noone,
         'ChangeSlot' => AccountLevel::JuniorGameMaster,
         'DeleteAccount' => AccountLevel::Administrator,

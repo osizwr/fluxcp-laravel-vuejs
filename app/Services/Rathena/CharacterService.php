@@ -386,7 +386,7 @@ final readonly class CharacterService
      *
      * @return Collection<int, object>
      */
-    public function mapStatistics(int $limit = 50): Collection
+    public function mapStatistics(int $limit = 50, bool $includeHidden = false): Collection
     {
         $server = $this->servers->currentCharMapServer();
         $connection = $this->connections->connection($server->connectionName());
@@ -397,8 +397,19 @@ final readonly class CharacterService
                 $join->on('hidden.char_id', '=', 'ch.char_id')
                     ->where('hidden.name', '=', 'HideMapFromWhosOnline');
             })
-            ->where('ch.online', 1)
-            ->where(fn ($q) => $q->whereNull('hidden.value')->orWhere('hidden.value', '!=', '1'));
+            ->where('ch.online', 1);
+
+        /*
+         * Staff holding SeeHiddenMapStats get the complete picture, which is
+         * the point of the ability and what the legacy did with it: somebody
+         * answering a report of a player stuck somewhere needs to see where
+         * everybody is.
+         */
+        if (! $includeHidden) {
+            $query->where(
+                fn ($q) => $q->whereNull('hidden.value')->orWhere('hidden.value', '!=', '1'),
+            );
+        }
 
         /*
          * Staff are left off the counts as well, which the per-character
@@ -406,7 +417,9 @@ final readonly class CharacterService
          * by a count of one whether or not they set a preference. FluxCP's
          * HideFromMapStats.
          */
-        $threshold = config('panel.characters.hide_maps_at_or_above_level');
+        $threshold = $includeHidden
+            ? null
+            : config('panel.characters.hide_maps_at_or_above_level');
 
         $this->staff->excludeStaff(
             $query,

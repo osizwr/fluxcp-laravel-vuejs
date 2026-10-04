@@ -428,6 +428,240 @@ final class ServiceDeskTest extends TestCase
         $this->assertDatabaseHas('cp_servicedeskcat', ['name' => 'Billing'], $this->loginConnection());
     }
 
+    /**
+     * A migrated FluxCP install has tickets in these states, so the port has
+     * to be able to set and recognise them. An earlier revision listed two
+     * statuses the legacy never wrote and omitted `Resolved`, which it did.
+     */
+    #[Test]
+    public function the_legacy_statuses_are_all_settable_and_keep_a_ticket_queued(): void
+    {
+        $player = Account::factory()->create();
+        $staff = Account::factory()->seniorGameMaster()->create();
+
+        foreach (['Pending', 'Resolved', 'Closed'] as $status) {
+            $id = $this->ticketFor($player);
+
+            $this->actingAs($staff)
+                ->postJson("/api/support/queue/{$id}/replies", [
+                    'text' => 'Noted.', 'status' => $status,
+                ])
+                ->assertOk();
+
+            $this->assertDatabaseHas('cp_servicedesk', [
+                'ticket_id' => $id, 'status' => $status,
+            ], $this->loginConnection());
+        }
+
+        /*
+         * Everything but Closed stays in the queue, which is the legacy's own
+         * test: its queue queries all read `status != 'Closed'`.
+         */
+        $queued = $this->actingAs($staff)->getJson('/api/support/queue')
+            ->assertOk()
+            ->json('data');
+
+        $statuses = array_column($queued, 'status');
+
+        $this->assertContains('Resolved', $statuses);
+        $this->assertContains('Pending', $statuses);
+        $this->assertNotContains('Closed', $statuses);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Credit rewards
+    |--------------------------------------------------------------------------
+    |
+    | FluxCP's SDEnableCreditRewards: staff may award credits to a player who
+    | reported a bug or an abuse.
+    |
+    */
+
+    private function ticketFor(Account $account): int
+    {
+        return (int) DB::connection($this->loginConnection())->table('cp_servicedesk')->insertGetId([
+            'account_id' => $account->account_id, 'category' => $this->category(),
+            'char_id' => '0', 'subject' => 'x', 'text' => 'y', 'timestamp' => now(),
+            'status' => 'Pending', 'lastreply' => '0',
+        ]);
+    }
+
+    private function balanceOf(Account $account): int
+    {
+        return (int) (DB::connection($this->loginConnection())->table('cp_credits')
+            ->where('account_id', $account->account_id)
+            ->value('balance') ?? 0);
+    }
+
+    #[Test]
+    public function staff_can_award_credits_when_replying(): void
+    {
+        $player = Account::factory()->create();
+        $id = $this->ticketFor($player);
+
+        $this->actingAs(Account::factory()->seniorGameMaster()->create())
+            ->postJson("/api/support/queue/{$id}/replies", [
+                'text' => 'Thanks for the report.',
+                'status' => 'Resolved',
+                'award_credits' => 25,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.credits_awarded', 25);
+
+        $this->assertSame(25, $this->balanceOf($player));
+    }
+
+    #[Test]
+    public function an_award_adds_to_an_existing_balance(): void
+    {
+        $player = Account::factory()->create();
+
+        DB::connection($this->loginConnection())->table('cp_credits')->insert([
+            'account_id' => $player->account_id, 'balance' => 100,
+        ]);
+
+        $id = $this->ticketFor($player);
+
+        $this->actingAs(Account::factory()->seniorGameMaster()->create())
+            ->postJson("/api/support/queue/{$id}/replies", [
+                'text' => 'Thanks.', 'award_credits' => 10,
+            ])
+            ->assertOk();
+
+        $this->assertSame(110, $this->balanceOf($player));
+    }
+
+    /**
+     * The legacy credited `$_POST['account_id']`, so the account to be paid
+     * was whatever the form said. It is read from the ticket here.
+     */
+    #[Test]
+    public function the_award_goes_to_the_ticket_owner_not_a_submitted_account(): void
+    {
+        $owner = Account::factory()->create();
+        $other = Account::factory()->create();
+
+        $id = $this->ticketFor($owner);
+
+        $this->actingAs(Account::factory()->seniorGameMaster()->create())
+            ->postJson("/api/support/queue/{$id}/replies", [
+                'text' => 'Thanks.',
+                'award_credits' => 50,
+                'account_id' => $other->account_id,
+            ])
+            ->assertOk();
+
+        $this->assertSame(50, $this->balanceOf($owner));
+        $this->assertSame(0, $this->balanceOf($other));
+    }
+
+    /**
+     * The legacy had no ceiling, so a mistyped figure awarded a fortune.
+     */
+    #[Test]
+    public function an_award_above_the_cap_is_refused(): void
+    {
+        config(['panel.service_desk.credit_rewards.maximum' => 100]);
+
+        $player = Account::factory()->create();
+        $id = $this->ticketFor($player);
+
+        $this->actingAs(Account::factory()->seniorGameMaster()->create())
+            ->postJson("/api/support/queue/{$id}/replies", [
+                'text' => 'Thanks.', 'award_credits' => 100_000,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('award_credits');
+
+        $this->assertSame(0, $this->balanceOf($player));
+    }
+
+    #[Test]
+    public function an_award_is_refused_when_rewards_are_turned_off(): void
+    {
+        config(['panel.service_desk.credit_rewards.enabled' => false]);
+
+        $player = Account::factory()->create();
+        $id = $this->ticketFor($player);
+
+        $this->actingAs(Account::factory()->seniorGameMaster()->create())
+            ->postJson("/api/support/queue/{$id}/replies", [
+                'text' => 'Thanks.', 'award_credits' => 5,
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame(0, $this->balanceOf($player));
+    }
+
+    /**
+     * Handing out currency is a separate act from answering a question, so it
+     * has its own ability -- a junior game master may reply and not award.
+     */
+    #[Test]
+    public function replying_staff_without_the_ability_cannot_award(): void
+    {
+        $player = Account::factory()->create();
+        $id = $this->ticketFor($player);
+
+        $this->actingAs(Account::factory()->juniorGameMaster()->create())
+            ->postJson("/api/support/queue/{$id}/replies", [
+                'text' => 'Thanks.', 'award_credits' => 5,
+            ])
+            ->assertStatus(403);
+
+        $this->assertSame(0, $this->balanceOf($player));
+    }
+
+    #[Test]
+    public function a_reply_without_an_award_leaves_the_balance_alone(): void
+    {
+        $player = Account::factory()->create();
+        $id = $this->ticketFor($player);
+
+        $this->actingAs(Account::factory()->juniorGameMaster()->create())
+            ->postJson("/api/support/queue/{$id}/replies", ['text' => 'Looking into it.'])
+            ->assertOk()
+            ->assertJsonPath('data.credits_awarded', 0);
+
+        $this->assertSame(0, $this->balanceOf($player));
+    }
+
+    /**
+     * The reply's action note is the only record of an award on the ticket
+     * itself, so it says so.
+     */
+    #[Test]
+    public function an_award_is_recorded_on_the_reply_and_in_the_transaction_log(): void
+    {
+        $player = Account::factory()->create();
+        $id = $this->ticketFor($player);
+
+        $this->actingAs(Account::factory()->seniorGameMaster()->create())
+            ->postJson("/api/support/queue/{$id}/replies", [
+                'text' => 'Thanks.', 'status' => 'Resolved', 'award_credits' => 15,
+            ])
+            ->assertOk();
+
+        $note = (string) DB::connection($this->loginConnection())->table('cp_servicedeska')
+            ->where('ticket_id', $id)
+            ->value('action');
+
+        $this->assertStringContainsString('15 credits awarded', $note);
+        $this->assertStringContainsString('Resolved', $note);
+
+        $log = DB::connection($this->loginConnection())->table('cp_txnlog')
+            ->where('account_id', $player->account_id)
+            ->first();
+
+        $this->assertNotNull($log);
+        $this->assertSame(15, (int) $log->credits);
+        $this->assertSame('service_desk_reward', $log->txn_type);
+        // cp_txnlog.txn_id is varchar(20), and these connections are
+        // non-strict, so a longer value is truncated rather than refused.
+        $this->assertLessThanOrEqual(20, strlen((string) $log->txn_id));
+    }
+
     #[Test]
     public function a_category_is_hidden_rather_than_deleted(): void
     {

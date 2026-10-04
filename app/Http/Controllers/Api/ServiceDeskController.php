@@ -220,10 +220,39 @@ final class ServiceDeskController
 
         abort_if($this->desk->find($ticket) === null, 404, 'No such ticket.');
 
+        $maximum = max(0, (int) config('panel.service_desk.credit_rewards.maximum', 500));
+
         $validated = $request->validate([
             'text' => ['required', 'string', 'max:65535'],
             'status' => ['nullable', Rule::in(ServiceDesk::STATUSES)],
+            /*
+             * Capped by the validator as well as by the service, so a mistyped
+             * figure comes back as a field error on the form rather than as a
+             * refusal after the reply has been written.
+             */
+            'award_credits' => ['nullable', 'integer', 'min:0', "max:{$maximum}"],
         ]);
+
+        $credits = (int) ($validated['award_credits'] ?? 0);
+
+        abort_if(
+            $credits > 0 && config('panel.service_desk.credit_rewards.enabled') !== true,
+            422,
+            'Credit rewards are turned off.',
+        );
+
+        abort_if(
+            $credits > 0 && ! $account->can('AwardTicketCredits'),
+            403,
+            'You may not award credits.',
+        );
+
+        /*
+         * The award is made first. If it fails the reply is not written, which
+         * is the right way round: a reply saying credits were awarded when
+         * they were not is worse than no reply.
+         */
+        $awarded = $this->desk->awardCredits($ticket, $account, $credits);
 
         $this->desk->reply(
             $ticket,
@@ -231,14 +260,41 @@ final class ServiceDeskController
             $validated['text'],
             true,
             (string) $request->ip(),
-            $validated['status'] ?? null,
+            $this->actionNote($validated['status'] ?? null, $awarded),
         );
 
         if (($status = $validated['status'] ?? null) !== null) {
             $this->desk->setStatus($ticket, $status);
         }
 
-        return response()->json(['message' => 'Your reply has been added.']);
+        return response()->json([
+            'message' => $awarded > 0
+                ? "Your reply has been added and {$awarded} credits awarded."
+                : 'Your reply has been added.',
+            'data' => ['credits_awarded' => $awarded],
+        ]);
+    }
+
+    /**
+     * The audit note stored against a staff reply.
+     *
+     * The legacy wrote free text here -- "Ticket Resolved, 50 Credits
+     * Awarded." -- and it is the only record of an award on the ticket itself,
+     * so it says both things when both happened.
+     */
+    private function actionNote(?string $status, int $awarded): ?string
+    {
+        $parts = [];
+
+        if ($status !== null) {
+            $parts[] = "Status set to {$status}";
+        }
+
+        if ($awarded > 0) {
+            $parts[] = "{$awarded} credits awarded";
+        }
+
+        return $parts === [] ? null : implode(', ', $parts).'.';
     }
 
     /**

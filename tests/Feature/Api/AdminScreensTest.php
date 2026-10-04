@@ -373,6 +373,71 @@ final class AdminScreensTest extends TestCase
         }
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Adjusting a balance
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * This path had no test, which is how it shipped writing a 23-character
+     * transaction id into `cp_txnlog.txn_id`, a varchar(20). The rAthena
+     * connections run non-strict by design, so MySQL truncated it instead of
+     * refusing it -- and what was truncated away was the random part of the
+     * id. See LocalTransactionId.
+     */
+    #[Test]
+    public function an_administrator_can_adjust_a_balance_and_it_is_logged(): void
+    {
+        $account = Account::factory()->create();
+
+        $this->actingAs(Account::factory()->administrator()->create())
+            ->putJson("/api/admin/accounts/{$account->account_id}", ['balance' => 250])
+            ->assertOk();
+
+        $this->assertSame(
+            250,
+            (int) DB::connection($this->loginConnection())->table('cp_credits')
+                ->where('account_id', $account->account_id)
+                ->value('balance'),
+        );
+
+        $log = DB::connection($this->loginConnection())->table('cp_txnlog')
+            ->where('account_id', $account->account_id)
+            ->first();
+
+        $this->assertNotNull($log, 'A balance change with no record cannot be answered for later.');
+        $this->assertSame(250, (int) $log->credits);
+        $this->assertSame('manual_adjustment', $log->txn_type);
+        $this->assertLessThanOrEqual(
+            20,
+            strlen((string) $log->txn_id),
+            'cp_txnlog.txn_id is varchar(20), and a longer value is silently truncated '
+            .'on these non-strict connections, taking the random part with it.',
+        );
+    }
+
+    #[Test]
+    public function the_logged_amount_is_the_difference_not_the_new_balance(): void
+    {
+        $account = Account::factory()->create();
+
+        DB::connection($this->loginConnection())->table('cp_credits')->insert([
+            'account_id' => $account->account_id, 'balance' => 100,
+        ]);
+
+        $this->actingAs(Account::factory()->administrator()->create())
+            ->putJson("/api/admin/accounts/{$account->account_id}", ['balance' => 40])
+            ->assertOk();
+
+        $this->assertSame(
+            -60,
+            (int) DB::connection($this->loginConnection())->table('cp_txnlog')
+                ->where('account_id', $account->account_id)
+                ->value('credits'),
+        );
+    }
+
     #[Test]
     public function the_status_xml_is_public(): void
     {

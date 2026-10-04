@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\Gender;
 use App\Models\Account;
+use App\Support\Rathena\LocalTransactionId;
 use App\Support\Rathena\ServerRegistry;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Http\JsonResponse;
@@ -254,7 +255,7 @@ final class AccountAdminController
                 'account_id' => $account->account_id,
                 'credits' => $balance - $current,
                 'payment_status' => 'Completed',
-                'txn_id' => 'manual-'.bin2hex(random_bytes(8)),
+                'txn_id' => LocalTransactionId::for('manual'),
                 'txn_type' => 'manual_adjustment',
                 'mc_gross' => '0.00',
                 'mc_currency' => (string) config('panel.donations.currency', 'USD'),

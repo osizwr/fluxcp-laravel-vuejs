@@ -151,10 +151,17 @@ final class CharacterManagementController
      * Public, as in the legacy panel. Characters who have asked to hide their
      * map are counted on no map rather than being findable by elimination.
      */
-    public function mapStatistics(): JsonResponse
+    public function mapStatistics(Request $request): JsonResponse
     {
+        $account = $request->user();
+
+        // Staff holding the ability see hidden characters and staff maps; the
+        // public figure leaves both out.
+        $includeHidden = $account instanceof Account && $account->can('SeeHiddenMapStats');
+
         $rows = $this->characters->mapStatistics(
             (int) config('panel.characters.map_statistics_limit', 50),
+            $includeHidden,
         );
 
         return response()->json([
@@ -162,7 +169,10 @@ final class CharacterManagementController
                 'map' => (string) $row->map,
                 'players' => (int) $row->players,
             ])->all(),
-            'meta' => ['total_online' => (int) $rows->sum('players')],
+            'meta' => [
+                'total_online' => (int) $rows->sum('players'),
+                'includes_hidden' => $includeHidden,
+            ],
         ]);
     }
 
