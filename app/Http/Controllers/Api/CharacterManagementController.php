@@ -8,6 +8,7 @@ use App\Enums\CharacterActionResult;
 use App\Http\Resources\CharacterResource;
 use App\Models\Account;
 use App\Models\Character;
+use App\Services\Rathena\CharacterInventory;
 use App\Services\Rathena\CharacterService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,18 +32,40 @@ use Illuminate\Validation\ValidationException;
  */
 final class CharacterManagementController
 {
-    public function __construct(private readonly CharacterService $characters) {}
+    public function __construct(
+        private readonly CharacterService $characters,
+        private readonly CharacterInventory $belongings,
+    ) {}
 
     /**
-     * One character.
+     * One character, with what they are carrying and who with.
+     *
+     * Equipment, cart, friends and party are sent in `meta` beside the
+     * character rather than inside it, because they are four separate queries
+     * against tables the character resource knows nothing about.
      */
     public function show(Request $request, Character $character): JsonResponse
     {
         $this->authorise($request, $character, 'ViewCharacter');
 
+        $account = $request->user();
+
+        /*
+         * An unidentified item is something the owner does not know yet, so
+         * naming it is staff-only -- the legacy gated the same rows on
+         * `SeeUnknownItems`, and this is the one ability whose absence changes
+         * the contents of the response rather than refusing it.
+         */
+        $unidentified = $account instanceof Account && $account->can('SeeUnknownItems');
+
         return CharacterResource::make($character->load('guild'))
             ->additional(['meta' => [
                 'preferences' => $this->characters->preferences($character),
+                'inventory' => $this->belongings->inventory($character, $unidentified),
+                'cart' => $this->belongings->cart($character, $unidentified),
+                'friends' => $this->belongings->friends($character),
+                'party' => $this->belongings->partyMembers($character),
+                'shows_unidentified' => $unidentified,
             ]])
             ->response();
     }

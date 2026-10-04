@@ -336,6 +336,19 @@ return [
         // Cap on a member-list export, so one request cannot stream a very
         // large guild's roster repeatedly.
         'export_limit' => (int) env('PANEL_GUILD_EXPORT_LIMIT', 500),
+
+        /*
+         * Show guild storage contents only to the guild master, rather than to
+         * every member. FluxCP's GStorageLeaderOnly. Staff with ViewGuild see
+         * it either way.
+         */
+        'storage_leader_only' => (bool) env('PANEL_GUILD_STORAGE_LEADER_ONLY', false),
+
+        /*
+         * Cap on how many storage rows one guild page returns. A guild store
+         * holds hundreds of stacks and each one costs a name lookup.
+         */
+        'storage_limit' => (int) env('PANEL_GUILD_STORAGE_LIMIT', 500),
     ],
 
     /*

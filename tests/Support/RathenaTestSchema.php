@@ -462,6 +462,30 @@ final class RathenaTestSchema
             $table->integer('card2')->default(0);
             $table->integer('card3')->default(0);
             $table->boolean('favorite')->default(false);
+            /*
+             * The character view orders on `attribute` -- a broken item sorts
+             * before an intact one -- and reports the rest, so a test schema
+             * without them exercised the ordering against columns that do not
+             * exist here but do exist on a real server.
+             */
+            $table->unsignedTinyInteger('attribute')->default(0);
+            $table->unsignedTinyInteger('bound')->default(0);
+            $table->unsignedInteger('expire_time')->default(0);
+            /*
+             * Renewal random options. A pre-renewal server has no such
+             * columns, which is why they are read only when the server group
+             * is configured as renewal.
+             */
+            $table->unsignedSmallInteger('option_id0')->default(0);
+            $table->smallInteger('option_val0')->default(0);
+            $table->unsignedSmallInteger('option_id1')->default(0);
+            $table->smallInteger('option_val1')->default(0);
+            $table->unsignedSmallInteger('option_id2')->default(0);
+            $table->smallInteger('option_val2')->default(0);
+            $table->unsignedSmallInteger('option_id3')->default(0);
+            $table->smallInteger('option_val3')->default(0);
+            $table->unsignedSmallInteger('option_id4')->default(0);
+            $table->smallInteger('option_val4')->default(0);
             $table->index('char_id');
         });
 
@@ -550,7 +574,22 @@ final class RathenaTestSchema
             $table->unsignedInteger('card1')->default(0);
             $table->integer('card2')->default(0);
             $table->integer('card3')->default(0);
+            $table->unsignedTinyInteger('attribute')->default(0);
+            $table->unsignedTinyInteger('bound')->default(0);
+            $table->unsignedInteger('expire_time')->default(0);
             $table->index('char_id');
+        });
+
+        /*
+         * rAthena keeps friendship one-directional: a row says that `char_id`
+         * added `friend_id`, and the reverse is a separate row that may not
+         * exist.
+         */
+        $schema->create('friends', function (Blueprint $table): void {
+            $table->unsignedInteger('char_id')->default(0);
+            $table->unsignedInteger('friend_account')->default(0);
+            $table->unsignedInteger('friend_id')->default(0);
+            $table->primary(['char_id', 'friend_id']);
         });
 
         $schema->create('guild_alliance', function (Blueprint $table): void {
@@ -653,6 +692,54 @@ final class RathenaTestSchema
             $table->unsignedTinyInteger('position')->default(0);
 
             $table->primary(['guild_id', 'char_id']);
+        });
+
+        /*
+         * A guild's rank titles. `position` on guild_member is an index into
+         * this table for the same guild, so the join needs both columns --
+         * joining on the index alone matches every guild's rank of that
+         * number.
+         */
+        $schema->create('guild_position', function (Blueprint $table): void {
+            $table->unsignedInteger('guild_id')->default(0);
+            $table->unsignedTinyInteger('position')->default(0);
+            $table->string('name', 24)->default('');
+            $table->unsignedTinyInteger('mode')->default(0);
+            $table->unsignedTinyInteger('exp_mode')->default(0);
+
+            $table->primary(['guild_id', 'position']);
+        });
+
+        /*
+         * Expulsion history. rAthena keeps the expelled member's name rather
+         * than only their id, because the character may since have been
+         * deleted.
+         */
+        $schema->create('guild_expulsion', function (Blueprint $table): void {
+            $table->unsignedInteger('guild_id')->default(0);
+            $table->unsignedInteger('account_id')->default(0);
+            $table->string('name', 24)->default('');
+            $table->string('mes', 40)->default('');
+
+            $table->primary(['guild_id', 'name']);
+        });
+
+        $schema->create('guild_storage', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedInteger('guild_id')->default(0);
+            $table->unsignedInteger('nameid')->default(0);
+            $table->smallInteger('amount')->default(0);
+            $table->boolean('identify')->default(false);
+            $table->tinyInteger('refine')->default(0);
+            $table->unsignedInteger('card0')->default(0);
+            $table->unsignedInteger('card1')->default(0);
+            $table->integer('card2')->default(0);
+            $table->integer('card3')->default(0);
+            $table->unsignedTinyInteger('attribute')->default(0);
+            $table->unsignedTinyInteger('bound')->default(0);
+            $table->unsignedInteger('expire_time')->default(0);
+
+            $table->index('guild_id');
         });
 
         $schema->create('cp_onlinepeak', function (Blueprint $table): void {

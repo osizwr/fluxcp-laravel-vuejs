@@ -188,6 +188,251 @@ final class GuildEndpointTest extends TestCase
     }
 
     #[Test]
+    public function a_guild_page_carries_rank_titles_tax_and_devotion(): void
+    {
+        $guild = Guild::factory()->named('Valkyrie')->create();
+
+        $leader = Character::factory()->forAccount(Account::factory()->create())
+            ->named('Leader')->state(['guild_id' => $guild->guild_id])->create();
+
+        DB::connection($this->charMap())->table('guild_member')->insert([
+            'guild_id' => $guild->guild_id, 'char_id' => $leader->char_id,
+            'exp' => 4_200, 'position' => 1,
+        ]);
+
+        DB::connection($this->charMap())->table('guild_position')->insert([
+            [
+                'guild_id' => $guild->guild_id, 'position' => 1,
+                'name' => 'Vice Master', 'mode' => 17, 'exp_mode' => 25,
+            ],
+            [
+                'guild_id' => $guild->guild_id, 'position' => 2,
+                'name' => 'Recruit', 'mode' => 0, 'exp_mode' => 50,
+            ],
+        ]);
+
+        $this->actingAs(Account::factory()->create())
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonPath('data.members.0.position_name', 'Vice Master')
+            ->assertJsonPath('data.members.0.position_mode', 17)
+            ->assertJsonPath('data.members.0.guild_tax', 25)
+            ->assertJsonPath('data.members.0.devotion', 4_200)
+            // The ranks a guild has defined, including one nobody holds.
+            ->assertJsonCount(2, 'data.positions')
+            ->assertJsonPath('data.positions.1.name', 'Recruit')
+            ->assertJsonPath('data.positions.1.guild_tax', 50);
+    }
+
+    /**
+     * A member of one guild must not pick up another guild's rank of the same
+     * number, which is what joining guild_member on char_id alone would do
+     * after the character changed guild.
+     */
+    #[Test]
+    public function a_stale_membership_row_does_not_leak_another_guilds_rank(): void
+    {
+        $old = Guild::factory()->named('Former')->create();
+        $new = Guild::factory()->named('Current')->create();
+
+        $member = Character::factory()->forAccount(Account::factory()->create())
+            ->named('Mover')->state(['guild_id' => $new->guild_id])->create();
+
+        DB::connection($this->charMap())->table('guild_member')->insert([
+            ['guild_id' => $old->guild_id, 'char_id' => $member->char_id, 'exp' => 999, 'position' => 1],
+            ['guild_id' => $new->guild_id, 'char_id' => $member->char_id, 'exp' => 5, 'position' => 2],
+        ]);
+
+        DB::connection($this->charMap())->table('guild_position')->insert([
+            ['guild_id' => $old->guild_id, 'position' => 1, 'name' => 'Old Master', 'mode' => 17, 'exp_mode' => 90],
+            ['guild_id' => $new->guild_id, 'position' => 2, 'name' => 'New Recruit', 'mode' => 0, 'exp_mode' => 10],
+        ]);
+
+        $this->actingAs(Account::factory()->create())
+            ->getJson("/api/guilds/{$new->guild_id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.members')
+            ->assertJsonPath('data.members.0.position_name', 'New Recruit')
+            ->assertJsonPath('data.members.0.devotion', 5);
+    }
+
+    #[Test]
+    public function a_guild_page_lists_expulsions_with_the_reason(): void
+    {
+        $guild = Guild::factory()->create();
+
+        DB::connection($this->charMap())->table('guild_expulsion')->insert([
+            [
+                'guild_id' => $guild->guild_id, 'account_id' => 42,
+                'name' => 'Troublemaker', 'mes' => 'Leaked the castle plan|00',
+            ],
+        ]);
+
+        $this->actingAs(Account::factory()->create())
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonPath('data.expulsions.0.name', 'Troublemaker')
+            // The terminator rAthena pads the column with is stripped.
+            ->assertJsonPath('data.expulsions.0.reason', 'Leaked the castle plan');
+    }
+
+    #[Test]
+    public function the_guild_notice_has_its_terminator_stripped(): void
+    {
+        $guild = Guild::factory()->state([
+            'mes1' => 'Siege tonight|00',
+            'mes2' => 'Meet at the west gate|00',
+        ])->create();
+
+        $this->actingAs(Account::factory()->create())
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonPath('data.notice.title', 'Siege tonight')
+            ->assertJsonPath('data.notice.body', 'Meet at the west gate');
+    }
+
+    /**
+     * rAthena denormalises an ally's name into the alliance row and never
+     * updates it, so trusting that column shows a renamed guild under its old
+     * name.
+     */
+    #[Test]
+    public function an_ally_is_named_by_its_current_name_not_the_stored_one(): void
+    {
+        $guild = Guild::factory()->named('Valkyrie')->create();
+        $ally = Guild::factory()->named('Renamed Since')->create();
+
+        DB::connection($this->charMap())->table('guild_alliance')->insert([
+            [
+                'guild_id' => $guild->guild_id, 'alliance_id' => $ally->guild_id,
+                'opposition' => 0, 'name' => 'Old Name',
+            ],
+        ]);
+
+        $this->actingAs(Account::factory()->create())
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonPath('data.allies.0.name', 'Renamed Since');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Guild storage
+    |--------------------------------------------------------------------------
+    */
+
+    #[Test]
+    public function a_member_sees_guild_storage_and_an_outsider_does_not(): void
+    {
+        $guild = Guild::factory()->create();
+
+        $memberAccount = Account::factory()->create();
+        Character::factory()->forAccount($memberAccount)
+            ->state(['guild_id' => $guild->guild_id])->create();
+
+        $this->storeItem($guild->guild_id, itemId: 501, amount: 3);
+
+        $this->actingAs($memberAccount)
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.storage')
+            ->assertJsonPath('data.storage.0.item_id', 501)
+            ->assertJsonPath('data.storage.0.amount', 3);
+
+        // Null, not an empty list: "you may not look" is not "the store is
+        // empty".
+        $this->actingAs(Account::factory()->create())
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonPath('data.storage', null);
+    }
+
+    #[Test]
+    public function storage_can_be_restricted_to_the_guild_master(): void
+    {
+        config(['panel.guilds.storage_leader_only' => true]);
+
+        $guild = Guild::factory()->create();
+
+        $masterAccount = Account::factory()->create();
+        $master = Character::factory()->forAccount($masterAccount)
+            ->named('Master')->state(['guild_id' => $guild->guild_id])->create();
+
+        DB::connection($this->charMap())->table('guild')
+            ->where('guild_id', $guild->guild_id)
+            ->update(['char_id' => $master->char_id, 'master' => 'Master']);
+
+        $memberAccount = Account::factory()->create();
+        Character::factory()->forAccount($memberAccount)
+            ->named('Member')->state(['guild_id' => $guild->guild_id])->create();
+
+        $this->storeItem($guild->guild_id, itemId: 501, amount: 1);
+
+        $this->actingAs($masterAccount)
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.storage');
+
+        $this->actingAs($memberAccount)
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonPath('data.storage', null);
+    }
+
+    #[Test]
+    public function staff_see_guild_storage_without_being_in_the_guild(): void
+    {
+        config(['panel.guilds.storage_leader_only' => true]);
+
+        $guild = Guild::factory()->create();
+        $this->storeItem($guild->guild_id, itemId: 501, amount: 1);
+
+        $this->asStaff()
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.storage');
+    }
+
+    #[Test]
+    public function an_unidentified_stored_item_is_hidden_from_a_member(): void
+    {
+        $guild = Guild::factory()->create();
+
+        $memberAccount = Account::factory()->create();
+        Character::factory()->forAccount($memberAccount)
+            ->state(['guild_id' => $guild->guild_id])->create();
+
+        $this->storeItem($guild->guild_id, itemId: 501, amount: 1);
+        $this->storeItem($guild->guild_id, itemId: 502, amount: 1, identified: false);
+
+        $this->actingAs($memberAccount)
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.storage')
+            ->assertJsonPath('data.storage.0.item_id', 501);
+
+        // Staff hold SeeUnknownItems, so they get both rows.
+        $this->asStaff()
+            ->getJson("/api/guilds/{$guild->guild_id}")
+            ->assertOk()
+            ->assertJsonCount(2, 'data.storage');
+    }
+
+    private function storeItem(
+        int $guildId,
+        int $itemId,
+        int $amount,
+        bool $identified = true,
+    ): void {
+        DB::connection($this->charMap())->table('guild_storage')->insert([
+            'guild_id' => $guildId,
+            'nameid' => $itemId,
+            'amount' => $amount,
+            'identify' => $identified,
+        ]);
+    }
+
+    #[Test]
     public function an_unknown_guild_is_a_404(): void
     {
         $this->actingAs(Account::factory()->create())

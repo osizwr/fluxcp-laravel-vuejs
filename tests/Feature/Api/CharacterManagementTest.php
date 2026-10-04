@@ -96,6 +96,272 @@ final class CharacterManagementTest extends TestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Belongings
+    |--------------------------------------------------------------------------
+    |
+    | The four data sets modules/character/view.php assembled: equipment and
+    | inventory, cart, friends and party.
+    |
+    */
+
+    #[Test]
+    public function a_character_page_lists_equipment_and_inventory(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $this->defineItem(1201, 'Knife', slots: 3);
+        $this->defineItem(501, 'Red Potion');
+
+        $this->carry($character->char_id, 1201, equip: 2, refine: 7);
+        $this->carry($character->char_id, 501, amount: 10);
+
+        $response = $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonCount(2, 'meta.inventory');
+
+        // Worn items first, whatever their item id.
+        $response->assertJsonPath('meta.inventory.0.item_id', 1201)
+            ->assertJsonPath('meta.inventory.0.name', 'Knife')
+            ->assertJsonPath('meta.inventory.0.equipped', true)
+            ->assertJsonPath('meta.inventory.0.refine', 7)
+            ->assertJsonPath('meta.inventory.0.slots', 3)
+            ->assertJsonPath('meta.inventory.1.item_id', 501)
+            ->assertJsonPath('meta.inventory.1.amount', 10)
+            ->assertJsonPath('meta.inventory.1.equipped', false);
+    }
+
+    #[Test]
+    public function slotted_cards_are_named(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $this->defineItem(1201, 'Knife', slots: 2);
+        $this->defineItem(4001, 'Poring Card');
+
+        $this->carry($character->char_id, 1201, cards: [4001, 0, 0, 0]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'meta.inventory.0.cards')
+            ->assertJsonPath('meta.inventory.0.cards.0.name', 'Poring Card')
+            // Two slots, one card: nothing over.
+            ->assertJsonPath('meta.inventory.0.cards_over', 0);
+    }
+
+    /**
+     * More cards than slots cannot happen on a stock server, so it is reported
+     * rather than corrected.
+     */
+    #[Test]
+    public function an_over_slotted_item_reports_how_many_cards_are_extra(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $this->defineItem(1201, 'Knife', slots: 1);
+        $this->defineItem(4001, 'Poring Card');
+        $this->defineItem(4002, 'Fabre Card');
+
+        $this->carry($character->char_id, 1201, cards: [4001, 4002, 0, 0]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.inventory.0.cards_over', 1);
+    }
+
+    /**
+     * When card0 marks a forged item, card2 and card3 are the two halves of
+     * the forger's character id -- not cards. Reading them as cards names
+     * items that are not there.
+     */
+    #[Test]
+    public function a_forged_item_names_its_forger_instead_of_cards(): void
+    {
+        [$account, $character] = $this->signedInWithCharacter();
+
+        $forger = Character::factory()->forAccount($account)->named('Smith')->create();
+
+        $this->defineItem(1201, 'Knife', slots: 0);
+
+        $charId = (int) $forger->char_id;
+
+        $this->carry($character->char_id, 1201, cards: [
+            255,
+            0,
+            // The low half is stored signed, so a value above 32767 arrives
+            // negative and has to be widened back.
+            $charId & 0xFFFF,
+            $charId >> 16,
+        ]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.inventory.0.creation_kind', 'forged')
+            ->assertJsonPath('meta.inventory.0.created_by', 'Smith')
+            ->assertJsonCount(0, 'meta.inventory.0.cards')
+            ->assertJsonPath('meta.inventory.0.cards_over', 0);
+    }
+
+    #[Test]
+    public function a_forger_id_above_the_signed_range_is_widened(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $this->defineItem(1201, 'Knife', slots: 0);
+
+        // 40000 does not fit in a signed 16-bit column, so rAthena stores it
+        // as a negative number.
+        $forgerId = 40_000;
+
+        $this->carry($character->char_id, 1201, cards: [
+            255, 0, $forgerId - 65_536, 0,
+        ]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonPath('meta.inventory.0.created_by_char_id', $forgerId);
+    }
+
+    #[Test]
+    public function an_unidentified_item_is_hidden_from_the_owner_and_shown_to_staff(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $this->defineItem(501, 'Red Potion');
+        $this->defineItem(603, 'Old Blue Box');
+
+        $this->carry($character->char_id, 501);
+        $this->carry($character->char_id, 603, identified: false);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'meta.inventory')
+            ->assertJsonPath('meta.inventory.0.item_id', 501)
+            ->assertJsonPath('meta.shows_unidentified', false);
+
+        $this->actingAs(Account::factory()->administrator()->create())
+            ->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonCount(2, 'meta.inventory')
+            ->assertJsonPath('meta.shows_unidentified', true);
+    }
+
+    #[Test]
+    public function a_character_page_lists_the_cart(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $this->defineItem(501, 'Red Potion');
+
+        DB::connection($this->charMap())->table('cart_inventory')->insert([
+            'char_id' => $character->char_id, 'nameid' => 501,
+            'amount' => 25, 'identify' => true,
+        ]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'meta.cart')
+            ->assertJsonPath('meta.cart.0.name', 'Red Potion')
+            ->assertJsonPath('meta.cart.0.amount', 25);
+    }
+
+    /**
+     * rAthena keeps friendship one-directional, so being added does not put
+     * the adder on your list.
+     */
+    #[Test]
+    public function a_character_page_lists_friends_in_one_direction_only(): void
+    {
+        [, $character] = $this->signedInWithCharacter();
+
+        $friend = Character::factory()->forAccount(Account::factory()->create())
+            ->named('Companion')->state(['online' => 1])->create();
+
+        DB::connection($this->charMap())->table('friends')->insert([
+            'char_id' => $character->char_id,
+            'friend_account' => $friend->account_id,
+            'friend_id' => $friend->char_id,
+        ]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'meta.friends')
+            ->assertJsonPath('meta.friends.0.name', 'Companion')
+            ->assertJsonPath('meta.friends.0.online', true);
+
+        // The friend has not added them back, so their list is empty.
+        $this->actingAs(Account::factory()->administrator()->create())
+            ->getJson("/api/characters/{$friend->char_id}")
+            ->assertOk()
+            ->assertJsonCount(0, 'meta.friends');
+    }
+
+    /**
+     * The legacy only ran the party query when the character was the leader,
+     * which left every other member looking party-less.
+     */
+    #[Test]
+    public function a_party_roster_is_listed_for_a_member_who_is_not_the_leader(): void
+    {
+        [, $character] = $this->signedInWithCharacter(['party_id' => 7]);
+
+        Character::factory()->forAccount(Account::factory()->create())
+            ->named('Leader')->state(['party_id' => 7])->create();
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'meta.party')
+            ->assertJsonPath('meta.party.0.name', 'Leader');
+    }
+
+    #[Test]
+    public function a_character_in_no_party_has_an_empty_roster(): void
+    {
+        [, $character] = $this->signedInWithCharacter(['party_id' => 0]);
+
+        $this->getJson("/api/characters/{$character->char_id}")
+            ->assertOk()
+            ->assertJsonCount(0, 'meta.party');
+    }
+
+    /**
+     * @param  list<int>  $cards
+     */
+    private function carry(
+        int $charId,
+        int $itemId,
+        int $amount = 1,
+        int $equip = 0,
+        int $refine = 0,
+        bool $identified = true,
+        array $cards = [0, 0, 0, 0],
+    ): void {
+        DB::connection($this->charMap())->table('inventory')->insert([
+            'char_id' => $charId,
+            'nameid' => $itemId,
+            'amount' => $amount,
+            'equip' => $equip,
+            'refine' => $refine,
+            'identify' => $identified,
+            'card0' => $cards[0],
+            'card1' => $cards[1],
+            'card2' => $cards[2],
+            'card3' => $cards[3],
+        ]);
+    }
+
+    private function defineItem(int $id, string $name, int $slots = 0): void
+    {
+        DB::connection($this->charMap())->table('item_db_re')->insert([
+            'id' => $id,
+            'name_aegis' => str_replace(' ', '_', $name),
+            'name_english' => $name,
+            'type' => 'Etc',
+            'slots' => $slots,
+        ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Slots
     |--------------------------------------------------------------------------
     */
