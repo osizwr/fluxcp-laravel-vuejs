@@ -78,6 +78,12 @@ final class ItemController
         return response()->json([
             'data' => [
                 'types' => (object) config('rathena_reference.item_types', []),
+                /*
+                 * Grouped by the item type they belong to, because the same
+                 * word means different things: `dagger` is a melee weapon
+                 * under `weapon` and a throwing dagger under `ammo`.
+                 */
+                'subtypes' => (object) config('rathena_reference.item_subtypes', []),
                 'locations' => (object) config('rathena_reference.equip_locations', []),
                 'jobs' => (object) [
                     ...(array) config('rathena_reference.equip_jobs.base', []),

@@ -190,4 +190,205 @@ final class MonsterEndpointTest extends TestCase
     {
         $this->getJson('/api/monsters/999999')->assertNotFound();
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Race, size and element
+    |--------------------------------------------------------------------------
+    |
+    | rAthena stores these two ways: the pre-renewal mob_db keeps a number and
+    | mob_db_re, generated from the YAML, keeps a word. FluxCP read both.
+    |
+    */
+
+    #[Test]
+    public function a_renewal_monster_reports_its_race_and_size_by_name(): void
+    {
+        $this->monster(1002, ['Race' => 'Formless', 'Size' => 'Medium']);
+
+        $this->getJson('/api/monsters/1002')
+            ->assertOk()
+            ->assertJsonPath('data.race', 'Formless')
+            ->assertJsonPath('data.race_name', 'Formless')
+            ->assertJsonPath('data.size', 'Medium')
+            ->assertJsonPath('data.size_name', 'Medium');
+    }
+
+    /**
+     * `(int) 'Formless'` is 0, so casting these to int reported race 0 and
+     * size 0 for every monster on a renewal server.
+     */
+    #[Test]
+    public function a_word_valued_race_is_not_reported_as_zero(): void
+    {
+        $this->monster(1002, ['Race' => 'Demihuman']);
+
+        $response = $this->getJson('/api/monsters/1002')->assertOk();
+
+        $this->assertNotSame(0, $response->json('data.race'));
+        $this->assertSame('Demi-Human', $response->json('data.race_name'));
+    }
+
+    #[Test]
+    public function a_pre_renewal_monster_reports_its_numeric_race_by_name(): void
+    {
+        /*
+         * The registry caches its groups on first use, so flipping the renewal
+         * flag here would not reach it. Pointing the reference tables at the
+         * numeric mob_db exercises the same reading path.
+         */
+        config(['rathena.reference_tables.monsters.renewal.base' => 'mob_db']);
+        config(['rathena.reference_tables.monsters.renewal.override' => 'mob_db2']);
+
+        $this->monster(1002, ['Race' => 7, 'Size' => 2], table: 'mob_db');
+
+        $this->getJson('/api/monsters/1002')
+            ->assertOk()
+            ->assertJsonPath('data.race', 7)
+            ->assertJsonPath('data.race_name', 'Demi-Human')
+            ->assertJsonPath('data.size', 2)
+            ->assertJsonPath('data.size_name', 'Large');
+    }
+
+    /**
+     * A pre-renewal server packs the element level into the element column as
+     * `element + level * 20`, so 23 is a level 1 Fire monster.
+     */
+    #[Test]
+    public function a_packed_element_is_split_into_element_and_level(): void
+    {
+        /*
+         * The registry caches its groups on first use, so flipping the renewal
+         * flag here would not reach it. Pointing the reference tables at the
+         * numeric mob_db exercises the same reading path.
+         */
+        config(['rathena.reference_tables.monsters.renewal.base' => 'mob_db']);
+        config(['rathena.reference_tables.monsters.renewal.override' => 'mob_db2']);
+
+        $this->monster(1002, ['Element' => 23], table: 'mob_db');
+
+        $this->getJson('/api/monsters/1002')
+            ->assertOk()
+            ->assertJsonPath('data.element_name', 'Fire')
+            ->assertJsonPath('data.element_level', 1);
+    }
+
+    #[Test]
+    public function a_renewal_element_uses_its_own_level_column(): void
+    {
+        $this->monster(1002, ['Element' => 'Water', 'ElementLevel' => 2]);
+
+        $this->getJson('/api/monsters/1002')
+            ->assertOk()
+            ->assertJsonPath('data.element_name', 'Water')
+            ->assertJsonPath('data.element_level', 2);
+    }
+
+    #[Test]
+    public function an_unknown_race_value_is_reported_without_a_name(): void
+    {
+        // A server on a newer rAthena than this table knows about should show
+        // the stored value rather than a wrong name.
+        $this->monster(1002, ['Race' => 'Doppelganger']);
+
+        $this->getJson('/api/monsters/1002')
+            ->assertOk()
+            ->assertJsonPath('data.race', 'Doppelganger')
+            ->assertJsonPath('data.race_name', null);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Filtering by them
+    |--------------------------------------------------------------------------
+    */
+
+    #[Test]
+    public function monsters_can_be_filtered_by_race(): void
+    {
+        $this->monster(1002, ['Race' => 'Formless']);
+        $this->monster(1003, ['Race' => 'Demihuman']);
+
+        $this->getJson('/api/monsters?race=Formless')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 1002);
+    }
+
+    /**
+     * One filter has to work whichever table the server has, so the term is
+     * resolved to a label and the label back to every stored form of it.
+     */
+    #[Test]
+    public function a_race_filter_accepts_the_label_the_word_or_the_number(): void
+    {
+        $this->monster(1002, ['Race' => 'Demihuman']);
+        $this->monster(1003, ['Race' => 'Formless']);
+
+        foreach (['Demi-Human', 'Demihuman', 'demihuman', '7'] as $term) {
+            $this->getJson('/api/monsters?race='.urlencode($term))
+                ->assertOk()
+                ->assertJsonCount(1, 'data', "The term \"{$term}\" should find the Demi-Human.")
+                ->assertJsonPath('data.0.id', 1002);
+        }
+    }
+
+    #[Test]
+    public function monsters_can_be_filtered_by_size(): void
+    {
+        $this->monster(1002, ['Size' => 'Small']);
+        $this->monster(1003, ['Size' => 'Large']);
+
+        $this->getJson('/api/monsters?size=Large')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 1003);
+    }
+
+    /**
+     * Every level of an element has a different stored number on a
+     * pre-renewal server, so matching one value would find only one level.
+     */
+    #[Test]
+    public function an_element_filter_finds_every_level_of_that_element(): void
+    {
+        /*
+         * The registry caches its groups on first use, so flipping the renewal
+         * flag here would not reach it. Pointing the reference tables at the
+         * numeric mob_db exercises the same reading path.
+         */
+        config(['rathena.reference_tables.monsters.renewal.base' => 'mob_db']);
+        config(['rathena.reference_tables.monsters.renewal.override' => 'mob_db2']);
+
+        $this->monster(1002, ['Element' => 23], table: 'mob_db');  // Fire, level 1
+        $this->monster(1003, ['Element' => 43], table: 'mob_db');  // Fire, level 2
+        $this->monster(1004, ['Element' => 21], table: 'mob_db');  // Water, level 1
+
+        $response = $this->getJson('/api/monsters?element=Fire')->assertOk();
+
+        $this->assertSame([1002, 1003], array_column($response->json('data'), 'id'));
+    }
+
+    #[Test]
+    public function an_unknown_race_filter_is_a_validation_error_not_a_query(): void
+    {
+        $this->getJson('/api/monsters?race=NotARace')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('race');
+    }
+
+    #[Test]
+    public function the_monster_vocabulary_lists_the_labels_once_each(): void
+    {
+        $response = $this->getJson('/api/monsters/vocabulary')->assertOk();
+
+        $races = $response->json('data.races');
+
+        $this->assertContains('Demi-Human', $races);
+        // Keyed by both the number and the word, so a naive listing would
+        // offer every label twice.
+        $this->assertSame(array_values(array_unique($races)), $races);
+        $this->assertContains('Medium', $response->json('data.sizes'));
+        $this->assertContains('Fire', $response->json('data.elements'));
+    }
 }

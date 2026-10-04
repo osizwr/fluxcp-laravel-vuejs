@@ -94,7 +94,8 @@ export interface ItemStack {
     created_by_char_id: number | null
     created_by: string | null
     creation_kind: 'forged' | 'brewed' | null
-    random_options: { id: number; value: number }[]
+    /** `label` is the option's text with its value substituted, or null for an id this panel does not know. */
+    random_options: { id: number; value: number; label: string | null }[]
 }
 
 /** A friend or a party member; both lists carry the same shape. */
@@ -340,18 +341,37 @@ export interface Monster {
     attack: { min: number; max: number }
     defense: number
     magic_defense: number
-    size: number | null
-    race: number | null
-    element: number | null
+    /**
+     * As rAthena stored it: a number on a pre-renewal server, a word on a
+     * renewal one. The `_name` fields are the label, or null for a value this
+     * panel's vocabulary does not cover.
+     */
+    size: number | string | null
+    size_name: string | null
+    race: number | string | null
+    race_name: string | null
+    element: number | string | null
+    element_name: string | null
+    element_level: number | null
     is_mvp: boolean
     modes: string[]
     is_custom: boolean
     origin_table: string | null
 }
 
+/** The monster search vocabulary: labels only, each once. */
+export interface MonsterVocabulary {
+    races: string[]
+    sizes: string[]
+    elements: string[]
+    sortable: string[]
+}
+
 /** The search vocabulary, so the client does not keep its own copy. */
 export interface ItemVocabulary {
     types: Record<string, string>
+    /** Keyed by the item type the subtype belongs to: the same word means different things under each. */
+    subtypes: Record<string, Record<string, string>>
     locations: Record<string, string>
     jobs: Record<string, string>
     classes: Record<string, string>

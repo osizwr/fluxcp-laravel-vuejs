@@ -209,6 +209,9 @@ return [
 
         // monster
         'monster.index' => AccountLevel::Anyone,
+        // The search form's vocabulary, as with items: this repository's own
+        // configuration, not anybody's data.
+        'monster.vocabulary' => AccountLevel::Anyone,
         'monster.view' => AccountLevel::Anyone,
 
         // news

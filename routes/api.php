@@ -491,6 +491,9 @@ Route::middleware('permission')->group(function (): void {
 
     Route::get('monsters', [MonsterController::class, 'index'])->name('monster.index');
 
+    Route::get('monsters/vocabulary', [MonsterController::class, 'vocabulary'])
+        ->name('monster.vocabulary');
+
     Route::get('monsters/{monster}', [MonsterController::class, 'show'])
         ->whereNumber('monster')
         ->name('monster.view');

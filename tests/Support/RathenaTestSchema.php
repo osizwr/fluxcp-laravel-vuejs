@@ -822,6 +822,9 @@ final class RathenaTestSchema
             $table->string('type', 1)->default('P');
             $table->unsignedInteger('nameid')->default(0);
             $table->integer('amount')->default(1);
+            // Declared by the items view and present on a real server, so the
+            // schema carries it rather than leaving the column untested.
+            $table->tinyInteger('refine')->default(0);
             $table->string('map', 11)->default('');
 
             $table->index('type');
@@ -992,6 +995,55 @@ final class RathenaTestSchema
         foreach (['mob_db_re', 'mob_db2_re'] as $table) {
             $schema->create($table, function (Blueprint $table): void {
                 // Capitalised on purpose; see the method comment.
+                $table->unsignedInteger('ID')->primary();
+                $table->string('Sprite', 50)->default('');
+                $table->string('kName', 50)->default('');
+                $table->string('iName', 50)->default('');
+                $table->unsignedSmallInteger('LV')->default(1);
+                $table->unsignedInteger('HP')->default(1);
+                $table->unsignedInteger('SP')->default(0);
+                $table->unsignedInteger('EXP')->default(0);
+                $table->unsignedInteger('JEXP')->default(0);
+                $table->unsignedSmallInteger('ATK1')->default(0);
+                $table->unsignedSmallInteger('ATK2')->default(0);
+                $table->unsignedSmallInteger('DEF')->default(0);
+                $table->unsignedSmallInteger('MDEF')->default(0);
+                $table->unsignedTinyInteger('MEXP')->default(0);
+                /*
+                 * Strings, as real renewal rAthena stores them: the SQL is
+                 * generated from the YAML and holds `Formless`, `Medium`,
+                 * `Water`. An earlier revision of this schema used the
+                 * pre-renewal numeric layout here, which hid a bug -- the
+                 * resource cast these to int, and `(int) 'Formless'` is 0, so
+                 * every monster on a renewal server reported race 0.
+                 *
+                 * The pre-renewal numeric layout is covered by mob_db below.
+                 */
+                $table->string('Size', 20)->nullable();
+                $table->string('Race', 20)->nullable();
+                $table->string('Element', 20)->nullable();
+                $table->unsignedTinyInteger('ElementLevel')->nullable();
+
+                foreach ([
+                    'mode_aggressive', 'mode_assist', 'mode_canattack', 'mode_canmove',
+                    'mode_looter', 'mode_mvp', 'mode_detector', 'mode_norandomwalk',
+                ] as $mode) {
+                    $table->unsignedTinyInteger($mode)->nullable();
+                }
+            });
+        }
+
+        /*
+         * The pre-renewal monster tables, with the numeric race, size and
+         * element layout. Both layouts exist on real servers and the panel
+         * reads either, so both are here -- a schema that models only one
+         * cannot catch a cast that is wrong on the other.
+         *
+         * `Element` packs the element level into the same column as
+         * `element + level * 20`, which is why it is wider than ten.
+         */
+        foreach (['mob_db', 'mob_db2'] as $table) {
+            $schema->create($table, function (Blueprint $table): void {
                 $table->unsignedInteger('ID')->primary();
                 $table->string('Sprite', 50)->default('');
                 $table->string('kName', 50)->default('');

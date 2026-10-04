@@ -46,6 +46,11 @@ final class LogBrowserTest extends TestCase
         return $this->app->make(ServerRegistry::class)->current()->logsConnection();
     }
 
+    private function loginConnection(): string
+    {
+        return $this->app->make(ServerRegistry::class)->current()->loginConnection();
+    }
+
     private function login(): string
     {
         return $this->app->make(ServerRegistry::class)->current()->loginConnection();
@@ -421,5 +426,86 @@ final class LogBrowserTest extends TestCase
                 ->getJson("/api/logs/{$key}")
                 ->assertOk();
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Coded columns
+    |--------------------------------------------------------------------------
+    |
+    | rAthena writes single characters into its log tables and the panel's own
+    | sign-in log holds a numeric outcome. Undecoded, the column an operator
+    | investigating a duplicated item reads first says `M`.
+    |
+    */
+
+    #[Test]
+    public function a_pick_type_is_reported_with_its_meaning(): void
+    {
+        DB::connection($this->logs())->table('picklog')->insert([
+            'time' => now(), 'char_id' => 150001, 'type' => 'M',
+            'nameid' => 501, 'amount' => 1, 'refine' => 0, 'map' => 'prontera',
+        ]);
+
+        $this->actingAs(Account::factory()->administrator()->create())
+            ->getJson('/api/logs/items')
+            ->assertOk()
+            // Both: the label is what an operator reads, the code is what
+            // they will find if they go to the table themselves.
+            ->assertJsonPath('data.0.type.code', 'M')
+            ->assertJsonPath('data.0.type.label', 'Monster');
+    }
+
+    #[Test]
+    public function a_feeding_type_is_reported_with_its_meaning(): void
+    {
+        DB::connection($this->logs())->table('feedinglog')->insert([
+            'time' => now(), 'char_id' => 150001, 'target_id' => 1,
+            'type' => 'H', 'item_id' => 537, 'map' => 'prontera',
+        ]);
+
+        $this->actingAs(Account::factory()->administrator()->create())
+            ->getJson('/api/logs/feeding')
+            ->assertOk()
+            ->assertJsonPath('data.0.type.code', 'H')
+            ->assertJsonPath('data.0.type.label', 'Homunculus');
+    }
+
+    /**
+     * This column was declared with a type nothing handled, so it fell through
+     * to a plain string and reported `2` where it meant invalid credentials.
+     */
+    #[Test]
+    public function a_sign_in_outcome_is_reported_with_its_meaning(): void
+    {
+        DB::connection($this->loginConnection())->table('cp_loginlog')->insert([
+            'account_id' => 0, 'username' => 'someone', 'ip' => '203.0.113.9',
+            'error_code' => 2, 'login_date' => now(),
+        ]);
+
+        $this->actingAs(Account::factory()->administrator()->create())
+            ->getJson('/api/logs/panel-logins')
+            ->assertOk()
+            ->assertJsonPath('data.0.error_code.code', '2')
+            ->assertJsonPath('data.0.error_code.label', 'Invalid Credentials');
+    }
+
+    /**
+     * These vocabularies grow with the emulator, so a row written by a newer
+     * rAthena than this table knows about stays readable.
+     */
+    #[Test]
+    public function an_unknown_code_keeps_its_value_and_gets_no_label(): void
+    {
+        DB::connection($this->logs())->table('picklog')->insert([
+            'time' => now(), 'char_id' => 150001, 'type' => 'W',
+            'nameid' => 501, 'amount' => 1, 'refine' => 0, 'map' => 'prontera',
+        ]);
+
+        $this->actingAs(Account::factory()->administrator()->create())
+            ->getJson('/api/logs/items')
+            ->assertOk()
+            ->assertJsonPath('data.0.type.code', 'W')
+            ->assertJsonPath('data.0.type.label', null);
     }
 }

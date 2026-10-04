@@ -176,10 +176,19 @@ final readonly class ItemStacks
     }
 
     /**
-     * @return list<array{id: int, value: int}>
+     * Renewal random options, named.
+     *
+     * The id alone says nothing, so it is resolved against the format strings
+     * in config/rathena_reference.php -- `MaxHP +%s`, and the value goes where
+     * the `%s` is. An id with no entry keeps its number and no label, because
+     * a server on a newer rAthena than this table knows about should show the
+     * option rather than hide it.
+     *
+     * @return list<array{id: int, value: int, label: ?string}>
      */
     private function randomOptions(object $row): array
     {
+        $vocabulary = (array) config('rathena_reference.item_random_options', []);
         $options = [];
 
         for ($slot = 0; $slot < self::RANDOM_OPTION_SLOTS; $slot++) {
@@ -189,7 +198,14 @@ final readonly class ItemStacks
                 continue;
             }
 
-            $options[] = ['id' => $id, 'value' => (int) ($row->{"option_val{$slot}"} ?? 0)];
+            $value = (int) ($row->{"option_val{$slot}"} ?? 0);
+            $format = $vocabulary[$id] ?? null;
+
+            $options[] = [
+                'id' => $id,
+                'value' => $value,
+                'label' => is_string($format) ? sprintf($format, $value) : null,
+            ];
         }
 
         return $options;

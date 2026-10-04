@@ -76,12 +76,36 @@ final readonly class AttributeDecoder
     /**
      * Equip locations, in the order an inventory window shows them.
      *
+     * A set of locations that means one thing together is collapsed to that
+     * one label: an item set in both hands is "Two-Handed", not "Right Hand,
+     * Left Hand", which describes the storage rather than the item. FluxCP's
+     * equip_location_combinations.php did the same.
+     *
      * @param  array<string, mixed>  $row
      * @return list<string>
      */
     public function equipLocations(array $row): array
     {
-        return $this->labels($row, (array) config('rathena_reference.equip_locations', []));
+        $map = (array) config('rathena_reference.equip_locations', []);
+        $columns = array_keys($this->labelled($row, $map));
+
+        if ($columns === []) {
+            return [];
+        }
+
+        /*
+         * Keys are the columns sorted and slash-joined, so the lookup does not
+         * depend on the order the configuration happens to list them in.
+         */
+        sort($columns);
+        $combinations = (array) config('rathena_reference.equip_location_combinations', []);
+        $combined = $combinations[implode('/', $columns)] ?? null;
+
+        if (is_string($combined)) {
+            return [$combined];
+        }
+
+        return $this->labels($row, $map);
     }
 
     /**

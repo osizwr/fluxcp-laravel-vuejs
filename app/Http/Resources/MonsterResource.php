@@ -50,9 +50,25 @@ final class MonsterResource extends JsonResource
             'defense' => (int) $this->pick($row, ['DEF', 'defense'], 0),
             'magic_defense' => (int) $this->pick($row, ['MDEF', 'magic_defense'], 0),
 
-            'size' => $this->nullableInt($this->pick($row, ['Size', 'size'], null)),
-            'race' => $this->nullableInt($this->pick($row, ['Race', 'race'], null)),
-            'element' => $this->nullableInt($this->pick($row, ['Element', 'element'], null)),
+            /*
+             * Reported as stored and as a name. rAthena holds these two ways:
+             * the pre-renewal `mob_db` keeps a number, and `mob_db_re`,
+             * generated from the YAML, keeps a word. Casting to int was wrong
+             * on the second -- `(int) 'Formless'` is 0, so every monster on a
+             * renewal server reported race 0 and size 0.
+             */
+            'size' => $this->raw($row, ['Size', 'size']),
+            'size_name' => $this->named($row, ['Size', 'size'], 'monster_sizes'),
+            'race' => $this->raw($row, ['Race', 'race']),
+            'race_name' => $this->named($row, ['Race', 'race'], 'monster_races'),
+            'element' => $this->raw($row, ['Element', 'element']),
+            'element_name' => $this->elementName($row),
+            /*
+             * `mob_db` packs the element level into the element column as
+             * `element + level * 20`, so a stored 23 is a level 1 Fire
+             * monster. `mob_db_re` keeps the level in its own column.
+             */
+            'element_level' => $this->elementLevel($row),
 
             'is_mvp' => (int) $this->pick($row, ['MEXP', 'mvp_exp'], 0) > 0
                 || (int) ($row['mode_mvp'] ?? 0) !== 0,
@@ -85,6 +101,91 @@ final class MonsterResource extends JsonResource
     {
         return (string) app(ReferenceTables::class)
             ->tablesFor('monsters')['base'];
+    }
+
+    /**
+     * A value as rAthena stored it: an int where it is numeric, the string
+     * otherwise, null when the column is absent.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  list<string>  $candidates
+     */
+    private function raw(array $row, array $candidates): int|string|null
+    {
+        $value = $this->pick($row, $candidates, null);
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return is_numeric($value) ? (int) $value : (string) $value;
+    }
+
+    /**
+     * The label for a stored value, looked up by whichever form it is in.
+     *
+     * The vocabularies in config/rathena_reference.php are keyed by both the
+     * number and the word for exactly this reason. A value with no entry
+     * yields null rather than a guess, so a server on a newer rAthena than
+     * this table knows about shows the raw value instead of a wrong name.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  list<string>  $candidates
+     */
+    private function named(array $row, array $candidates, string $vocabulary): ?string
+    {
+        $value = $this->raw($row, $candidates);
+
+        if ($value === null) {
+            return null;
+        }
+
+        $map = (array) config("rathena_reference.{$vocabulary}", []);
+
+        return isset($map[$value]) ? (string) $map[$value] : null;
+    }
+
+    /**
+     * The element name, with `mob_db`'s packed level removed first.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function elementName(array $row): ?string
+    {
+        $value = $this->raw($row, ['Element', 'element']);
+
+        if ($value === null) {
+            return null;
+        }
+
+        $map = (array) config('rathena_reference.monster_elements', []);
+
+        if (is_string($value)) {
+            return isset($map[$value]) ? (string) $map[$value] : null;
+        }
+
+        $element = $value % 20;
+
+        return isset($map[$element]) ? (string) $map[$element] : null;
+    }
+
+    /**
+     * The element level: its own column on a renewal server, and the high part
+     * of the element column on a pre-renewal one.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function elementLevel(array $row): ?int
+    {
+        $own = $this->pick($row, ['ElementLevel', 'element_level'], null);
+
+        if ($own !== null && $own !== '') {
+            return (int) $own;
+        }
+
+        $value = $this->raw($row, ['Element', 'element']);
+
+        return is_int($value) ? intdiv($value, 20) : null;
     }
 
     private function nullableInt(mixed $value): ?int

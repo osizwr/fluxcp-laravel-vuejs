@@ -89,7 +89,7 @@ final readonly class LogBrowser
     /**
      * The columns a view can actually show here, in declared order.
      *
-     * @return array<string, array{label: string, type: string}>
+     * @return array<string, array{label: string, type: string, vocabulary?: string}>
      */
     public function columnsFor(string $key): array
     {
@@ -112,6 +112,17 @@ final readonly class LogBrowser
                     'label' => (string) ($meta['label'] ?? $column),
                     'type' => (string) ($meta['type'] ?? 'text'),
                 ];
+
+                /*
+                 * Carried through for a `vocabulary` column, which names the
+                 * reference map its stored code is resolved against. This
+                 * projection is rebuilt rather than passed along, so a key
+                 * not listed here is silently dropped -- which is how the
+                 * coded columns came to be declared and never decoded.
+                 */
+                if (isset($meta['vocabulary'])) {
+                    $columns[$column]['vocabulary'] = (string) $meta['vocabulary'];
+                }
             }
         }
 

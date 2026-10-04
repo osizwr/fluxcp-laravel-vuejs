@@ -383,11 +383,12 @@ is trusted again.
 
 | Concern | Legacy | Status | Notes |
 | --- | --- | --- | --- |
-| Routing | `Flux_Dispatcher` module/action | `VERIFIED` | API routes + SPA history routing. 8 endpoints so far. |
-| Authentication | `Flux_LoginServer::isAuth()` | `VERIFIED` | Session cookie auth in the web middleware group (D11); rAthena credential compatibility (D1). Registration and password reset not built. |
-| Authorization | `access.php` 139 action keys + 46 features | `VERIFIED` | Permission registry with 133 route and 47 ability entries, deny-by-default (D3). Gates registered for every ability. |
+| Routing | `Flux_Dispatcher` module/action | `VERIFIED` | API routes + SPA history routing. 112 named API endpoints. |
+| Authentication | `Flux_LoginServer::isAuth()` | `VERIFIED` | Session cookie auth in the web middleware group (D11); rAthena credential compatibility (D1). Registration, confirmation, password reset, password change and e-mail change are all built and tested. |
+| Authorization | `access.php` 139 action keys + 46 features | `VERIFIED` | Permission registry with 143 route and 48 ability entries, deny-by-default (D3). Gates registered for every ability. Two abilities were declared and enforced nowhere — `SeeUnknownItems` and `ViewGuild` — which is what pointed at the dropped character and guild data. |
 | Database connections | 4 handles per server group | `VERIFIED` | Runtime registration (D5), plus co-location detection for the login/char join. |
 | Application schema | 25 `cp_*` tables, 44 SQL files | `VERIFIED` | `panel:install-schema` (D4). 196 columns compared against the legacy end state; 11 benign type differences recorded in the compatibility report. |
+| Game reference data | 26 vocabulary files under `config/` | `VERIFIED` | `config/rathena_reference.php`: 23 vocabularies, 833 entries. Ten were missing and were found by reconciling the legacy's files one by one rather than by name — monster races, sizes, elements and AI, item subtypes, the random option names, the pick and feeding log codes, the sign-in outcomes, and the equip location combinations. Their absence was visible in the product: a monster's race rendered as a number, a pick log read `M` where it meant Monster, a sign-in outcome read `2`, a two-handed sword listed "Right Hand, Left Hand", and the random options this port had just added showed bare ids. Races, sizes and elements are keyed by both the number and the word, because rAthena stores them each way depending on the table. |
 | Configuration | 361 options in one array | `IMPLEMENTING` | Split by audience (D12). The options the built features read are ported; database-backed admin-editable settings are not built. |
 | Themes | PHP template inheritance, 3 themes | `VERIFIED` | Design tokens plus file-resolution overrides for pages, layouts and components, selected by APP_THEME (D7). Two themes ship. Covered by 28 tests, including that the API is byte-identical whichever theme is active and that no theme file fetches data. |
 | Add-ons | `addons/` loader, 1 example | `NOT_STARTED` | Laravel packages (D8). |
@@ -398,5 +399,5 @@ is trusted again.
 | Queues/scheduling | Inline in `preprocess` on every request | `VERIFIED` | Three scheduled commands: status measurement, unconfirmed-account pruning, and the donation hold queue. None of the three is reachable over HTTP, which two of them were. |
 | Server status | `fsockopen` per request | `VERIFIED` | Cached probe behind a contract, measured on a schedule and broadcast. |
 | Pagination/sorting | `Flux_Paginator`, allow-listed columns, direction from request | `VERIFIED` | `ListQuery`: an allow-list per endpoint mapping public names onto columns, a capped `per_page`, and nulls last on an ascending sort as the legacy did. In use by every listing. Not a security fix — the legacy allow-list was always hardcoded by the calling module. |
-| Automated tests | None in repository | `IMPLEMENTING` | 678 PHPUnit tests, 2,348 assertions, across 44 files. Integration tests run against a real MariaDB schema. **No frontend tests exist**, which is the largest gap in the project. |
+| Automated tests | None in repository | `IMPLEMENTING` | 779 PHPUnit tests, 2,693 assertions, across 47 files. Integration tests run against a real MariaDB schema. **No frontend tests exist**, which is the largest gap in the project and matters most now that the interface is the next thing to change. |
 

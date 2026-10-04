@@ -174,11 +174,45 @@ final class LogBrowserController
                     ? null
                     : (int) $value,
                 'message' => $this->cleanMessage($value),
+                /*
+                 * A column whose stored value is a code: the single letters
+                 * rAthena writes into its pick and feeding logs, and the
+                 * numeric outcome in the panel's own sign-in log. Both the
+                 * code and its label are reported -- the label is what an
+                 * operator reads, and the code is what they will find if they
+                 * go to the table themselves.
+                 */
+                'vocabulary' => $this->decode($value, (string) ($meta['vocabulary'] ?? '')),
                 default => $value === null ? null : (string) $value,
             };
         }
 
         return $shaped;
+    }
+
+    /**
+     * A stored code and what it means.
+     *
+     * An unknown code keeps its value and gets no label, because these
+     * vocabularies grow with the emulator: a log row written by a newer
+     * rAthena than this table knows about should still be readable.
+     *
+     * @return array{code: string, label: ?string}|null
+     */
+    private function decode(mixed $value, string $vocabulary): ?array
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $map = (array) config("rathena_reference.{$vocabulary}", []);
+        $code = (string) $value;
+        $label = $map[$code] ?? ($map[(int) $code] ?? null);
+
+        return [
+            'code' => $code,
+            'label' => is_string($label) ? $label : null,
+        ];
     }
 
     /**
