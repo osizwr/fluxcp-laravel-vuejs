@@ -437,6 +437,51 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Discord notifications
+    |--------------------------------------------------------------------------
+    |
+    | Operator notifications to a Discord channel, ported from FluxCP's
+    | lib/functions/discordwebhook.php.
+    |
+    */
+
+    'discord' => [
+        'enabled' => (bool) env('PANEL_DISCORD_ENABLED', false),
+
+        /*
+         * https only, because the URL carries a token that authorises posting
+         * to the channel. Keep it in the environment, not in this file.
+         */
+        'webhook_url' => env('PANEL_DISCORD_WEBHOOK_URL', ''),
+
+        'timeout_seconds' => (int) env('PANEL_DISCORD_TIMEOUT', 5),
+
+        /*
+         * Off by default, as with the mail queue and for the same reason: a
+         * queued job on a server with no `queue:work` running is a job that
+         * never happens. Turn it on once a worker is running and the
+         * notification leaves the request entirely.
+         */
+        'queue' => (bool) env('PANEL_QUEUE_DISCORD', false),
+
+        'events' => [
+            'registration' => (bool) env('PANEL_DISCORD_ON_REGISTER', true),
+            'ticket' => (bool) env('PANEL_DISCORD_ON_TICKET', true),
+            'web_command' => (bool) env('PANEL_DISCORD_ON_WEB_COMMAND', true),
+            'broadcast' => (bool) env('PANEL_DISCORD_ON_BROADCAST', true),
+
+            /*
+             * Off by default, unlike the legacy, which sent the exception
+             * message to the channel. An exception message is where a database
+             * credential or a file path ends up, and a Discord channel is read
+             * by more people than a log file is. Turn it on knowing that.
+             */
+            'exception' => (bool) env('PANEL_DISCORD_ON_EXCEPTION', false),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | News
     |--------------------------------------------------------------------------
     */

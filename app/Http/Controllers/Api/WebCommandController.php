@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Account;
 use App\Support\Http\ListQuery;
+use App\Services\Notifications\DiscordWebhook;
 use App\Support\Rathena\ServerRegistry;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\ConnectionResolverInterface;
@@ -47,6 +48,7 @@ final class WebCommandController
     public function __construct(
         private readonly ConnectionResolverInterface $connections,
         private readonly ServerRegistry $servers,
+        private readonly DiscordWebhook $discord,
     ) {}
 
     /**
@@ -124,6 +126,12 @@ final class WebCommandController
             'done' => 0,
             'timestamp' => now(),
         ]);
+
+        $this->discord->notify('web_command', sprintf(
+            'Web command queued by %s: %s',
+            $account->userid,
+            $command,
+        ));
 
         return response()->json([
             'message' => 'The command has been queued. It runs the next time the server picks it up.',

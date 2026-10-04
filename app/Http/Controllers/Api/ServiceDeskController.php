@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Models\Account;
+use App\Services\Notifications\DiscordWebhook;
 use App\Services\Support\ServiceDesk;
 use App\Support\Http\ListQuery;
 use Illuminate\Http\JsonResponse;
@@ -34,7 +35,10 @@ use Illuminate\Validation\ValidationException;
  */
 final class ServiceDeskController
 {
-    public function __construct(private readonly ServiceDesk $desk) {}
+    public function __construct(
+        private readonly ServiceDesk $desk,
+        private readonly DiscordWebhook $discord,
+    ) {}
 
     /*
     |--------------------------------------------------------------------------
@@ -96,6 +100,16 @@ final class ServiceDeskController
         }
 
         $ticketId = $this->desk->open($account, $validated, (string) $request->ip());
+
+        /*
+         * The subject is somebody's free text, which is why no notification is
+         * allowed to mention anybody -- see DiscordWebhook.
+         */
+        $this->discord->notify('ticket', sprintf(
+            'New ticket #%d: %s',
+            $ticketId,
+            $validated['subject'],
+        ));
 
         return response()->json([
             'message' => 'Your ticket has been opened.',

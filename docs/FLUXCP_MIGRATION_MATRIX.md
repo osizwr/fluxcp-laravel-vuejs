@@ -35,6 +35,17 @@ the migration being finished — see the cross-cutting table below and
 [FINAL_MIGRATION_AUDIT.md](FINAL_MIGRATION_AUDIT.md) §3, which list what is
 still outstanding outside the module actions.
 
+**A row marked `VERIFIED` has been wrong before.** Three were found by
+measuring rather than re-reading this table: `character/view` and `guild/view`
+returned four and three data sets respectively that the port did not, and
+`item/iteminfo` was described as the filter-vocabulary endpoint when it is the
+itemInfo.lua importer, which was not ported at all. What found them was
+checking every table the legacy reads against whether any code here touches it
+— `cp_itemdesc`, `friends`, `guild_expulsion` and `guild_storage` came back
+with no readers — and the same sweep over the legacy's 199 configuration
+options. Both sweeps are cheap to repeat and worth repeating before this table
+is trusted again.
+
 ## Module actions
 
 ### `account`
@@ -363,7 +374,7 @@ still outstanding outside the module actions.
 | `Flux_LogFile` | Plain-text file logger | Laravel logging channels | `INTENTIONALLY_REPLACED` |
 | `Flux_Addon` | Add-on discovery and config merge | Laravel packages (D8) | `INTENTIONALLY_REPLACED` |
 | `Flux_Error and 6 error subclasses` | Exception hierarchy | Typed exceptions, enums and Laravel's handler | `INTENTIONALLY_REPLACED` |
-| `lib/functions/discordwebhook` | Discord webhook notifications | Notification channel | `NOT_STARTED` |
+| `lib/functions/discordwebhook` | Discord webhook notifications | `DiscordWebhook` service | `VERIFIED` | All five events the legacy announced: a registration, a new ticket, a web command, a mass mailing and an unhandled exception. The legacy was a bare cURL POST with no timeout, run inline and its result discarded, built by string concatenation from whatever triggered it — so a slow Discord made registration slow, a broken webhook was indistinguishable from a quiet channel, and an account named `@everyone` pinged the whole server on registration. Here: a timeout, a logged failure that never records the URL (it carries its own token), `allowed_mentions` set to parse nothing, https only, and optional queueing. The exception event is off by default, unlike the legacy — an exception message is where a credential ends up. 17 tests. |
 | `lib/functions/getReposVersion` | Upstream version check | Dropped (phones home) | `INTENTIONALLY_REPLACED` |
 | `lib/functions/imagecreatefrombmpstring` | BMP decoding for emblems | PHP's own `imagecreatefrombmp` (7.2+) | `INTENTIONALLY_REPLACED` |
 | `lib/phpmailer (49 files)` | Bundled PHPMailer 5.x | Laravel Mail (Symfony Mailer) | `INTENTIONALLY_REPLACED` |

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Mail\BroadcastMessage;
 use App\Models\Account;
 use App\Services\Content\ContentRenderer;
+use App\Services\Notifications\DiscordWebhook;
 use Illuminate\Contracts\Mail\Mailer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,6 +39,7 @@ final class BroadcastMailController
     public function __construct(
         private readonly Mailer $mailer,
         private readonly ContentRenderer $renderer,
+        private readonly DiscordWebhook $discord,
     ) {}
 
     /**
@@ -119,6 +121,13 @@ final class BroadcastMailController
                 ]);
             }
         }
+
+        $this->discord->notify('broadcast', sprintf(
+            'Mass e-mail sent by %s to %d recipients: %s',
+            $actor->userid,
+            $sent,
+            $validated['subject'],
+        ));
 
         Log::info('A broadcast was sent.', [
             'by' => $actor->userid,

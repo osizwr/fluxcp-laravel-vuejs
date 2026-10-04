@@ -10,6 +10,7 @@ use App\Http\Requests\Account\RegisterRequest;
 use App\Http\Requests\Account\ResendConfirmationRequest;
 use App\Http\Resources\AccountResource;
 use App\Services\Mail\AccountMailer;
+use App\Services\Notifications\DiscordWebhook;
 use App\Services\Rathena\AccountConfirmationService;
 use App\Support\Rathena\ServerRegistry;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +29,7 @@ final class RegistrationController
         private readonly AccountConfirmationService $confirmations,
         private readonly AccountMailer $mailer,
         private readonly ServerRegistry $servers,
+        private readonly DiscordWebhook $discord,
     ) {}
 
     /**
@@ -59,6 +61,17 @@ final class RegistrationController
             birthdate: (string) $request->input('birthdate'),
             registeredFromIp: (string) $request->ip(),
         );
+
+        /*
+         * Announced whether or not the account still needs confirming, which
+         * is what the legacy did: it said "Account Created." or "Awaiting
+         * confirmation." in the same message.
+         */
+        $this->discord->notify('registration', sprintf(
+            'New registration: %s (%s)',
+            $outcome->account->userid,
+            $outcome->isUsable() ? 'active' : 'awaiting confirmation',
+        ));
 
         if ($outcome->isUsable()) {
             /*
