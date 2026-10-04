@@ -437,6 +437,39 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | News
+    |--------------------------------------------------------------------------
+    */
+
+    'news' => [
+        /*
+         * Where news comes from. FluxCP's CMSNewsType, as a word rather than
+         * as 1 or 2.
+         *
+         *   'panel' -- the news table, edited here.
+         *   'feed'  -- an external RSS or Atom feed, so a server whose
+         *              announcements live on its forum does not write them
+         *              twice.
+         */
+        'source' => env('PANEL_NEWS_SOURCE', 'panel'),
+
+        // FluxCP's CMSNewsRSS. Only http and https are accepted.
+        'feed_url' => env('PANEL_NEWS_FEED_URL', ''),
+
+        // FluxCP's CMSNewsLimit, for the feed. Panel news is paginated.
+        'feed_limit' => (int) env('PANEL_NEWS_FEED_LIMIT', 4),
+
+        /*
+         * The legacy read the feed on every request with no cache and no
+         * timeout, so a forum that stopped answering took the front page with
+         * it.
+         */
+        'feed_cache_seconds' => (int) env('PANEL_NEWS_FEED_CACHE_SECONDS', 900),
+        'feed_timeout_seconds' => (int) env('PANEL_NEWS_FEED_TIMEOUT', 5),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Support desk
     |--------------------------------------------------------------------------
     */

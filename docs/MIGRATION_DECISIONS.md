@@ -895,3 +895,79 @@ move them to another, and the trail of who paid is broken.
 `PANEL_CREDIT_TRANSFER_MAX` is a brake, and `enabled` turns the feature off
 entirely. Transfers to your own account are refused, which the legacy did not
 check.
+
+## D24 — Game artwork is not fetched from third-party sites
+
+FluxCP's `DivinePrideIntegration` downloaded item and monster images from
+divine-pride.net when a local copy was missing, and `ItemIconNameFormat`,
+`ItemImageNameFormat`, `JobImageNameFormat` and `MonsterImageNameFormat` named
+the local files it looked for first.
+
+**None of this is ported, and the omission is the decision rather than an
+oversight.** Those images are Ragnarok Online client artwork. This project has
+no licence to redistribute them, and a panel that fetches them on demand
+redistributes them from whatever server it is installed on — it is the same act
+as shipping them, performed later and by the operator.
+
+What is ported is the part that is the operator's own: an item image an
+operator uploads for their credit shop is served from the configured disk, as
+`panel.item_shop.image_disk`. That is their file and their decision.
+
+An operator who holds the rights to the client artwork can serve it from that
+same disk. The panel does not go and get it for them, and there is no
+configuration flag that makes it.
+
+**Guild emblems are the one image the panel does decode**, because an emblem is
+not game artwork: it is a bitmap a player uploaded to a server the operator
+runs, stored in that server's own `guild.emblem_data`. FluxCP's
+`EmblemUseWebservice`, `ForceEmptyEmblem` and `MissingEmblemBMP` are not
+ported with it. The first fetched emblems from a remote service rather than
+decoding the column, which is a network call on a page render for data already
+in the database; the other two substituted a placeholder image. A guild with no
+emblem is a 404 here, so the client decides whether to draw a fallback — a
+placeholder served with a 200 cannot be told from a real emblem by a cache.
+
+## D25 — Presentation stays out of the API
+
+Several FluxCP options set colours and markup from configuration:
+`StaffReplyColour`, `FontPendingColour`, `FontResolvedColour`,
+`FontClosedColour`, `AdminMenuNewStyle`, and `ShowRenderDetails`.
+
+**These are not ported as configuration.** A ticket's status reaches the client
+as `"Resolved"`, not as a colour, and what colour a theme paints it is the
+theme's business. Porting them would put presentation in the API and give an
+operator a second, worse place to style the panel from — one that no theme
+could override, which is the opposite of what the theme system is for.
+
+`ShowCopyright` is not ported either: the LGPL-3.0 attribution stays. It is not
+a display preference.
+
+## D26 — A search with one result does not redirect
+
+`SingleMatchRedirect`, `SingleMatchRedirectItem` and `SingleMatchRedirectMobs`
+sent a search with exactly one result straight to that result's page.
+
+**Not ported as server behaviour.** The endpoints return a list of one, because
+that is what was asked for, and a 302 from a JSON endpoint to an HTML page is
+not something a client can sensibly follow. The behaviour itself is worth
+having and belongs in the client, where it is a navigation decision made with
+the response in hand.
+
+Recorded here so it is a decision about where the behaviour lives rather than
+a feature that went missing.
+
+## D27 — A lapsed ban is interpreted, not tidied
+
+FluxCP's `AutoRemoveTempBans` ran `UPDATE login SET unban_time = 0 WHERE
+unban_time <= UNIX_TIMESTAMP()` whenever an administrator opened the account
+search.
+
+**Not ported.** `Account::isTemporarilyBanned()` compares the timestamp against
+the current time, so a lapsed ban reports false without anything being written.
+The legacy put a write on a read path and made whether a ban had been cleared
+depend on whether somebody had happened to visit a page; rAthena compares the
+timestamp against the current time as well, so a stale value is not acted on by
+the emulator either.
+
+An explicit unban still clears the column, because that is a deliberate act
+with an audit row behind it.

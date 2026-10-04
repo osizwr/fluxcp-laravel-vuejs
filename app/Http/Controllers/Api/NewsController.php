@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Resources\NewsArticleResource;
 use App\Models\NewsArticle;
+use App\Services\Content\NewsFeed;
 use App\Support\Http\ListQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,16 +31,35 @@ use Illuminate\Validation\ValidationException;
  */
 final class NewsController
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function __construct(private readonly NewsFeed $feed) {}
+
+    public function index(Request $request): AnonymousResourceCollection|JsonResponse
     {
         $perPage = min(
             $request->integer('per_page', (int) config('panel.pagination.per_page', 20)),
             (int) config('panel.pagination.max_per_page', 100),
         );
 
+        /*
+         * An operator may point the panel at their forum's feed instead of
+         * writing news here (FluxCP's CMSNewsType). The items come back in the
+         * same shape, so a client renders either without knowing which.
+         *
+         * Not paginated: a feed returns what it returns, and asking a third
+         * party for page four of their announcements is not a thing feeds do.
+         */
+        if ($this->feed->isConfigured()) {
+            $items = $this->feed->items($perPage);
+
+            return response()->json([
+                'data' => $items,
+                'meta' => ['source' => 'feed', 'total' => count($items)],
+            ]);
+        }
+
         return NewsArticleResource::collection(
             NewsArticle::query()->newestFirst()->paginate($perPage)->withQueryString(),
-        );
+        )->additional(['meta' => ['source' => 'panel']]);
     }
 
     public function show(int $article): NewsArticleResource

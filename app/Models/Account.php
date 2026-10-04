@@ -263,8 +263,16 @@ final class Account extends Model implements AuthenticatableContract, Authorizab
      * Whether a temporary ban is currently in force.
      *
      * `unban_time` is a Unix timestamp, and 0 means "not banned". A value in
-     * the past means the ban has lapsed but nothing has cleared it yet, which
-     * the authentication flow does on the account's next sign-in attempt.
+     * the past means the ban has lapsed, and nothing clears it: the column is
+     * interpreted rather than tidied, so a lapsed ban reports false here
+     * without a write.
+     *
+     * FluxCP ran `UPDATE login SET unban_time = 0 WHERE unban_time <=
+     * UNIX_TIMESTAMP()` whenever an administrator opened the account search
+     * (AutoRemoveTempBans), which put a write on a read path and made whether
+     * a ban had been cleared depend on whether somebody had happened to visit
+     * a page. rAthena compares the timestamp against the current time too, so
+     * a stale value is not acted on by the emulator either.
      */
     public function isTemporarilyBanned(?CarbonImmutable $at = null): bool
     {
