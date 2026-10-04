@@ -1,0 +1,461 @@
+/*
+|--------------------------------------------------------------------------
+| Yatagarasu — decorative language
+|--------------------------------------------------------------------------
+|
+| The vocabulary this theme's sections are assembled from. Everything here is
+| a class a block applies, rather than a rule that reaches into core markup.
+|
+| The rule the whole file follows: gold is structural, not decorative. It
+| appears as a hairline, a bracket or a single mark. There is no gold fill
+| larger than a button anywhere in this stylesheet, because the moment gold
+| becomes a surface it stops meaning "here" and starts meaning "fantasy".
+|
+*/
+
+/* -------------------------------------------------------------------------- */
+/* Section atmosphere                                                         */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Sections do not sit on flat black. Each carries a wash whose hue says what
+ * kind of place it is -- cool for the world, violet for the classes, crimson
+ * for the legend -- at an opacity low enough that naming the colour is hard.
+ *
+ * The wash is a pseudo-element rather than a background so that a section can
+ * still carry artwork of its own underneath it.
+ */
+.yata-air {
+    position: relative;
+    isolation: isolate;
+}
+
+.yata-air::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+        140ch 80ch at 50% 0%,
+        color-mix(in oklab, var(--yata-air-cool) 85%, transparent),
+        transparent 70%
+    );
+}
+
+.yata-air--violet::before {
+    background: radial-gradient(
+        120ch 70ch at 70% 10%,
+        color-mix(in oklab, var(--yata-air-violet) 90%, transparent),
+        transparent 66%
+    );
+}
+
+.yata-air--crimson::before {
+    background: radial-gradient(
+        130ch 80ch at 30% 100%,
+        color-mix(in oklab, var(--yata-air-crimson) 92%, transparent),
+        transparent 68%
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Rules and separators                                                       */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * A hairline that fades out at both ends rather than stopping. A rule with
+ * hard ends reads as a border; one that fades reads as an inlay.
+ */
+.yata-rule {
+    height: 1px;
+    border: 0;
+    background: linear-gradient(90deg, transparent, var(--yata-rule) 18%, var(--yata-rule) 82%, transparent);
+}
+
+/*
+ * The same, with a diamond at its centre. Used under a section title, where
+ * the mark gives the eye somewhere to stop.
+ */
+.yata-rule-diamond {
+    position: relative;
+    height: 1px;
+    border: 0;
+    background: linear-gradient(90deg, transparent, var(--yata-rule) 30%, var(--yata-rule) 70%, transparent);
+}
+
+.yata-rule-diamond::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    translate: -50% -50%;
+    rotate: 45deg;
+    background: var(--color-accent-500);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Plates                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The theme's panel: a plate with its corners bracketed in gold rather than
+ * rounded.
+ *
+ * Two pseudo-elements, each drawing two edges of a corner, mirrored by
+ * `scale`. That is the whole trick -- four separate corner elements would be
+ * four more nodes per panel and these sections have a lot of panels.
+ */
+.yata-plate {
+    position: relative;
+    background-color: var(--surface-raised);
+    background-image: linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--yata-blue) 40%, transparent) 0%,
+        transparent 52%
+    );
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-panel);
+}
+
+.yata-plate::before,
+.yata-plate::after {
+    content: '';
+    position: absolute;
+    width: var(--yata-bracket);
+    height: var(--yata-bracket);
+    border-color: var(--yata-rule-strong);
+    border-style: solid;
+    pointer-events: none;
+}
+
+.yata-plate::before {
+    top: -1px;
+    left: -1px;
+    border-width: 1px 0 0 1px;
+}
+
+.yata-plate::after {
+    right: -1px;
+    bottom: -1px;
+    border-width: 0 1px 1px 0;
+}
+
+/* A plate that reacts to the pointer. The lift is a border, not a shadow. */
+.yata-plate--interactive {
+    transition:
+        border-color 200ms var(--yata-ease),
+        background-color 200ms var(--yata-ease),
+        translate 200ms var(--yata-ease);
+}
+
+.yata-plate--interactive:hover {
+    border-color: color-mix(in oklab, var(--yata-gold) 38%, var(--border-subtle));
+    background-color: var(--surface-hover);
+    translate: 0 -2px;
+}
+
+.yata-plate--interactive:hover::before,
+.yata-plate--interactive:hover::after {
+    border-color: var(--color-accent-400);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Eyebrow and section titles                                                 */
+/* -------------------------------------------------------------------------- */
+
+/* The small tracked label above a section title. */
+.yata-eyebrow {
+    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--color-accent-500);
+}
+
+.yata-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--text-primary);
+    text-wrap: balance;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Buttons                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * This theme's own controls, used inside its blocks. Core pages keep the
+ * core button; these exist because the art direction calls for a plate with
+ * the legend cut into it, which is not a variant the core button has.
+ */
+.yata-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8125rem 1.75rem;
+    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    border-radius: var(--radius-panel);
+    cursor: pointer;
+    transition:
+        background-color 180ms var(--yata-ease),
+        border-color 180ms var(--yata-ease),
+        color 180ms var(--yata-ease);
+}
+
+/* Gold plate, dark legend. */
+.yata-btn--primary {
+    background-color: var(--color-accent-500);
+    color: var(--yata-void);
+    border-color: var(--color-accent-400);
+}
+
+.yata-btn--primary:hover {
+    background-color: var(--color-accent-300);
+    border-color: var(--color-accent-300);
+}
+
+/* Cut into the dark: a gold edge and nothing else. */
+.yata-btn--secondary {
+    background-color: color-mix(in oklab, var(--yata-void) 55%, transparent);
+    color: var(--yata-ivory);
+    border-color: var(--yata-rule-strong);
+}
+
+.yata-btn--secondary:hover {
+    background-color: color-mix(in oklab, var(--yata-gold) 10%, transparent);
+    border-color: var(--color-accent-400);
+    color: var(--color-accent-300);
+}
+
+/* A link that behaves like a control. */
+.yata-btn--ghost {
+    padding-inline: 0;
+    background: none;
+    color: var(--color-accent-400);
+    border-color: transparent;
+}
+
+.yata-btn--ghost:hover {
+    color: var(--color-accent-300);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Art placeholders                                                           */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Where artwork will go but does not exist yet.
+ *
+ * Deliberately legible rather than invisible: it names the file it is waiting
+ * for, so that whoever supplies the art knows where it goes without reading
+ * the source. It is not a grey box -- it carries the same night wash as the
+ * rest of the page, so a page full of placeholders still reads as designed
+ * rather than as broken.
+ *
+ * No game artwork is shipped with this theme. See resources/themes/README.md.
+ */
+.yata-art {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: var(--yata-navy);
+    background-image:
+        radial-gradient(
+            80ch 50ch at 50% 0%,
+            color-mix(in oklab, var(--yata-blue) 80%, transparent),
+            transparent 70%
+        ),
+        repeating-linear-gradient(
+            -45deg,
+            transparent 0 12px,
+            color-mix(in oklab, var(--yata-gold) 3%, transparent) 12px 13px
+        );
+    border: 1px solid var(--border-subtle);
+}
+
+.yata-art__label {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--yata-gold) 72%, transparent);
+    border: 1px solid var(--yata-rule);
+    border-radius: var(--radius-panel);
+    text-align: center;
+}
+
+/*
+ * Full-bleed art carries the page's own words, so its placeholder label goes
+ * into a corner rather than landing in the middle of a headline.
+ */
+.yata-art--corner {
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 1.25rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ranking marks                                                              */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * First, second and third are gold, silver and bronze; everything below is
+ * ordinary. Three metals and then nothing is what makes the top three read as
+ * a podium rather than as the top of a list.
+ */
+.yata-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    font-family: var(--font-display);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+    rotate: 45deg;
+}
+
+.yata-rank > * {
+    rotate: -45deg;
+}
+
+.yata-rank--1 {
+    color: var(--yata-gold-bright);
+    border-color: var(--color-accent-500);
+    background-color: color-mix(in oklab, var(--yata-gold) 12%, transparent);
+}
+
+.yata-rank--2 {
+    color: #cdd3dc;
+    border-color: #8b94a3;
+}
+
+.yata-rank--3 {
+    color: #c89a72;
+    border-color: #8a6446;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Meters                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/* The population bars. A track cut into the plate, a gold fill on top. */
+.yata-meter {
+    height: 6px;
+    overflow: hidden;
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border-subtle);
+    border-radius: 1px;
+}
+
+.yata-meter__fill {
+    height: 100%;
+    background-image: linear-gradient(90deg, var(--color-accent-700), var(--color-accent-400));
+    transition: width var(--yata-reveal) var(--yata-ease);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Motion                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * One reveal, used everywhere: a short rise and a fade. Cinematic means slow
+ * and single-direction, not spring.
+ */
+@keyframes yata-rise {
+    from {
+        opacity: 0;
+        translate: 0 14px;
+    }
+
+    to {
+        opacity: 1;
+        translate: 0 0;
+    }
+}
+
+.yata-rise {
+    animation: yata-rise var(--yata-reveal) var(--yata-ease) both;
+}
+
+/* Staggered children, for a row of plates arriving in sequence. */
+.yata-rise-2 {
+    animation-delay: 90ms;
+}
+
+.yata-rise-3 {
+    animation-delay: 180ms;
+}
+
+.yata-rise-4 {
+    animation-delay: 270ms;
+}
+
+/*
+ * The drifting motes in the hero. Slow enough to be noticed only on the second
+ * look, which is the difference between atmosphere and decoration.
+ */
+@keyframes yata-drift {
+    from {
+        translate: 0 0;
+        opacity: 0;
+    }
+
+    12% {
+        opacity: 0.55;
+    }
+
+    88% {
+        opacity: 0.4;
+    }
+
+    to {
+        translate: 0 -120px;
+        opacity: 0;
+    }
+}
+
+.yata-mote {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background-color: var(--color-accent-300);
+    animation: yata-drift 14s linear infinite;
+}
+
+/*
+ * Everything above is decoration, so all of it is dropped rather than reduced
+ * when the visitor has asked for less motion. The page is designed to work
+ * with none of it.
+ */
+@media (prefers-reduced-motion: reduce) {
+    .yata-rise,
+    .yata-mote {
+        animation: none;
+    }
+
+    .yata-plate--interactive:hover {
+        translate: none;
+    }
+
+    .yata-meter__fill {
+        transition: none;
+    }
+}

@@ -9,6 +9,7 @@ the practical checklist and the licence notes.
 resources/themes/
 ├── fantasy/     the default — dark, warm, antique gold; 8 blocks, composed home page
 ├── slate/       a cool, light-first skin; palette only, core pages throughout
+├── yatagarasu/  a dark Japanese fantasy skin; 13 blocks, cinematic composed home page
 └── README.md
 ```
 
@@ -156,6 +157,35 @@ a mark that adapts to whatever the server is called.
 ### slate
 
 No third-party assets.
+
+### yatagarasu
+
+| Asset | Source | Licence |
+| --- | --- | --- |
+| Cinzel (display font) | Google Fonts | SIL Open Font License 1.1 |
+| Manrope (interface font) | Google Fonts | SIL Open Font License 1.1 |
+
+Everything else is original. The three-legged crow is generated SVG that
+inherits `currentColor`, and the ornaments, washes and textures are CSS
+gradients and pseudo-elements, so the theme ships no binary assets.
+
+**It ships no game artwork, and must not.** Every image in the design is a
+named slot that falls back to a labelled placeholder, listed below. Supplying
+them is dropping files into `public/images/` — the slot requests its path and
+uses it the moment it exists, with no code change. Whoever supplies the art is
+responsible for holding the rights to it.
+
+```
+public/images/hero/yatagarasu-world.webp    the hero's key art
+public/images/world/yatagarasu-gate.webp    the banner under the hero
+public/images/world/yatagarasu-lore.webp    the legend section
+public/images/world/yatagarasu-dawn.webp    the closing call to action
+public/images/news/latest.webp              the lead dispatch
+public/images/classes/<job-name>.webp       one per class, named after the job
+                                            the server reports, lower-cased and
+                                            hyphenated: `High Priest` resolves
+                                            to `high-priest.webp`
+```
 
 ---
 

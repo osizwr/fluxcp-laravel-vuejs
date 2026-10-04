@@ -1,0 +1,30 @@
+/*
+|--------------------------------------------------------------------------
+| Yatagarasu — entrypoint
+|--------------------------------------------------------------------------
+|
+| Vite builds this file as its own entrypoint, and Blade links it for whichever
+| theme APP_THEME names. The parts are split by what they change:
+|
+|   variables.css   the palette and the theme's own tokens
+|   components.css  how the application's own components look
+|   blocks.css      the decorative language this theme's sections are built from
+|
+| Fonts are loaded here rather than from the page shell so that a theme owns its
+| own typography. Both are licensed under the SIL Open Font License 1.1 and are
+| recorded in resources/themes/README.md.
+|
+|   Cinzel    display -- the game's name, section titles, ranks
+|   Manrope   interface -- navigation, body, figures, controls
+|
+| `display=swap` on purpose: the first paint showing fallback text is better
+| than a hero with no words in it, and the layout shift is small because the
+| fallback stack is metric-adjacent.
+|
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap');
+
+@import './variables.css';
+@import './components.css';
+@import './blocks.css';

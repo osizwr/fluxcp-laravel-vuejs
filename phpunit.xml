@@ -19,6 +19,13 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!--
+            Pinned so the suite does not depend on which theme the developer
+            happens to have selected locally. Several assertions name the
+            theme they expect, and without this they pass or fail according to
+            a line in .env rather than according to the code.
+        -->
+        <env name="APP_THEME" value="fantasy"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

@@ -29,12 +29,13 @@ APP_THEME=fantasy
 That is the whole operation. The theme is resolved per request, so the change
 takes effect on the next page load.
 
-Two themes ship:
+Three themes ship:
 
 | Slug | What it is |
 | --- | --- |
 | `fantasy` | The default. Dark, warm, antique gold — an adventurer's guild ledger. |
 | `slate` | A cool, light-first skin that ships **nothing but a palette**, as a worked example. |
+| `yatagarasu` | Dark Japanese fantasy, art-directed for a cinematic front page. The worked example at the other end of the scale: thirteen blocks, two of them its own, and a composed home page of ten sections. |
 
 ```bash
 php artisan theme:list     # what is installed, and which is active
@@ -104,6 +105,18 @@ resources/themes/fantasy/
 
 Only `theme.json` is required. A theme consisting of nothing but `theme.json`
 and `styles/theme.css` is valid and useful — see `slate`.
+
+`yatagarasu` is the opposite extreme to `slate`, and worth reading if you are
+building something ambitious: it replaces all eleven core blocks, adds two of
+its own (`promo-banner` and `lore-section` — a theme's blocks resolve by name
+whether or not core has one), and composes a ten-section front page. It still
+contains no data fetching, because every section takes its figures from the
+same composables in `resources/js/blocks/data.ts` that every other theme uses.
+
+It also ships no artwork. Each image is a slot that requests its path and
+falls back to a labelled placeholder, so supplying the art is dropping files
+into `public/images/` rather than editing the theme. The expected paths are
+listed in `resources/themes/README.md`.
 
 The `fantasy` theme overrides eight blocks and inherits three from core
 (`statistics`, `class-showcase`, `feature-grid`), which is the fallback system
