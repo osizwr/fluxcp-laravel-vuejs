@@ -190,6 +190,14 @@ final class RathenaTestSchema
             $table->index('account_id');
         });
 
+        /* Mirrors PanelSchema: the typed confirmation code, hashed. */
+        $schema->create('cp_registration_otp', function (Blueprint $table): void {
+            $table->unsignedInteger('account_id')->primary();
+            $table->string('code', 32);
+            $table->dateTime('expires_at');
+            $table->unsignedTinyInteger('attempts')->default(0);
+        });
+
         /*
          * The panel's IP ban history, paired with rAthena's own `ipbanlist`.
          * Append-only: a lift is a new row, not a deletion.

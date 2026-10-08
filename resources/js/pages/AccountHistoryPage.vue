@@ -6,6 +6,7 @@ import DataTable, { type Column } from '../components/ui/DataTable.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import StatusPill from '../components/ui/StatusPill.vue'
 import { api } from '../services/api'
+import { useTranslation } from '../i18n'
 
 /**
  * What has happened to this account.
@@ -27,60 +28,62 @@ interface Tab {
     columns: Column[]
 }
 
+const { t } = useTranslation()
+
 const TABS: Tab[] = [
     {
         slug: 'panel-logins',
-        label: 'Website sign-ins',
+        label: t('history.websiteSignIns'),
         endpoint: 'panel-logins',
-        description: 'Attempts to sign in to this website, successful or not.',
+        description: t('history.websiteSignInsBody'),
         columns: [
-            { key: 'at', label: 'When', sort: 'date' },
-            { key: 'ip', label: 'Address', sort: 'ip' },
-            { key: 'outcome', label: 'Outcome', sort: 'outcome' },
+            { key: 'at', label: t('history.when'), sort: 'date' },
+            { key: 'ip', label: t('history.address'), sort: 'ip' },
+            { key: 'outcome', label: t('history.outcome'), sort: 'outcome' },
         ],
     },
     {
         slug: 'game-logins',
-        label: 'Game sign-ins',
+        label: t('history.gameSignIns'),
         endpoint: 'game-logins',
         description: "Sign-ins to the game, from the server's own log.",
         columns: [
-            { key: 'at', label: 'When', sort: 'date' },
-            { key: 'ip', label: 'Address', sort: 'ip' },
-            { key: 'outcome', label: 'Outcome', sort: 'outcome' },
+            { key: 'at', label: t('history.when'), sort: 'date' },
+            { key: 'ip', label: t('history.address'), sort: 'ip' },
+            { key: 'outcome', label: t('history.outcome'), sort: 'outcome' },
         ],
     },
     {
         slug: 'password-changes',
-        label: 'Password changes',
+        label: t('history.passwordChanges'),
         endpoint: 'password-changes',
-        description: 'Every time this password was changed.',
+        description: t('history.passwordChangesBody'),
         columns: [
-            { key: 'at', label: 'When', sort: 'date' },
-            { key: 'ip', label: 'Address', sort: 'ip' },
+            { key: 'at', label: t('history.when'), sort: 'date' },
+            { key: 'ip', label: t('history.address'), sort: 'ip' },
         ],
     },
     {
         slug: 'password-resets',
-        label: 'Password resets',
+        label: t('history.passwordResets'),
         endpoint: 'password-resets',
-        description: 'Reset links requested for this account.',
+        description: t('history.passwordResetsBody'),
         columns: [
-            { key: 'requested_at', label: 'Requested', sort: 'requested' },
-            { key: 'requested_from', label: 'Address' },
-            { key: 'completed', label: 'Used', sort: 'completed' },
+            { key: 'requested_at', label: t('history.requested'), sort: 'requested' },
+            { key: 'requested_from', label: t('history.address') },
+            { key: 'completed', label: t('history.used'), sort: 'completed' },
         ],
     },
     {
         slug: 'email-changes',
-        label: 'E-mail changes',
+        label: t('history.emailChanges'),
         endpoint: 'email-changes',
-        description: 'Changes to the address on this account.',
+        description: t('history.emailChangesBody'),
         columns: [
-            { key: 'requested_at', label: 'Requested', sort: 'requested' },
-            { key: 'from', label: 'From', secondary: true },
+            { key: 'requested_at', label: t('history.requested'), sort: 'requested' },
+            { key: 'from', label: t('history.from'), secondary: true },
             { key: 'to', label: 'To' },
-            { key: 'completed', label: 'Confirmed', sort: 'completed' },
+            { key: 'completed', label: t('history.confirmed'), sort: 'completed' },
         ],
     },
 ]
@@ -97,9 +100,7 @@ const tab = computed<Tab>(
 
 const page = computed(() => Math.max(1, Number(route.query.page ?? 1)))
 const sort = computed(() => (route.query.sort as string) ?? undefined)
-const direction = computed<'asc' | 'desc'>(() =>
-    route.query.direction === 'asc' ? 'asc' : 'desc',
-)
+const direction = computed<'asc' | 'desc'>(() => (route.query.direction === 'asc' ? 'asc' : 'desc'))
 
 async function load(): Promise<void> {
     loading.value = true
@@ -119,7 +120,7 @@ async function load(): Promise<void> {
         total.value = response.meta.total
         lastPage.value = response.meta.last_page
     } catch {
-        error.value = 'This history could not be loaded.'
+        error.value = t('history.error')
         rows.value = []
     } finally {
         loading.value = false
@@ -161,9 +162,9 @@ watch(
 
 <template>
     <div class="py-6">
-        <PageHeader title="Account history" :description="tab.description">
+        <PageHeader :title="t('history.title')" :description="tab.description">
             <template #actions>
-                <nav aria-label="History" class="flex flex-wrap gap-1">
+                <nav :aria-label="t('history.heading')" class="flex flex-wrap gap-1">
                     <AppButton
                         v-for="option in TABS"
                         :key="option.slug"
@@ -181,13 +182,13 @@ watch(
             class="mt-4"
             :columns="tab.columns"
             :rows="rows"
-            :row-key="(_row: Row, ) => JSON.stringify(_row)"
+            :row-key="(_row: Row) => JSON.stringify(_row)"
             :loading="loading"
             :error="error"
             :sort="sort ?? null"
             :direction="direction"
             :caption="tab.label"
-            empty-title="Nothing recorded yet"
+            empty-:title="t('history.empty')"
             empty-description="This part of your history is empty."
             @sort="sortBy"
         >
@@ -214,16 +215,19 @@ watch(
             </template>
         </DataTable>
 
-        <div v-if="!loading && !error && rows.length > 0" class="mt-4 flex items-center justify-between text-sm">
+        <div
+            v-if="!loading && !error && rows.length > 0"
+            class="mt-4 flex items-center justify-between text-sm"
+        >
             <span class="text-[var(--text-secondary)]">{{ total.toLocaleString() }} entries</span>
 
             <div class="flex items-center gap-2">
                 <AppButton size="sm" :disabled="page <= 1" @click="goToPage(page - 1)">
-                    Previous
+                    {{ t('common.previous') }}
                 </AppButton>
                 <span class="text-[var(--text-muted)]">Page {{ page }} of {{ lastPage }}</span>
                 <AppButton size="sm" :disabled="page >= lastPage" @click="goToPage(page + 1)">
-                    Next
+                    {{ t('common.next') }}
                 </AppButton>
             </div>
         </div>

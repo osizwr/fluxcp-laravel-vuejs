@@ -5,6 +5,7 @@ import type {
     ServerGroupStatus,
     ServerStatistics,
 } from '../types/api'
+import type { DownloadClient, InstallStep, RequirementGroup } from '../types/bootstrap'
 
 /**
  * The data contracts every block is built against.
@@ -210,6 +211,52 @@ export interface FeatureData {
 
 export interface FeatureProps {
     heading?: string
+}
+
+/* -------------------------------------------------------------------------- */
+/* Downloads                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Everything the three download blocks read.
+ *
+ * One contract rather than three, because all of it comes from the same
+ * operator-authored configuration and splitting it would mean three
+ * composables parsing the same payload. Each block takes the list it draws and
+ * ignores the rest.
+ *
+ * The shapes are the bootstrap's own rather than copies of them: this data
+ * never leaves the payload it arrived in, so a second declaration would only
+ * be somewhere for the two to drift apart.
+ *
+ * `state.empty` means the whole page has nothing -- no packages, no
+ * specifications, no steps -- which is the only case the page itself has to
+ * handle. A section with nothing in it simply does not render.
+ */
+export interface DownloadsData {
+    notice: string | null
+    clients: DownloadClient[]
+    requirements: RequirementGroup[]
+    steps: InstallStep[]
+    state: BlockState
+}
+
+export interface DownloadsProps {
+    heading?: string
+    description?: string
+    /**
+     * Whether the block draws its own container and card.
+     *
+     * True by default, which is what a block dropped onto a composed page
+     * needs: its own width, its own padding and its own panel, owing nothing
+     * to whatever is above it.
+     *
+     * A page that is already one card sets it false and the block renders
+     * bare into it. That is the difference between a page that is one white
+     * card and a page that is a stack of them, and it has to be the caller's
+     * decision -- the block cannot see what it was placed inside.
+     */
+    framed?: boolean
 }
 
 /* -------------------------------------------------------------------------- */

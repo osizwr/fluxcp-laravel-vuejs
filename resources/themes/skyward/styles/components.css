@@ -1,0 +1,168 @@
+/*
+|--------------------------------------------------------------------------
+| Skyward — the application's own components
+|--------------------------------------------------------------------------
+|
+| The palette in variables.css already restyles every core component, because
+| each of them reads the semantic tokens rather than a colour. This file is
+| only for the handful of places where this skin wants a different *shape*
+| than the core default, which a token cannot express.
+|
+| Everything here is scoped to the slug, so none of it leaks into another
+| theme.
+|
+*/
+
+/*
+ * Controls share one corner.
+ *
+ * Set here rather than by pushing `--radius-panel` up, because that token also
+ * rounds tables, panels and form fields, where a control's corner would be
+ * wrong. Every button and every link styled as one reads from the same token,
+ * so the shape is changed in one place.
+ */
+:root[data-theme-slug='skyward'] button,
+:root[data-theme-slug='skyward'] a[class*='rounded-[var(--radius-panel)]'] {
+    border-radius: var(--sky-radius-control);
+}
+
+/*
+ * A visible focus ring everywhere, in the accent rather than the browser
+ * default. On a near-white page the UA outline is easy to lose, and keyboard
+ * navigation through a masthead of controls is exactly where it is needed.
+ *
+ * It sets no radius of its own. An outline already follows the shape of the
+ * element it belongs to, so stating one here does not round the ring -- it
+ * rounds the *element*, and every text field reshaped itself into a pill for
+ * as long as it held focus.
+ */
+:root[data-theme-slug='skyward'] :focus-visible {
+    outline: 2px solid var(--color-accent-500);
+    outline-offset: 2px;
+}
+
+/* Headings take the rounded display face; body copy stays on the system stack. */
+:root[data-theme-slug='skyward'] h1,
+:root[data-theme-slug='skyward'] h2,
+:root[data-theme-slug='skyward'] h3 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.015em;
+}
+
+/*
+ * Panels float rather than sit in a box. The border is kept as a hairline so
+ * the edge survives against a white surface in dark mode and in forced
+ * colours, where shadows are dropped entirely.
+ */
+:root[data-theme-slug='skyward'] [class*='bg-[var(--surface-raised)]'] {
+    box-shadow: 0 10px 30px -24px oklch(0.3 0.08 258 / 0.5);
+}
+
+/* -------------------------------------------------------------------------- */
+/* The day/night switch                                                       */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Square, outlined, and the same height as the pills beside it.
+ *
+ * The height is matched by construction rather than by a fixed number: the
+ * padding and the icon size below add up to the 2.5rem that `px-4 py-2` on a
+ * 0.8125rem/1.25 label comes to, so the three controls sit on one baseline
+ * and keep doing so if the masthead's type is retuned.
+ */
+:root[data-theme-slug='skyward'] .sky-appearance {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--sky-radius-control);
+    color: var(--text-secondary);
+    transition:
+        background-color 150ms ease,
+        border-color 150ms ease,
+        color 150ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-appearance:hover:not(:disabled) {
+    background-color: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+/*
+ * Disabled only ever means "mid-fade", which lasts about as long as it takes
+ * to notice. So it says so with the cursor and nothing else: dimming a
+ * control for the second or so it runs, on the one press the visitor is
+ * already watching the result of, reads as the button glitching rather than
+ * as the button waiting. The page turning over behind it is the feedback.
+ */
+:root[data-theme-slug='skyward'] .sky-appearance:disabled {
+    cursor: default;
+}
+
+/*
+ * Both icons occupy the same cell, so the pair can cross-fade in place.
+ *
+ * Stacked with grid-area rather than absolute positioning: the button is
+ * already a grid, and an absolutely positioned icon would take the control
+ * out of the business of sizing itself to its contents -- which is what the
+ * comment above depends on.
+ */
+:root[data-theme-slug='skyward'] .sky-appearance__icon {
+    grid-area: 1 / 1;
+    width: 1.125rem;
+    height: 1.125rem;
+    transition:
+        opacity 200ms ease,
+        transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/*
+ * The icon shows where pressing goes, not where the page is: a moon in
+ * daylight, a sun after dark. The one that is not offered rotates out rather
+ * than only fading, so a glance catches that something turned over.
+ */
+:root[data-theme-slug='skyward'] .sky-appearance__icon--sun {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+}
+
+:root[data-theme-slug='skyward'] .sky-appearance--night .sky-appearance__icon--moon {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.6);
+}
+
+:root[data-theme-slug='skyward'] .sky-appearance--night .sky-appearance__icon--sun {
+    opacity: 1;
+    transform: none;
+}
+
+/*
+ * After dark the switch is the one control that says what the page is, so it
+ * stops being quiet: the accent fills it the way it fills Create Account.
+ */
+:root[data-theme-slug='skyward'] .sky-appearance--night {
+    border-color: transparent;
+    background-color: var(--surface-sunken);
+    color: var(--color-accent-300);
+}
+
+:root[data-theme-slug='skyward'] .sky-appearance--night:hover:not(:disabled) {
+    background-color: var(--surface-hover);
+    color: var(--color-accent-300);
+}
+
+/* The turning is decoration; the state change is not, and that still lands. */
+@media (prefers-reduced-motion: reduce) {
+    :root[data-theme-slug='skyward'] .sky-appearance__icon {
+        transition: none;
+        transform: none;
+    }
+
+    :root[data-theme-slug='skyward'] .sky-appearance--night .sky-appearance__icon--moon,
+    :root[data-theme-slug='skyward'] .sky-appearance__icon--sun {
+        transform: none;
+    }
+}

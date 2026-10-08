@@ -8,6 +8,7 @@ the practical checklist and the licence notes.
 ```
 resources/themes/
 ├── fantasy/     the default — dark, warm, antique gold; 8 blocks, composed home page
+├── skyward/     bright and light-first; a masthead and ticker that float over the hero
 ├── slate/       a cool, light-first skin; palette only, core pages throughout
 ├── yatagarasu/  dark fantasy in gold and blood; 13 blocks, composed home page
 └── README.md
@@ -88,7 +89,7 @@ cp -r resources/themes/slate resources/themes/my-theme
 
 5. **Override blocks** where a section needs different structure. Copy one out
    of `resources/js/blocks/` into `blocks/` and edit it, keeping its props and
-   data composable. Eleven core blocks exist; override only the ones you want.
+   data composable. Fourteen core blocks exist; override only the ones you want.
 
 6. **Compose pages** in `theme.json` if you want different sections or a
    different order:
@@ -153,6 +154,82 @@ Everything else is original: the brand mark is generated SVG drawn from
 `GAME_SHORT_NAME`, and the textures and ornaments are CSS gradients and
 pseudo-elements. There are no binary assets, which means nothing to licence and
 a mark that adapts to whatever the server is called.
+
+### skyward
+
+| Asset | Source | Licence |
+| --- | --- | --- |
+| Nunito (display) | Google Fonts | SIL Open Font License 1.1 |
+
+Everything else in the theme itself is original: the brand mark is generated
+SVG drawn from `GAME_SHORT_NAME`, and the sky, cloud banks and card elevation
+are CSS gradients and shadows. The theme directory holds no binary assets.
+
+**It ships no game artwork, and must not.** The hero is a full viewport of key
+art, and the page closes on a band of it; both are supplied per installation.
+Every slot requests its file and falls back to the generated sky when it 404s,
+so there is no placeholder to remove and no code change to make — supplying the
+art is dropping files into `public/`:
+
+```
+public/videos/hero/skyward-hero.mp4      the hero's background loop, behind the
+                                         floating masthead and ticker
+public/images/hero/skyward-sky.webp      its poster frame, shown while the
+                                         video loads; optional
+public/images/world/skyward-horizon.webp the closing call to action, below the
+                                         last section and above the footer
+```
+
+The closing band is wide and short — roughly 3:1 at full width — and the type
+sits in the middle of it, so art whose subject is centred will be covered.
+Something that reads at the edges works best.
+
+The video is muted, looped and `playsinline`, which is what lets a browser
+autoplay it. Under `prefers-reduced-motion` it is not requested at all and the
+generated sky stands in: a paused `<video>` still has to download before it can
+show a frame, and a hero loop is a large file to pull down for a still.
+
+Keep that loop small. It is served to every first-time visitor, and a few
+seconds of 1080p re-encodes comfortably under 4 MB:
+
+```
+ffmpeg -i source.mp4 -an -vf scale=1920:-2 -c:v libx264 -crf 30 -preset slow \
+       -movflags +faststart public/videos/hero/skyward-hero.mp4
+```
+
+`-an` drops the audio track, which a muted background never plays, and
+`+faststart` puts the index at the front of the file so playback can begin
+before the whole thing has arrived.
+
+Video is tracked with Git LFS — see `.gitattributes` — so the repository keeps
+a pointer rather than the blob, and a clone does not pay for media it may not
+want. A deploy target therefore needs `git lfs` installed, or the file copied
+across by other means.
+
+### The loading gate
+
+`components/LoadingScreen.vue` holds the public shell back until the hero's
+media has arrived, showing a percentage and a running byte count so a visitor
+on a slow line can tell the difference between slow and broken. The bytes are
+real: `usePreload` in core reads each response as a stream and sums the
+`Content-Length` headers.
+
+The mechanism is in core on purpose. A theme may not contain a network call —
+a test fails if one does — so the theme declares the manifest and draws the
+screen, and nothing else.
+
+It fails open at every step. A missing file, a server that sends no
+`Content-Length`, or a connection too slow to finish inside the deadline all
+resolve to *show the page anyway*, because every block falls back to its own
+source and a gate that can strand somebody is worse than no gate. The deadline
+defaults to 20 seconds, set where the manifest is declared.
+
+The completed download is handed to the hero as an object URL, so the video
+plays from memory rather than being requested a second time. That is also why
+the manifest should stay short: whatever is in it is held in memory for the
+life of the page.
+
+Whoever supplies the art is responsible for holding the rights to it.
 
 ### slate
 

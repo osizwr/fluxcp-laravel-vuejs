@@ -5,6 +5,7 @@ import AppButton from '../components/ui/AppButton.vue'
 import DataTable, { type Column } from '../components/ui/DataTable.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import { api } from '../services/api'
+import { useTranslation } from '../i18n'
 
 /**
  * The public ladders.
@@ -30,101 +31,103 @@ interface LadderDefinition {
     columns: Column[]
 }
 
+const { t } = useTranslation()
+
 const LADDERS: LadderDefinition[] = [
     {
         slug: 'level',
-        label: 'Level',
-        description: 'The highest-level characters on this server.',
+        label: t('common.level'),
+        description: t('rankings.levelBody'),
         columns: [
             { key: 'rank', label: '#', numeric: true },
-            { key: 'name', label: 'Character' },
+            { key: 'name', label: t('common.character') },
             { key: 'job', label: 'Job', secondary: true },
-            { key: 'level', label: 'Level', numeric: true },
-            { key: 'guild', label: 'Guild', secondary: true },
+            { key: 'level', label: t('common.level'), numeric: true },
+            { key: 'guild', label: t('common.guild'), secondary: true },
         ],
     },
     {
         slug: 'zeny',
-        label: 'Zeny',
-        description: 'The wealthiest characters who have not opted out.',
+        label: t('common.zeny'),
+        description: t('rankings.zenyBody'),
         columns: [
             { key: 'rank', label: '#', numeric: true },
-            { key: 'name', label: 'Character' },
+            { key: 'name', label: t('common.character') },
             { key: 'job', label: 'Job', secondary: true },
-            { key: 'zeny', label: 'Zeny', numeric: true },
-            { key: 'guild', label: 'Guild', secondary: true },
+            { key: 'zeny', label: t('common.zeny'), numeric: true },
+            { key: 'guild', label: t('common.guild'), secondary: true },
         ],
     },
     {
         slug: 'alchemist',
-        label: 'Alchemist',
-        description: 'Ranked by fame earned brewing.',
+        label: t('rankings.alchemist'),
+        description: t('rankings.alchemistBody'),
         columns: [
             { key: 'rank', label: '#', numeric: true },
-            { key: 'name', label: 'Character' },
+            { key: 'name', label: t('common.character') },
             { key: 'job', label: 'Job', secondary: true },
-            { key: 'fame', label: 'Fame', numeric: true },
-            { key: 'guild', label: 'Guild', secondary: true },
+            { key: 'fame', label: t('rankings.fame'), numeric: true },
+            { key: 'guild', label: t('common.guild'), secondary: true },
         ],
     },
     {
         slug: 'blacksmith',
-        label: 'Blacksmith',
-        description: 'Ranked by fame earned forging.',
+        label: t('rankings.blacksmith'),
+        description: t('rankings.blacksmithBody'),
         columns: [
             { key: 'rank', label: '#', numeric: true },
-            { key: 'name', label: 'Character' },
+            { key: 'name', label: t('common.character') },
             { key: 'job', label: 'Job', secondary: true },
-            { key: 'fame', label: 'Fame', numeric: true },
-            { key: 'guild', label: 'Guild', secondary: true },
+            { key: 'fame', label: t('rankings.fame'), numeric: true },
+            { key: 'guild', label: t('common.guild'), secondary: true },
         ],
     },
     {
         slug: 'deaths',
-        label: 'Deaths',
-        description: 'Characters who have died the most.',
+        label: t('rankings.deaths'),
+        description: t('rankings.deathsBody'),
         columns: [
             { key: 'rank', label: '#', numeric: true },
-            { key: 'name', label: 'Character' },
+            { key: 'name', label: t('common.character') },
             { key: 'job', label: 'Job', secondary: true },
-            { key: 'deaths', label: 'Deaths', numeric: true },
-            { key: 'guild', label: 'Guild', secondary: true },
+            { key: 'deaths', label: t('rankings.deaths'), numeric: true },
+            { key: 'guild', label: t('common.guild'), secondary: true },
         ],
     },
     {
         slug: 'mvp',
         label: 'MVP',
-        description: 'Who has felled the most bosses.',
+        description: t('rankings.bossBody'),
         columns: [
             { key: 'rank', label: '#', numeric: true },
-            { key: 'name', label: 'Character' },
-            { key: 'monster', label: 'Monster' },
-            { key: 'kills', label: 'Kills', numeric: true },
-            { key: 'guild', label: 'Guild', secondary: true },
+            { key: 'name', label: t('common.character') },
+            { key: 'monster', label: t('rankings.monster') },
+            { key: 'kills', label: t('rankings.kills'), numeric: true },
+            { key: 'guild', label: t('common.guild'), secondary: true },
         ],
     },
     {
         slug: 'homunculus',
-        label: 'Homunculus',
-        description: 'The strongest homunculi and who raised them.',
+        label: t('rankings.homunculus'),
+        description: t('rankings.homunculusBody'),
         columns: [
             { key: 'rank', label: '#', numeric: true },
-            { key: 'homunculus', label: 'Homunculus' },
-            { key: 'homunculusClass', label: 'Type', secondary: true },
-            { key: 'homunculusLevel', label: 'Level', numeric: true },
-            { key: 'owner', label: 'Owner', secondary: true },
+            { key: 'homunculus', label: t('rankings.homunculus') },
+            { key: 'homunculusClass', label: t('common.type'), secondary: true },
+            { key: 'homunculusLevel', label: t('common.level'), numeric: true },
+            { key: 'owner', label: t('rankings.owner'), secondary: true },
         ],
     },
     {
         slug: 'guilds',
-        label: 'Guilds',
-        description: 'Ranked by level, castles held, and experience.',
+        label: t('rankings.guilds'),
+        description: t('rankings.guildsBody'),
         columns: [
             { key: 'rank', label: '#', numeric: true },
-            { key: 'guildName', label: 'Guild' },
-            { key: 'guildLevel', label: 'Level', numeric: true },
-            { key: 'members', label: 'Members', numeric: true },
-            { key: 'castles', label: 'Castles', numeric: true, secondary: true },
+            { key: 'guildName', label: t('common.guild') },
+            { key: 'guildLevel', label: t('common.level'), numeric: true },
+            { key: 'members', label: t('rankings.members'), numeric: true },
+            { key: 'castles', label: t('rankings.castles'), numeric: true, secondary: true },
         ],
     },
 ]
@@ -172,7 +175,7 @@ async function load(): Promise<void> {
         const response = await api.get<{ data: LadderRow[] }>(`rankings/${ladder.value.slug}`)
         entries.value = response.data
     } catch {
-        error.value = 'The ranking could not be loaded.'
+        error.value = t('rankings.error')
         entries.value = []
     } finally {
         loading.value = false
@@ -184,9 +187,9 @@ watch(ladder, load, { immediate: true })
 
 <template>
     <div>
-        <PageHeader title="Rankings" :description="ladder.description">
+        <PageHeader :title="t('nav.rankings')" :description="ladder.description">
             <template #actions>
-                <nav aria-label="Ladder" class="flex flex-wrap gap-1">
+                <nav :aria-label="t('rankings.ladder')" class="flex flex-wrap gap-1">
                     <AppButton
                         v-for="option in LADDERS"
                         :key="option.slug"
@@ -208,10 +211,12 @@ watch(ladder, load, { immediate: true })
             :loading="loading"
             :error="error"
             :caption="`${ladder.label} ranking`"
-            empty-title="Nothing on this ladder yet"
+            empty-:title="t('rankings.empty')"
             empty-description="Nobody qualifies for it at the moment."
         >
-            <template #retry><AppButton size="sm" @click="load">Try again</AppButton></template>
+            <template #retry
+                ><AppButton size="sm" @click="load">{{ t('common.retry') }}</AppButton></template
+            >
 
             <template #cell:rank="{ row }">{{ row.rank }}</template>
 

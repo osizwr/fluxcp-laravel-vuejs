@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\ServerStatusXmlController;
 use App\Http\Controllers\Api\ServiceDeskController;
 use App\Http\Controllers\Api\StaticPageController;
 use App\Http\Controllers\Api\WebCommandController;
+use App\Http\Controllers\Api\WikiController;
 use App\Http\Controllers\Api\WorldController;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
@@ -224,6 +225,20 @@ Route::middleware('permission')->group(function (): void {
     Route::get('pages/{path}', [StaticPageController::class, 'show'])
         ->where('path', '[A-Za-z0-9][A-Za-z0-9\-\/]*')
         ->name('pages.content');
+
+    /*
+     * The wiki: the server's own guide, read from disk rather than from a
+     * table. See config/wiki.php for why.
+     *
+     * `wiki/search` is declared before the page route and could not be
+     * swallowed by it either way: a page path is always two segments, which
+     * is what the constraint says, so a single segment cannot match it.
+     */
+    Route::get('wiki', [WikiController::class, 'index'])->name('wiki.index');
+    Route::get('wiki/search', [WikiController::class, 'search'])->name('wiki.search');
+    Route::get('wiki/{path}', [WikiController::class, 'show'])
+        ->where('path', '[a-z0-9][a-z0-9\-]*\/[a-z0-9][a-z0-9\-]*')
+        ->name('wiki.page');
 
     /*
      * Donations.

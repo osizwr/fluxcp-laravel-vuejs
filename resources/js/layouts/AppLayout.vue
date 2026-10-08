@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { resolveBlock } from '../theme/blocks'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * The shell for the application's utility pages.
@@ -23,7 +26,7 @@ const Footer = resolveBlock('footer')
             href="#main"
             class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-[var(--surface-raised)] focus:px-3 focus:py-2 focus:text-sm"
         >
-            Skip to content
+            {{ t('common.skipToContent') }}
         </a>
 
         <component :is="AnnouncementBar" v-if="AnnouncementBar" />

@@ -112,6 +112,35 @@ final class PanelSchema
             },
 
             /*
+             * The typed confirmation code, kept beside the e-mailed link.
+             *
+             * A separate table rather than a column on cp_createlog, for two
+             * reasons. That row is FluxCP's, shared with an installation that
+             * may still be reading it, and the panel works within its shape
+             * rather than widening it (see SecureToken, and D1). And the
+             * installer creates missing tables but does not alter existing
+             * ones, so a new column would only ever reach a fresh database --
+             * a new table reaches every installation on the next
+             * `panel:install-schema`.
+             *
+             * One row per account: issuing a code replaces whatever was there,
+             * so only one is ever live.
+             */
+            'cp_registration_otp' => static function (Blueprint $table): void {
+                $table->unsignedInteger('account_id')->primary();
+
+                /* Truncated SHA-256, never the code itself. */
+                $table->string('code', 32);
+                $table->dateTime('expires_at');
+
+                /*
+                 * Counted, because six digits is a million guesses and this is
+                 * what stops somebody working through them. See OneTimeCode.
+                 */
+                $table->unsignedTinyInteger('attempts')->default(0);
+            },
+
+            /*
              * Item-shop credit balance per account, plus a last-donation marker.
              */
             'cp_credits' => static function (Blueprint $table): void {

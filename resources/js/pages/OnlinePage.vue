@@ -7,6 +7,9 @@ import PageHeader from '../components/ui/PageHeader.vue'
 import { api, ApiError } from '../services/api'
 import { useAuthStore } from '../stores/auth'
 import type { Character, Paginated } from '../types/api'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * Who is online.
@@ -30,13 +33,13 @@ const columns = ref<Column[]>([])
 
 function buildColumns(): void {
     columns.value = [
-        { key: 'name', label: 'Character' },
+        { key: 'name', label: t('common.character') },
         { key: 'job', label: 'Job', secondary: true },
-        { key: 'level', label: 'Level', numeric: true },
+        { key: 'level', label: t('common.level'), numeric: true },
         ...(auth.can('ViewOnlinePosition')
-            ? [{ key: 'map', label: 'Location', secondary: true }]
+            ? [{ key: 'map', label: t('online.location'), secondary: true }]
             : []),
-        { key: 'guild', label: 'Guild', secondary: true },
+        { key: 'guild', label: t('common.guild'), secondary: true },
     ]
 }
 
@@ -60,7 +63,7 @@ async function load(): Promise<void> {
         if (caught instanceof ApiError && caught.status === 503) {
             unavailable.value = true
         } else {
-            error.value = 'The listing could not be loaded.'
+            error.value = t('online.error')
         }
     } finally {
         loading.value = false
@@ -97,24 +100,24 @@ function goToPage(next: number): void {
 <template>
     <div>
         <PageHeader
-            title="Who's online"
+            :title="t('nav.online')"
             :description="
                 total > 0 ? `${total.toLocaleString()} characters in the world.` : undefined
             "
         >
             <template #actions>
-                <label class="sr-only" for="online-search">Search by character name</label>
+                <label class="sr-only" for="online-search">{{ t('online.searchLabel') }}</label>
                 <input
                     id="online-search"
                     v-model.trim="search"
                     class="field-input max-w-48"
                     type="search"
-                    placeholder="Search name…"
+                    :placeholder="t('online.searchPlaceholder')"
                 />
             </template>
         </PageHeader>
 
-        <AlertMessage v-if="unavailable" tone="warning" title="Unavailable during War of Emperium">
+        <AlertMessage v-if="unavailable" tone="warning" :title="t('online.duringWoe')">
             This listing is hidden while a siege is in progress, so castle defences cannot be
             scouted from the website.
         </AlertMessage>
@@ -126,11 +129,15 @@ function goToPage(next: number): void {
                 :row-key="(character: Character) => character.id"
                 :loading="loading"
                 :error="error"
-                empty-title="Nobody is online"
+                empty-:title="t('online.empty')"
                 empty-description="Characters appear here while they are in the world."
                 caption="Characters currently online"
             >
-                <template #retry><AppButton size="sm" @click="load">Try again</AppButton></template>
+                <template #retry
+                    ><AppButton size="sm" @click="load">{{
+                        t('common.retry')
+                    }}</AppButton></template
+                >
 
                 <template #[`cell:name`]="{ row }">
                     <span class="font-medium">{{ row.name }}</span>
@@ -159,11 +166,11 @@ function goToPage(next: number): void {
 
             <nav
                 v-if="lastPage > 1"
-                aria-label="Pagination"
+                :aria-label="t('common.pagination')"
                 class="mt-3 flex items-center justify-between gap-3"
             >
                 <AppButton size="sm" :disabled="page <= 1" @click="goToPage(page - 1)">
-                    Previous
+                    {{ t('common.previous') }}
                 </AppButton>
 
                 <p class="tabular text-[0.8125rem] text-[var(--text-muted)]" aria-live="polite">
@@ -171,7 +178,7 @@ function goToPage(next: number): void {
                 </p>
 
                 <AppButton size="sm" :disabled="page >= lastPage" @click="goToPage(page + 1)">
-                    Next
+                    {{ t('common.next') }}
                 </AppButton>
             </nav>
         </template>

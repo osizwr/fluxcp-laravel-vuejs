@@ -1,0 +1,269 @@
+/*
+|--------------------------------------------------------------------------
+| Skyward — palette
+|--------------------------------------------------------------------------
+|
+| Every token the core components read, redefined for this theme.
+|
+| Scoped to `:root[data-theme-slug='skyward']` rather than plain `:root` so the
+| theme wins on specificity instead of on stylesheet order. That matters: the
+| core stylesheet arrives in the bundle and this one as its own <link>, and
+| depending on which the browser happens to apply last would be fragile.
+|
+| Direction: an open sky at midday. A pale blue ground, white panels that look
+| lifted off it rather than drawn on it, deep navy ink, and one saturated royal
+| blue reserved for the things a visitor can actually press.
+|
+| The skin has two appearances: day, which is the one it was designed in, and
+| night, below. Night is not the same palette turned down -- a white card
+| floating over bright artwork and a lit card floating over a dark valley are
+| two different ideas about where the light is coming from, and the tokens say
+| so. What they share is the structure: the same cards, the same corners, the
+| same one accent doing the pressing.
+|
+| Day is the default and theme.json says so, so a first visit under a dark
+| operating system still arrives in daylight. Night is the visitor's choice,
+| made from the masthead and remembered.
+|
+| ---------------------------------------------------------------------------
+| Why each block is bound to the selectors it is
+| ---------------------------------------------------------------------------
+|
+| The core stylesheet dims the interface in two places this theme does not
+| control: `:root[data-appearance='dark']` once a visitor has asked for dark,
+| and `:root:not([data-appearance='light'])` under a dark OS before Vue has
+| mounted and set the attribute. Both match at the same specificity as a bare
+| `:root[data-theme-slug]`, and the core sheet is linked after this one, so a
+| bare selector loses the tie.
+|
+| Hence the pairing below. Day carries `:not([data-appearance])` as well as
+| the bare selector, which is one attribute more than the core's media rule
+| and therefore wins the frame before Vue runs -- without it, a visitor on a
+| dark OS would see this theme's light cards on the core's dark surfaces for
+| that frame. Night carries `[data-appearance='dark']`, which outweighs the
+| core's rule of the same name for the same reason.
+|
+| Everything that is not a colour -- the type, the corners, the shell's
+| measurements -- is declared once in the day block and inherited by night,
+| because the bare selector matches in both. Night redeclares colour and
+| nothing else, so the two cannot drift apart on geometry.
+|
+*/
+
+:root[data-theme-slug='skyward'],
+:root[data-theme-slug='skyward']:not([data-appearance]) {
+    /*
+     * Native widgets -- scrollbars, date pickers, form controls -- follow this
+     * rather than the tokens, so without it a visitor on a dark OS gets dark
+     * scrollbars framing a light page.
+     */
+    color-scheme: light;
+
+    /* ---- Surfaces: sky above, white panels lifted off it ---------------- */
+    --surface-page: oklch(0.955 0.025 236);
+    --surface-raised: oklch(1 0 0);
+    --surface-sunken: oklch(0.975 0.012 238);
+    --surface-hover: oklch(0.955 0.02 240);
+
+    /* ---- Borders: barely there, because elevation does the separating --- */
+    --border-subtle: oklch(0.91 0.016 242);
+    --border-strong: oklch(0.84 0.025 244);
+
+    /* ---- Ink: deep navy, never pure black ------------------------------- */
+    --text-primary: oklch(0.3 0.045 262);
+    --text-secondary: oklch(0.52 0.035 258);
+    --text-muted: oklch(0.64 0.028 254);
+
+    /*
+     * Royal blue. The only accent, and it carries a lot of weight in this
+     * skin: the primary button, the active nav item and the ticker's own
+     * badge are all the same blue, so "blue" reads as "this does something".
+     */
+    --color-accent-300: oklch(0.79 0.11 258);
+    --color-accent-400: oklch(0.69 0.16 260);
+    --color-accent-500: oklch(0.61 0.2 262);
+    --color-accent-600: oklch(0.54 0.22 264);
+    --color-accent-700: oklch(0.46 0.2 266);
+
+    /* ---- Status: meadow, coral, honey ----------------------------------- */
+    --color-up: oklch(0.58 0.15 152);
+    --color-down: oklch(0.57 0.19 25);
+    --color-warn: oklch(0.68 0.14 72);
+
+    --status-up-bg: oklch(0.94 0.045 152);
+    --status-down-bg: oklch(0.95 0.035 25);
+    --status-warn-bg: oklch(0.95 0.045 78);
+
+    /* ---- Typography ------------------------------------------------------
+     *
+     * Nunito for headings and the masthead. A rounded humanist sans carries
+     * the friendly register this layout wants without costing legibility at
+     * small sizes, which a display face would. Licensed under the SIL Open
+     * Font License; see resources/themes/README.md.
+     */
+    --font-display: 'Nunito', ui-rounded, 'SF Pro Rounded', 'Segoe UI', system-ui, sans-serif;
+
+    /* ---- Geometry --------------------------------------------------------
+     *
+     * Generously soft. Where fantasy reads as forged and yatagarasu as cut,
+     * this one reads as moulded, and the radius is most of why.
+     */
+    --radius-panel: 0.75rem;
+
+    /*
+     * Controls -- buttons, nav tabs, icon buttons -- get their own corner.
+     *
+     * Separate from `--radius-panel` because the two are pulled in different
+     * directions: a panel's corner is about the surface, a control's is about
+     * how pressable the thing looks, and tying them together means one cannot
+     * be adjusted without disturbing the other.
+     */
+    --sky-radius-control: 0.75rem;
+
+    /* ---- Theme-only: the floating shell ----------------------------------
+     *
+     * Consumed by blocks.css and by this theme's layout. Named rather than
+     * inlined because the hero has to cancel exactly the space the shell
+     * occupies, and two hardcoded numbers would drift apart the first time
+     * the masthead changed height.
+     */
+
+    /* The inset of the floating cards from the viewport edge, at rest. */
+    --sky-shell-gap: 1.25rem;
+
+    /* The gap between the masthead card and the ticker card. */
+    --sky-shell-stack: 0.625rem;
+
+    /*
+     * The shell's measured height. Set on <html> by the theme's PublicLayout
+     * from a ResizeObserver; this value is only what the page uses for the
+     * one frame before that runs, and whenever the shell is absent.
+     */
+    --sky-shell-height: 0px;
+
+    /* The floating cards. Pills, near enough. */
+    --sky-card-radius: 1.75rem;
+    --sky-card-shadow: 0 18px 40px -22px oklch(0.3 0.08 258 / 0.55);
+    --sky-card-shadow-pinned: 0 10px 28px -18px oklch(0.3 0.08 258 / 0.5);
+
+    /* The ticker's own badge colours, which are not a core status. */
+    --sky-news-badge-bg: oklch(0.94 0.055 152);
+    --sky-news-badge-ink: oklch(0.44 0.12 152);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Skyward — night
+|--------------------------------------------------------------------------
+|
+| Direction: the same valley after dusk. The ground drops to a deep indigo
+| that still reads as sky rather than as a grey interface, the cards stay
+| cards but are now lit from within instead of lifted off brightness, and the
+| accent is moved up the lightness scale so that a button on a dark panel is
+| as legible as the same button was on a white one.
+|
+| Three things worth knowing about how these numbers were chosen:
+|
+|   1. The hue is held. Day runs 236-266 across its surfaces and ink, and so
+|      does night, which is what makes this the same skin after dark rather
+|      than a second skin. What changes is lightness and, slightly, chroma --
+|      a saturated dark blue goes muddy, so the surfaces carry less chroma
+|      than their daylight counterparts, not more.
+|
+|   2. Raised is lighter than page, where in daylight it is also lighter.
+|      That sounds obvious and is the opposite of what most dark themes do:
+|      they darken the card and lighten the page. This skin's whole structure
+|      is a card floating above a ground, and a card darker than its ground
+|      reads as a hole cut in the page.
+|
+|   3. The shadows stay, and get deeper rather than lighter. Elevation is the
+|      only thing separating a card from the page in this skin -- there is no
+|      border doing that work -- so dropping shadows after dark would flatten
+|      the design into panels drawn on a background.
+|
+*/
+
+:root[data-theme-slug='skyward'][data-appearance='dark'] {
+    /*
+     * Native widgets follow this, not the tokens. Without it the scrollbar
+     * framing a night page is a bright light-mode one.
+     */
+    color-scheme: dark;
+
+    /* ---- Surfaces: a night sky, with cards lit above it ----------------- */
+
+    /*
+     * Deep indigo rather than near-black. Black would be a cheaper night and
+     * a worse one: the hero's artwork is a lit valley under a sky, and a page
+     * that goes to zero makes the frame it sits in read as a letterbox.
+     */
+    --surface-page: oklch(0.21 0.035 264);
+    --surface-raised: oklch(0.27 0.032 262);
+    --surface-sunken: oklch(0.235 0.032 263);
+    --surface-hover: oklch(0.32 0.034 262);
+
+    /* ---- Borders: visible now, because elevation reads less after dark -- */
+    --border-subtle: oklch(0.34 0.028 262);
+    --border-strong: oklch(0.43 0.032 260);
+
+    /*
+     * ---- Ink: moonlight, never pure white -----------------------------
+     *
+     * Pure white on a dark ground is what causes the smeared, haloed look of
+     * a badly made dark theme. A faint blue cast at 0.94 carries the same
+     * information and sits still on the page. Secondary and muted keep more
+     * than their daylight separation, because contrast ratios compress as
+     * the ground darkens and two greys that were distinct on white are not.
+     */
+    --text-primary: oklch(0.94 0.012 250);
+    --text-secondary: oklch(0.79 0.02 252);
+    --text-muted: oklch(0.65 0.025 254);
+
+    /*
+     * ---- The accent, lifted ---------------------------------------------
+     *
+     * The daylight royal blue is 0.61 lightness, which against a 0.27 panel
+     * is a button you have to look for. Each stop moves up, and the ramp is
+     * re-pointed as well as shifted: in daylight 600 is the resting state and
+     * 700 the hover, which is darker. After dark a hover that darkens reads
+     * as the control switching off, so the pair is inverted below -- the
+     * components keep asking for 600 and 700 by name and get a sensible
+     * answer in both appearances.
+     */
+    --color-accent-300: oklch(0.86 0.08 258);
+    --color-accent-400: oklch(0.79 0.12 259);
+    --color-accent-500: oklch(0.72 0.16 261);
+    --color-accent-600: oklch(0.66 0.19 263);
+    --color-accent-700: oklch(0.74 0.17 262);
+
+    /*
+     * ---- Status ----------------------------------------------------------
+     *
+     * The same three signals, lifted to carry on a dark ground, with their
+     * backing tints rebuilt rather than dimmed: a pale meadow green at 10%
+     * opacity over indigo is grey, so the tints below are dark and saturated
+     * in the status hue instead.
+     */
+    --color-up: oklch(0.74 0.16 154);
+    --color-down: oklch(0.7 0.18 25);
+    --color-warn: oklch(0.8 0.14 78);
+
+    --status-up-bg: oklch(0.32 0.07 154);
+    --status-down-bg: oklch(0.33 0.09 25);
+    --status-warn-bg: oklch(0.34 0.07 78);
+
+    /*
+     * ---- The floating cards ----------------------------------------------
+     *
+     * Deeper and tighter than in daylight. A shadow is cast light, and there
+     * is less of it after dark -- a soft wide one would wash the ground
+     * rather than lift the card, so the spread comes in and the opacity goes
+     * up until the card's edge is unambiguous.
+     */
+    --sky-card-shadow: 0 18px 40px -20px oklch(0.08 0.03 264 / 0.85);
+    --sky-card-shadow-pinned: 0 10px 28px -16px oklch(0.08 0.03 264 / 0.8);
+
+    /* The ticker's own badge. Dark green ground, bright ink. */
+    --sky-news-badge-bg: oklch(0.33 0.07 152);
+    --sky-news-badge-ink: oklch(0.85 0.14 152);
+}

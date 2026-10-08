@@ -1,5 +1,7 @@
 <script setup lang="ts" generic="T">
+import { computed } from 'vue'
 import StateBlock from './StateBlock.vue'
+import { useTranslation } from '../../i18n'
 
 /**
  * A table with consistent loading, empty and error states.
@@ -24,6 +26,8 @@ export interface Column {
     sort?: string
 }
 
+const { t } = useTranslation()
+
 const props = withDefaults(
     defineProps<{
         columns: Column[]
@@ -41,7 +45,6 @@ const props = withDefaults(
     {
         loading: false,
         error: null,
-        emptyTitle: 'Nothing to show',
         sort: null,
         direction: 'asc',
     },
@@ -66,6 +69,10 @@ function ariaSort(column: Column): 'ascending' | 'descending' | 'none' | undefin
 
     return props.direction === 'asc' ? 'ascending' : 'descending'
 }
+
+/* The default lives here rather than in defineProps, which is hoisted out
+ * of setup() and so cannot call t(). */
+const emptyTitleText = computed(() => props.emptyTitle ?? t('common.nothingToShow'))
 </script>
 
 <template>
@@ -73,13 +80,13 @@ function ariaSort(column: Column): 'ascending' | 'descending' | 'none' | undefin
         <StateBlock
             v-if="props.loading && props.rows.length === 0"
             variant="loading"
-            title="Loading…"
+            :title="t('common.loading')"
         />
 
         <StateBlock
             v-else-if="props.error"
             variant="error"
-            title="Could not load this list"
+            :title="t('common.couldNotLoad')"
             :description="props.error"
         >
             <template v-if="$slots.retry" #action><slot name="retry" /></template>
@@ -88,7 +95,7 @@ function ariaSort(column: Column): 'ascending' | 'descending' | 'none' | undefin
         <StateBlock
             v-else-if="props.rows.length === 0"
             variant="empty"
-            :title="props.emptyTitle"
+            :title="emptyTitleText"
             :description="props.emptyDescription"
         />
 

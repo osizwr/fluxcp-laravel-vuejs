@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useFeatureData } from './data'
 import type { FeatureProps } from './contracts'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * What the server offers.
@@ -11,9 +15,13 @@ import type { FeatureProps } from './contracts'
  * is empty rather than inventing features, and an entry without a url is plain
  * text rather than a dead link.
  */
-const props = withDefaults(defineProps<FeatureProps>(), { heading: 'Why play here' })
+const props = defineProps<FeatureProps>()
 
 const features = useFeatureData()
+
+/* The default lives here rather than in defineProps, which is hoisted out
+ * of setup() and so cannot call t(). */
+const headingText = computed(() => props.heading ?? t('features.heading'))
 </script>
 
 <template>
@@ -22,7 +30,7 @@ const features = useFeatureData()
         class="mx-auto max-w-6xl px-4 py-10"
         aria-labelledby="block-features"
     >
-        <h2 id="block-features" class="mb-4 text-lg font-semibold">{{ props.heading }}</h2>
+        <h2 id="block-features" class="mb-4 text-lg font-semibold">{{ headingText }}</h2>
 
         <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <li v-for="feature in features.items" :key="feature.title" class="panel p-4">

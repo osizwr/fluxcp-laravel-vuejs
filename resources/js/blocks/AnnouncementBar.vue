@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { useAnnouncement } from './data'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * The operator's announcement, above everything else.
@@ -43,7 +46,7 @@ const toneClass = {
                 v-if="announcement.dismissible"
                 type="button"
                 class="shrink-0 rounded p-1 hover:bg-black/10"
-                aria-label="Dismiss announcement"
+                :aria-label="t('news.dismiss')"
                 @click="dismiss"
             >
                 <svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Theme;
 
+use App\Http\Middleware\SetLocale;
+use App\Support\Tokens\OneTimeCode;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 
 /**
@@ -43,11 +45,13 @@ final readonly class ClientBootstrap
     public function toArray(): array
     {
         return [
+            'locale' => $this->locale(),
             'game' => $this->game(),
             'theme' => $this->themes->active()->toClientArray(),
             'broadcasting' => $this->broadcasting(),
             'announcement' => $this->announcement(),
             'features' => $this->features(),
+            'downloads' => $this->downloads(),
             'accounts' => $this->accounts(),
         ];
     }
@@ -91,7 +95,181 @@ final readonly class ClientBootstrap
              * array where it expects an object.
              */
             'links' => (object) $links,
+            'nav' => $this->navLinks((array) $this->config->get('game.nav', [])),
+            'footer' => $this->footer(),
+            'legal' => $this->legal(),
         ];
+    }
+
+    /**
+     * The footer's link groups and social buttons, from config/game.php.
+     *
+     * Normalised here so the client receives one shape rather than three. Each
+     * link arrives as a label plus at most one destination:
+     *
+     *   to      an internal route
+     *   href    an external address
+     *   neither a section that does not exist yet
+     *
+     * Unlike the navigation links above, an entry with no destination is kept
+     * rather than dropped. The footer is a map of what the server offers, and
+     * an operator standing one up wants the shape of it visible while the
+     * pages are still being built.
+     *
+     * @return array<string, mixed>
+     */
+    private function footer(): array
+    {
+        $groups = [];
+
+        foreach ((array) $this->config->get('game.footer.groups', []) as $group) {
+            if (! is_array($group)) {
+                continue;
+            }
+
+            $heading = $this->trimmedOrNull($group['heading'] ?? null);
+
+            $links = [];
+
+            $links = $this->navLinks((array) ($group['links'] ?? []));
+
+            // A heading with nothing under it is a column of whitespace.
+            if ($heading === null || $links === []) {
+                continue;
+            }
+
+            $groups[] = ['heading' => $heading, 'links' => $links];
+        }
+
+        $socials = [];
+
+        foreach ((array) $this->config->get('game.footer.socials', []) as $social) {
+            if (! is_array($social)) {
+                continue;
+            }
+
+            $network = $this->trimmedOrNull($social['network'] ?? null);
+
+            if ($network === null) {
+                continue;
+            }
+
+            $socials[] = [
+                'network' => $network,
+                'href' => $this->trimmedOrNull($social['url'] ?? null),
+            ];
+        }
+
+        return ['groups' => $groups, 'socials' => $socials];
+    }
+
+    /**
+     * The footer's small print, from config/game.php.
+     *
+     * Here rather than written into a theme because a test forbids a frontend
+     * file from containing the game's name, and the affiliation notice is the
+     * one piece of copy that has to say it. Keeping it in configuration means
+     * the notice survives a rebrand and a theme change alike.
+     *
+     * Every field is nullable, and null means the footer omits that line
+     * rather than printing an empty one.
+     *
+     * @return array<string, mixed>
+     */
+    private function legal(): array
+    {
+        $name = (string) $this->config->get('game.name', '');
+
+        $disclaimer = $this->config->get('game.legal.disclaimer');
+
+        $creditName = $this->trimmedOrNull($this->config->get('game.legal.credit.name'));
+
+        return [
+            /*
+             * `:name` is substituted here rather than in the browser so the
+             * client renders a finished sentence. A placeholder is a server
+             * concern; the footer should not have to know the convention.
+             */
+            'disclaimer' => is_string($disclaimer) && trim($disclaimer) !== ''
+                ? str_replace(':name', $name, trim($disclaimer))
+                : null,
+
+            // Falls back to the game name, which is the common case.
+            'copyright' => $this->trimmedOrNull($this->config->get('game.legal.copyright'))
+                ?? ($name !== '' ? $name : null),
+
+            /*
+             * Dropped entirely without a name: a URL with nothing to label it
+             * has nothing to render as.
+             */
+            'credit' => $creditName === null ? null : [
+                'name' => $creditName,
+                'url' => $this->trimmedOrNull($this->config->get('game.legal.credit.url')),
+            ],
+        ];
+    }
+
+    /**
+     * Normalises a configured list of links, for the masthead or for one
+     * footer group.
+     *
+     * Each entry arrives as a label plus at most one destination:
+     *
+     *   to      an internal route
+     *   href    an external address
+     *   neither a section that does not exist yet
+     *
+     * An entry with no destination is kept rather than dropped, which is the
+     * one place this differs from `game.links` above. These lists are a map of
+     * what the server offers, and an operator standing one up wants the shape
+     * of it visible while the pages are still being built.
+     *
+     * @param  array<int|string, mixed>  $entries
+     * @return list<array<string, string|null>>
+     */
+    private function navLinks(array $entries): array
+    {
+        $links = [];
+
+        foreach ($entries as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $label = $this->trimmedOrNull($entry['label'] ?? null);
+
+            if ($label === null) {
+                continue;
+            }
+
+            $href = $this->trimmedOrNull($entry['url'] ?? null);
+
+            $links[] = [
+                'label' => $label,
+                /*
+                 * A configured URL wins over the built-in route. That is what
+                 * lets an operator point Download at a CDN without having to
+                 * remove the internal page it would otherwise open, and put it
+                 * back by clearing one env var.
+                 */
+                'to' => $href === null ? $this->trimmedOrNull($entry['to'] ?? null) : null,
+                'href' => $href,
+            ];
+        }
+
+        return $links;
+    }
+
+    /**
+     * A configured string, or null when it is absent or blank.
+     *
+     * Blank counts as absent throughout this payload: an operator who clears
+     * an env var leaves `FOO=` behind as often as they delete the line, and
+     * the two should mean the same thing.
+     */
+    private function trimmedOrNull(mixed $value): ?string
+    {
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
     }
 
     /**
@@ -128,7 +306,13 @@ final readonly class ClientBootstrap
             'emailChangeRequiresConfirmation' => $this->config->get('panel.email_change.require_confirmation') === true,
             'registrationRequiresConfirmation' => $this->config->get('panel.registration.require_email_confirmation') === true,
 
-            'minimumAge' => (int) $this->config->get('panel.registration.minimum_age', 0),
+            /*
+             * Not configurable, and published anyway: the confirmation form
+             * draws one input per digit, so it needs the count to render at
+             * all. Reading it from the class that generates the codes is what
+             * stops a form of six boxes outliving a change to five.
+             */
+            'confirmationCodeLength' => OneTimeCode::LENGTH,
 
             'username' => [
                 'minLength' => (int) $this->config->get('panel.registration.username.min_length', 4),
@@ -175,6 +359,29 @@ final readonly class ClientBootstrap
             'on_login' => $this->config->get('panel.captcha.on_login') === true,
             'self_hosted' => $selfHosted,
             'site_key' => $selfHosted || $siteKey === '' ? null : $siteKey,
+        ];
+    }
+
+    /**
+     * The active language, and the ones a visitor may switch to.
+     *
+     * Sent as BCP 47 -- `pt-BR`, not `pt_BR` -- because that is what the
+     * client puts in the `lang` attribute and in its cookie. SetLocale does
+     * the one conversion to Laravel's directory naming on the way back in.
+     *
+     * The list is sent rather than compiled into the bundle so that the
+     * picker cannot offer a language the server would refuse to serve.
+     *
+     * @return array{active: string, available: list<string>}
+     */
+    private function locale(): array
+    {
+        return [
+            'active' => str_replace('_', '-', app()->getLocale()),
+            'available' => array_map(
+                static fn (string $locale): string => str_replace('_', '-', $locale),
+                SetLocale::SUPPORTED,
+            ),
         ];
     }
 
@@ -254,6 +461,188 @@ final readonly class ClientBootstrap
         }
 
         return $features;
+    }
+
+    /**
+     * The download page's contents, from config/game.php.
+     *
+     * Normalised here so the client receives one shape rather than whatever an
+     * operator's array happened to look like, and so a half-filled section is
+     * dropped on the server instead of rendering as a gap in the page.
+     *
+     * What is dropped, and why:
+     *
+     *   a package with no name          nothing to label the card with
+     *   a mirror with no label or URL   a button that downloads nothing
+     *   a requirement row missing either half   half a table row
+     *   a step with no title            a numbered disc beside nothing
+     *
+     * A package whose mirrors all dropped out is deliberately *kept*. That is
+     * the state every install starts in, and an operator standing one up wants
+     * to see the card they are about to fill rather than a blank page; the
+     * client draws it as not yet available.
+     *
+     * @return array<string, mixed>
+     */
+    private function downloads(): array
+    {
+        return [
+            'notice' => $this->trimmedOrNull($this->config->get('game.downloads.notice')),
+            'clients' => $this->downloadClients(),
+            'requirements' => $this->downloadRequirements(),
+            'steps' => $this->downloadSteps(),
+        ];
+    }
+
+    /**
+     * The packages on offer.
+     *
+     * `platform` is checked against the list the client draws an icon for, so
+     * a typo renders a card without one rather than a broken image or, worse,
+     * an icon for the wrong operating system.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function downloadClients(): array
+    {
+        $platforms = ['windows', 'macos', 'linux', 'android', 'ios'];
+        $clients = [];
+
+        foreach ((array) $this->config->get('game.downloads.clients', []) as $client) {
+            if (! is_array($client)) {
+                continue;
+            }
+
+            $name = $this->trimmedOrNull($client['name'] ?? null);
+
+            if ($name === null) {
+                continue;
+            }
+
+            $platform = $this->trimmedOrNull($client['platform'] ?? null);
+
+            $mirrors = [];
+
+            foreach ((array) ($client['mirrors'] ?? []) as $mirror) {
+                if (! is_array($mirror)) {
+                    continue;
+                }
+
+                $label = $this->trimmedOrNull($mirror['label'] ?? null);
+                $url = $this->trimmedOrNull($mirror['url'] ?? null);
+
+                // Both halves or neither: a labelled button that leads nowhere
+                // is worse than an absent one.
+                if ($label === null || $url === null) {
+                    continue;
+                }
+
+                $mirrors[] = ['label' => $label, 'url' => $url];
+            }
+
+            $notes = [];
+
+            foreach ((array) ($client['notes'] ?? []) as $note) {
+                $trimmed = $this->trimmedOrNull($note);
+
+                if ($trimmed !== null) {
+                    $notes[] = $trimmed;
+                }
+            }
+
+            $clients[] = [
+                'name' => $name,
+                'platform' => in_array($platform, $platforms, strict: true) ? $platform : null,
+                'badge' => $this->trimmedOrNull($client['badge'] ?? null),
+                'version' => $this->trimmedOrNull($client['version'] ?? null),
+                'size' => $this->trimmedOrNull($client['size'] ?? null),
+                'updated' => $this->trimmedOrNull($client['updated'] ?? null),
+                'description' => (string) ($this->trimmedOrNull($client['description'] ?? null) ?? ''),
+                'mirrors' => $mirrors,
+                'notes' => $notes,
+            ];
+        }
+
+        return $clients;
+    }
+
+    /**
+     * The specification tables, one per tab.
+     *
+     * A group with a heading and no rows is dropped rather than rendered as an
+     * empty tab, which is a tab somebody clicks once and learns nothing from.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function downloadRequirements(): array
+    {
+        $groups = [];
+
+        foreach ((array) $this->config->get('game.downloads.requirements', []) as $group) {
+            if (! is_array($group)) {
+                continue;
+            }
+
+            $heading = $this->trimmedOrNull($group['heading'] ?? null);
+
+            $rows = [];
+
+            foreach ((array) ($group['rows'] ?? []) as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+
+                $label = $this->trimmedOrNull($row['label'] ?? null);
+                $value = $this->trimmedOrNull($row['value'] ?? null);
+
+                if ($label === null || $value === null) {
+                    continue;
+                }
+
+                $rows[] = ['label' => $label, 'value' => $value];
+            }
+
+            if ($heading === null || $rows === []) {
+                continue;
+            }
+
+            $groups[] = ['heading' => $heading, 'rows' => $rows];
+        }
+
+        return $groups;
+    }
+
+    /**
+     * The installation steps, in the order configured.
+     *
+     * Numbered by the client from their position rather than carrying a number
+     * here, so removing the third step renumbers the rest instead of leaving a
+     * list that counts 1, 2, 4.
+     *
+     * @return list<array{title: string, description: string}>
+     */
+    private function downloadSteps(): array
+    {
+        $steps = [];
+
+        foreach ((array) $this->config->get('game.downloads.steps', []) as $step) {
+            if (! is_array($step)) {
+                continue;
+            }
+
+            $title = $this->trimmedOrNull($step['title'] ?? null);
+
+            if ($title === null) {
+                continue;
+            }
+
+            $steps[] = [
+                'title' => $title,
+                'description' => (string) ($this->trimmedOrNull($step['description'] ?? null) ?? ''),
+            ];
+        }
+
+        return $steps;
     }
 
     /**

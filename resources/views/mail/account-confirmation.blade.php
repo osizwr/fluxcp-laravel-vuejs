@@ -5,14 +5,23 @@
 
     <p style="margin:0 0 14px;">
         An account named <strong>{{ $username }}</strong> was registered with this address.
-        Follow the link below to activate it.
+        Enter this code to activate it:
+    </p>
+
+    {{-- Letter-spaced and large, because it is read off the screen and typed. --}}
+    <p style="margin:0 0 18px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:30px;font-weight:700;letter-spacing:0.22em;text-align:center;color:#1f2430;">
+        {{ $code }}
+    </p>
+
+    <p style="margin:0 0 14px;color:#6b7080;font-size:14px;">
+        Or confirm without typing it:
     </p>
 
     @include('mail.button', ['url' => $actionUrl, 'label' => 'Confirm my account'])
 
     <p style="margin:0 0 14px;color:#6b7080;font-size:14px;">
-        The link is valid for {{ $expiresInHours }} {{ \Illuminate\Support\Str::plural('hour', $expiresInHours) }}
-        and can be used once. Until you follow it, the account cannot sign in.
+        The code and the link are valid for {{ $expiresInHours }} {{ \Illuminate\Support\Str::plural('hour', $expiresInHours) }}
+        and can be used once. Until one of them is used, the account cannot sign in.
     </p>
 @endsection
 

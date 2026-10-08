@@ -10,15 +10,24 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Following the link that activates a newly registered account.
+ * Activating a newly registered account, by either route.
  *
  * Open to guests, necessarily: the whole point is that the account cannot sign
  * in until this has been done.
  *
- * The legacy link carried the account name as well as the code and the lookup
- * required both. The token alone identifies the row, so the name is not here
- * -- a link in an e-mail that names the account is one more thing disclosed by
- * a forwarded message.
+ * Two shapes, because the e-mail offers two ways in:
+ *
+ *   token               the link. Identifies the registration by itself, so no
+ *                       account name is needed -- and a link in an e-mail that
+ *                       names the account is one more thing disclosed by a
+ *                       forwarded message. (The legacy link carried the name
+ *                       and required it.)
+ *
+ *   username + code     the typed code. The name is required here and is not
+ *                       a disclosure: whoever is typing has just registered it.
+ *                       It is what scopes six digits to one account, without
+ *                       which the code would be guessable against every
+ *                       pending registration at once. See OneTimeCode.
  */
 final class ConfirmAccountRequest extends FormRequest
 {
@@ -36,7 +45,15 @@ final class ConfirmAccountRequest extends FormRequest
     {
         return [
             'server' => ['nullable', 'string', 'max:64'],
-            'token' => ['required', 'string', 'regex:/^[0-9a-f]{64}$/'],
+
+            /*
+             * Exactly one of the two routes. `required_without` on both sides
+             * refuses a request carrying neither; a request carrying both is
+             * answered by the token, which is the stronger secret.
+             */
+            'token' => ['required_without:code', 'nullable', 'string', 'regex:/^[0-9a-f]{64}$/'],
+            'code' => ['required_without:token', 'nullable', 'string', 'regex:/^\d{6}$/'],
+            'username' => ['required_with:code', 'nullable', 'string', 'max:23'],
         ];
     }
 
@@ -46,8 +63,11 @@ final class ConfirmAccountRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'token.required' => 'This confirmation link is incomplete.',
+            'token.required_without' => 'This confirmation link is incomplete.',
             'token.regex' => 'This confirmation link is not valid.',
+            'code.required_without' => 'Enter the code from your e-mail.',
+            'code.regex' => 'The code is six digits.',
+            'username.required_with' => 'This confirmation is incomplete.',
         ];
     }
 
@@ -65,11 +85,19 @@ final class ConfirmAccountRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
+        /*
+         * Keyed on the field the request actually used, so a visitor mistyping
+         * a code is not throttled out of clicking the link instead. The code's
+         * real ceiling is the per-account attempt count in the service; this
+         * is the blanket limit on top of it.
+         */
+        $usedCode = is_string($this->input('code')) && $this->input('code') !== '';
+
         $this->throttleSubmission(
-            'confirm-account',
+            $usedCode ? 'confirm-account-code' : 'confirm-account',
             [(string) $this->ip() => 10],
             900,
-            'token',
+            $usedCode ? 'code' : 'token',
         );
     }
 }

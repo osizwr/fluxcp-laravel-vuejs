@@ -1,0 +1,25 @@
+/*
+|--------------------------------------------------------------------------
+| Skyward — entrypoint
+|--------------------------------------------------------------------------
+|
+| Vite builds this file as its own entrypoint, and Blade links it for whichever
+| theme APP_THEME names. The three parts are split by what they change:
+|
+|   variables.css   the palette -- a derivative skin usually needs only this
+|   components.css  how the application's own components look
+|   blocks.css      the floating shell, and how this theme's sections are drawn
+|
+| The fonts are loaded here rather than from the page shell so that a theme owns
+| its own typography. Nunito carries the skin; Fredoka is used by the footer's
+| group headings only, to match the design that footer was taken from. Both are
+| licensed under the SIL Open Font License 1.1; third-party assets are listed
+| in resources/themes/README.md.
+|
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800&display=swap');
+
+@import './variables.css';
+@import './components.css';
+@import './blocks.css';

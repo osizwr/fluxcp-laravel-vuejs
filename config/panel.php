@@ -88,13 +88,6 @@ return [
         'allow_duplicate_emails' => (bool) env('PANEL_ALLOW_DUPLICATE_EMAILS', false),
         'require_email_confirmation' => (bool) env('PANEL_REQUIRE_EMAIL_CONFIRMATION', false),
         'email_confirmation_expires_after_hours' => (int) env('PANEL_EMAIL_CONFIRM_EXPIRE_HOURS', 48),
-
-        /*
-         * Minimum age in years, enforced against the submitted birthdate.
-         * rAthena stores the birthdate and uses it for its own age-gated
-         * features, so it is required rather than optional.
-         */
-        'minimum_age' => (int) env('PANEL_MINIMUM_AGE', 13),
     ],
 
     /*

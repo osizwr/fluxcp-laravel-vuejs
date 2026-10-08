@@ -12,6 +12,7 @@ use App\Mail\PasswordResetMail;
 use App\Models\Account;
 use App\Support\Client\ClientRoutes;
 use App\Support\Rathena\ServerGroup;
+use App\Support\Tokens\ConfirmationSecrets;
 use App\Support\Tokens\SecureToken;
 use Illuminate\Contracts\Mail\Mailer;
 use Illuminate\Support\Facades\Log;
@@ -55,16 +56,17 @@ final readonly class AccountMailer
     public function sendAccountConfirmation(
         ServerGroup $group,
         Account $account,
-        SecureToken $token,
+        ConfirmationSecrets $secrets,
     ): bool {
         $hours = (int) config('panel.registration.email_confirmation_expires_after_hours', 48);
 
         return $this->dispatch($account->email, new AccountConfirmationMail(
             username: $account->userid,
             confirmationUrl: ClientRoutes::url(ClientRoutes::CONFIRM_ACCOUNT, [
-                'token' => $token->plaintext,
+                'token' => $secrets->token->plaintext,
                 'server' => $group->key,
             ]),
+            confirmationCode: $secrets->code->plaintext,
             expiresInHours: $hours,
         ));
     }

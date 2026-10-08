@@ -3,6 +3,7 @@ import { useGame } from '../composables/useGame'
 import { useAccounts } from '../composables/useAccounts'
 import { api } from '../services/api'
 import { bootstrap } from '../theme/bootstrap'
+import { translate as t } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useServerStore } from '../stores/server'
 import { useSiteStore } from '../stores/site'
@@ -13,6 +14,7 @@ import type {
     BlockAction,
     CallToActionData,
     ClassShowcaseData,
+    DownloadsData,
     FeatureData,
     HeroData,
     HeroProps,
@@ -103,16 +105,16 @@ export function useHeroData(props: HeroProps = {}): ComputedRef<HeroData> {
          * rather than leading to a page that refuses it.
          */
         const primaryAction: BlockAction | null = auth.isAuthenticated
-            ? { label: 'My account', to: '/account' }
+            ? { label: t('cta.myAccount'), to: '/account' }
             : registrationEnabled.value
-              ? { label: 'Create an account', to: '/register' }
-              : { label: 'Sign in', to: '/sign-in' }
+              ? { label: t('cta.createAccount'), to: '/register' }
+              : { label: t('auth.signIn'), to: '/sign-in' }
 
         const secondaryAction: BlockAction | null = auth.isAuthenticated
             ? links.downloads
-                ? { label: 'Download', href: links.downloads }
-                : { label: 'View rankings', to: '/rankings/level' }
-            : { label: 'Sign in', to: '/sign-in' }
+                ? { label: t('cta.download'), href: links.downloads }
+                : { label: t('cta.viewRankings'), to: '/rankings/level' }
+            : { label: t('auth.signIn'), to: '/sign-in' }
 
         return {
             title: props.title ?? game.value.name,
@@ -149,9 +151,9 @@ export function useServerStatusData(): ComputedRef<ServerStatusData> {
                 first === null
                     ? []
                     : [
-                          { label: 'Login', up: first.login_server_up },
-                          { label: 'Character', up: first.char_server_up },
-                          { label: 'Map', up: first.map_server_up },
+                          { label: t('server.login'), up: first.login_server_up },
+                          { label: t('server.char'), up: first.char_server_up },
+                          { label: t('server.map'), up: first.map_server_up },
                       ],
             playersOnline: servers.playersOnline,
             playersPeak: (() => {
@@ -195,10 +197,14 @@ export function useStatisticsData(): ComputedRef<StatisticsData> {
             raw === null
                 ? []
                 : [
-                      { key: 'players_online', label: 'Players online', value: raw.players_online },
-                      { key: 'characters', label: 'Characters', value: raw.characters },
-                      { key: 'guilds', label: 'Guilds', value: raw.guilds },
-                      { key: 'accounts', label: 'Accounts', value: raw.accounts },
+                      {
+                          key: 'players_online',
+                          label: t('stats.playersOnline'),
+                          value: raw.players_online,
+                      },
+                      { key: 'characters', label: t('stats.characters'), value: raw.characters },
+                      { key: 'guilds', label: t('stats.guilds'), value: raw.guilds },
+                      { key: 'accounts', label: t('stats.accounts'), value: raw.accounts },
                   ].map((item) => ({ ...item, formatted: item.value.toLocaleString() }))
 
         return {
@@ -262,7 +268,7 @@ export function useRankingData(
             })
             entries.value = response.data
         } catch {
-            error.value = 'The ranking could not be loaded.'
+            error.value = t('rankings.error')
         } finally {
             loading.value = false
         }
@@ -312,12 +318,46 @@ export function useFeatureData(): ComputedRef<FeatureData> {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Downloads                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * What the download page offers, from config/game.php.
+ *
+ * Nothing is fetched: the packages, the specifications and the steps are
+ * operator-authored configuration and arrive in the bootstrap payload with
+ * everything else the server decides. There is therefore no loading state to
+ * draw and no request to fail -- which is the right trade for a page whose
+ * whole job is to hand somebody a link quickly.
+ *
+ * `empty` is true only when all three sections are, because that is the one
+ * case the page as a whole has to answer for. A missing section is the job of
+ * the block that would have drawn it.
+ */
+export function useDownloadsData(): ComputedRef<DownloadsData> {
+    const { notice, clients, requirements, steps } = bootstrap().downloads
+
+    return computed<DownloadsData>(() => ({
+        notice,
+        clients,
+        requirements,
+        steps,
+        state: {
+            loading: false,
+            error: null,
+            empty: clients.length === 0 && requirements.length === 0 && steps.length === 0,
+        },
+    }))
+}
+
+/* -------------------------------------------------------------------------- */
 /* Call to action                                                             */
 /* -------------------------------------------------------------------------- */
 
-export function useCallToActionData(heading?: string, description?: string): ComputedRef<
-    CallToActionData
-> {
+export function useCallToActionData(
+    heading?: string,
+    description?: string,
+): ComputedRef<CallToActionData> {
     const { game } = useGame()
     const auth = useAuthStore()
     const { registrationEnabled } = useAccounts()
@@ -331,26 +371,34 @@ export function useCallToActionData(heading?: string, description?: string): Com
          * server refuses, is worse than none.
          */
         const action: BlockAction | null = auth.isAuthenticated
-            ? { label: 'My characters', to: '/characters' }
+            ? { label: t('cta.myCharacters'), to: '/characters' }
             : registrationEnabled.value
-              ? { label: 'Create an account', to: '/register' }
-              : { label: 'Sign in', to: '/sign-in' }
+              ? { label: t('cta.createAccount'), to: '/register' }
+              : { label: t('auth.signIn'), to: '/sign-in' }
 
+        /*
+         * The operator's own address wins over the panel's page, the same way
+         * it does in the navigation: somebody who pointed Download at a CDN
+         * means that, not the page they left behind. The internal page is
+         * offered next, and only when it has something on it.
+         */
         const secondaryAction: BlockAction | null = links.downloads
-            ? { label: 'Download the client', href: links.downloads }
-            : links.discord
-              ? { label: 'Join the community', href: links.discord }
-              : null
+            ? { label: t('cta.downloadClient'), href: links.downloads }
+            : bootstrap().downloads.clients.length > 0
+              ? { label: t('cta.downloadClient'), to: '/downloads' }
+              : links.discord
+                ? { label: t('cta.joinCommunity'), href: links.discord }
+                : null
 
         return {
-            title: heading ?? (auth.isAuthenticated ? 'Return to the realm' : 'Begin your adventure'),
+            title: heading ?? (auth.isAuthenticated ? t('cta.returnTitle') : t('cta.beginTitle')),
             description:
                 description ??
                 (auth.isAuthenticated
-                    ? `Your characters are waiting in ${game.value.name}.`
+                    ? t('cta.returnBody', { game: game.value.name })
                     : registrationEnabled.value
-                      ? `Create an account and start playing ${game.value.name}.`
-                      : `Sign in to manage your account in ${game.value.name}.`),
+                      ? t('cta.createBody', { game: game.value.name })
+                      : t('cta.signInBody', { game: game.value.name })),
             action,
             secondaryAction,
         }

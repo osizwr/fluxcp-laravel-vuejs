@@ -88,6 +88,40 @@
     --status-down-bg: var(--color-down-soft);
     --status-warn-bg: var(--color-warn-soft);
 
+    /*
+     * How much of the top of the viewport the shell is covering.
+     *
+     * Zero here, because the core layouts put the masthead in the flow and it
+     * scrolls away like everything else. A theme whose masthead is fixed --
+     * Skyward's rides over the page -- sets this to its measured height, and
+     * anything that sticks to the top of the viewport offsets by it.
+     *
+     * A neutral name rather than the theme's own, so a page can position
+     * itself correctly without naming a theme. A page that reached for
+     * `--sky-shell-height` would be right under one skin and wrong under
+     * every other.
+     */
+    --sticky-offset: 0px;
+
+    /*
+     * How long switching between light and dark takes.
+     *
+     * Two full seconds -- an order of magnitude longer than an interface
+     * transition is usually allowed to be, and deliberate. A theme change is
+     * the whole page turning over, and at 150ms that reads as a glitch: the
+     * eye registers that something broke rather than that something changed.
+     * The length is set by the slowest thing in it, which is the hero
+     * dissolving from a daylight valley into a night one -- two seconds is
+     * about what that shot needs to be read as one place at two hours
+     * rather than as two different places.
+     *
+     * Declared here because the animation has to be: `::view-transition-old`
+     * is not something script can time. useAppearance reads this value back
+     * to decide how long to hold its toggle disabled, so a theme that retunes
+     * the fade retunes the disabled window with it and the two cannot drift.
+     */
+    --appearance-fade: 2000ms;
+
     color-scheme: light;
 }
 
@@ -204,5 +238,955 @@
     .field-input:disabled {
         background-color: var(--surface-sunken);
         cursor: not-allowed;
+    }
+
+    /*
+     * A password field and its reveal control.
+     *
+     * The button sits inside the field's box rather than beside it, so the
+     * control reads as part of the input instead of as something next to it --
+     * and so a row of fields stays one column wide whether or not a given one
+     * is a password.
+     */
+    .field-password {
+        position: relative;
+    }
+
+    /*
+     * Room for the button, so a long password runs under the caret and not
+     * under the eye. Overrides the shorthand `padding` on `.field-input`,
+     * which is why it is the logical property rather than `padding-right`:
+     * the two cascade together, and this one follows the writing direction.
+     */
+    .field-password__input {
+        padding-inline-end: 2.5rem;
+    }
+
+    /*
+     * No background of its own, in any state.
+     *
+     * A filled hover block inside a bordered input reads as a second control
+     * butted up against the first, and at this size the tint is competing with
+     * the field's own border a few pixels away. The icon changing colour is
+     * enough to say it is live, and the focus ring -- which every interactive
+     * element here gets -- is what matters for reaching it by keyboard.
+     */
+    .field-password__toggle {
+        position: absolute;
+        inset-block: 1px;
+        inset-inline-end: 1px;
+        display: flex;
+        align-items: center;
+        padding-inline: 0.625rem;
+        color: var(--text-muted);
+        background: none;
+        border: 0;
+        border-radius: var(--radius-panel);
+        cursor: pointer;
+        transition: color 140ms ease;
+    }
+
+    .field-password__toggle:hover,
+    .field-password__toggle:focus-visible {
+        color: var(--text-secondary);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .field-password__toggle {
+            transition: none;
+        }
+    }
+
+    /*
+     * A code entered one digit per box.
+     *
+     * Sized from the text rather than fixed in pixels, so the row grows with
+     * the root font size and stays square at any of them. `aspect-ratio` does
+     * the squaring, which keeps one number -- the width -- as the only thing
+     * to change.
+     *
+     * The boxes shrink below their basis on a narrow screen rather than
+     * wrapping to a second line: a code split across two rows reads as two
+     * codes. Six of them plus the gaps fit inside a 320px viewport once they
+     * are allowed to give.
+     */
+    /*
+     * A fieldset will not shrink below its content by default, which turns any
+     * wide child into page-level overflow. Nothing here wants that behaviour.
+     */
+    fieldset {
+        min-inline-size: 0;
+    }
+
+    .code-input {
+        display: grid;
+        /*
+         * Tracks rather than flex items, and `minmax(0, …)` rather than a
+         * basis, because a text input carries an intrinsic width of about
+         * twenty characters. As a flex item that width is its minimum
+         * contribution, which made each box 251px and pushed the row to
+         * 1546px inside a 448px column. A grid track whose minimum is 0
+         * ignores it, so the boxes are sized by this rule and nothing else.
+         *
+         * The cap is a maximum, not a size: six boxes sit at 3rem where there
+         * is room and shrink together where there is not, which is what keeps
+         * them on one line down to a 320px screen. A code split over two rows
+         * reads as two codes.
+         */
+        grid-template-columns: repeat(var(--code-count, 6), minmax(0, 3rem));
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .code-input__box {
+        min-width: 0;
+        aspect-ratio: 1;
+        padding: 0;
+        font-size: 1.375rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        text-align: center;
+        color: var(--text-primary);
+        background-color: var(--surface-raised);
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-panel);
+        transition:
+            border-color 120ms ease,
+            box-shadow 120ms ease;
+    }
+
+    /*
+     * A filled box is marked by its border rather than by a background, so the
+     * row shows progress without the digits themselves changing weight.
+     */
+    .code-input__box--filled {
+        border-color: var(--color-accent-600);
+    }
+
+    .code-input__box:focus {
+        outline: none;
+        border-color: var(--color-accent-600);
+        box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent-600) 28%, transparent);
+    }
+
+    .code-input__box--invalid,
+    .code-input__box--invalid.code-input__box--filled {
+        border-color: var(--color-down);
+    }
+
+    .code-input__box--invalid:focus {
+        border-color: var(--color-down);
+        box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-down) 28%, transparent);
+    }
+
+    /*
+     * The row is also disabled while a rejected code is being shown, and the
+     * sunken background would read as "switched off" over the top of the red.
+     * The red is the message there; the greying is only for the moment the
+     * code is in flight.
+     */
+    .code-input__box:disabled:not(.code-input__box--invalid) {
+        background-color: var(--surface-sunken);
+    }
+
+    .code-input__box:disabled {
+        cursor: not-allowed;
+    }
+
+    /*
+     * A hint that floats over the form while its field has focus.
+     *
+     * Hidden with opacity rather than `display` or `visibility`, deliberately:
+     * the field's `aria-describedby` points here, and both of those would take
+     * it out of the accessibility tree -- so a screen reader would be told to
+     * read a description that no longer exists. Opacity leaves it readable on
+     * demand while keeping it out of the way visually, and `pointer-events`
+     * stops the invisible panel swallowing clicks on whatever is underneath.
+     */
+    .field-requirements {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 140ms ease;
+    }
+
+    /*
+     * Shown, but never clickable -- `pointer-events` stays off in both states.
+     *
+     * The panel floats over whatever follows the field, which on a registration
+     * form is the confirm-password input. Nothing in the panel is interactive,
+     * so taking the pointer would mean a click aimed at the field underneath
+     * landing on a checklist instead: the panel would then hide, because focus
+     * left the password, and the visitor would have to click the same spot
+     * twice. Letting the click through costs nothing and avoids that.
+     */
+    .field-group:focus-within .field-requirements {
+        opacity: 1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .field-requirements {
+            transition: none;
+        }
+    }
+
+    /*
+     * The download cards.
+     *
+     * Each one carries a picture of the thing being downloaded, and is itself
+     * the control that opens the package's mirrors. The art is a real <img>
+     * rather than a background, so it is lazily loaded, decoded off the main
+     * thread, and can fall back to nothing when the file is not there -- all
+     * of which a background-image gives up.
+     */
+    .download-card {
+        /*
+         * Square, because the art is square: at any other ratio the
+         * illustration has to be cropped, and these are pictures of a person
+         * at a screen -- there is no edge of them to lose.
+         */
+        aspect-ratio: 1 / 1;
+        transition:
+            transform 160ms ease,
+            box-shadow 160ms ease,
+            border-color 160ms ease;
+    }
+
+    .download-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--border-strong);
+        box-shadow: 0 18px 30px -22px color-mix(in oklab, var(--color-shell-950) 65%, transparent);
+    }
+
+    /*
+     * The card's only content. `cover` crops nothing -- a square picture in a
+     * square card -- and is there for the art an operator replaces with a file
+     * of some other shape.
+     */
+    .download-card__art {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 400ms ease;
+    }
+
+    .download-card:hover .download-card__art {
+        transform: scale(1.05);
+    }
+
+    /*
+     * The wash over the art, and the thing the hover takes away. Thin enough
+     * that the illustration still reads through it, and white rather than the
+     * surface colour because what it is doing is holding the picture back a
+     * little until the pointer asks for it.
+     */
+    .download-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        background-color: oklch(1 0 0 / 0.1);
+        transition: opacity 220ms ease;
+    }
+
+    .download-card:hover::before {
+        opacity: 0;
+    }
+
+    /*
+     * The platform's mark, over the middle of the picture.
+     *
+     * White at rest, because a white mark reads on any illustration and
+     * because a card doing nothing should look like one thing rather than
+     * three. The pointer hands each mark its own colour at the same moment the
+     * wash lifts, so the two read as one movement.
+     *
+     * The shadow stays through both: these sit on photographs, and a mark with
+     * no edge disappears into a pale corner whatever colour it is.
+     */
+    .download-card__logo {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: grid;
+        place-items: center;
+        color: oklch(1 0 0);
+        filter: drop-shadow(
+            0 2px 10px color-mix(in oklab, var(--color-shell-950) 50%, transparent)
+        );
+        transition:
+            color 220ms ease,
+            transform 220ms ease;
+    }
+
+    .download-card:hover .download-card__logo {
+        color: var(--download-logo-color);
+        transform: scale(1.06);
+    }
+
+    .download-card__mark {
+        width: 4.5rem;
+        height: 4.5rem;
+    }
+
+    /*
+     * The colours the marks revert to. Three of them are brands and so are
+     * written as the literals their owners publish rather than mixed from a
+     * token, which would drift with the palette; the monitor is nobody's, so
+     * it takes the panel's own accent.
+     */
+    .download-card--windows {
+        --download-logo-color: #0078d4;
+    }
+
+    .download-card--desktop {
+        --download-logo-color: var(--color-accent-600);
+    }
+
+    .download-card--android {
+        --download-logo-color: #3ddc84;
+    }
+
+    .download-card--apple {
+        --download-logo-color: #000000;
+    }
+
+    /*
+     * The card as one control: an otherwise empty button stretched over the
+     * whole of it. Nothing else in the card is interactive, so there is
+     * nothing for it to swallow -- the mirrors are in the dialog it opens.
+     */
+    .download-card__hit {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        border-radius: var(--radius-panel);
+        cursor: pointer;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .download-card,
+        .download-card::before,
+        .download-card__art,
+        .download-card__logo {
+            transition: none;
+        }
+
+        .download-card:hover,
+        .download-card:hover .download-card__art,
+        .download-card:hover .download-card__logo {
+            transform: none;
+        }
+    }
+
+    /*
+     * The package dialog: the picture on one side, everything configured about
+     * the package on the other.
+     */
+    .download-modal {
+        /*
+         * Restores the centring the UA stylesheet provides and Tailwind's
+         * preflight takes away: a modal dialog is laid out `position: fixed;
+         * inset: 0` with `margin: auto` doing the centring, and preflight
+         * zeroes the margin on every element. Without this the dialog sits in
+         * the top-left corner.
+         */
+        margin: auto;
+        padding: 0;
+        border: 0;
+        width: min(64rem, calc(100vw - 3rem));
+        max-width: none;
+        border-radius: var(--radius-panel);
+        background-color: var(--surface-raised);
+        color: var(--text-primary);
+        overflow: hidden;
+        box-shadow: 0 32px 64px -24px color-mix(in oklab, var(--color-shell-950) 70%, transparent);
+    }
+
+    .download-modal::backdrop {
+        background-color: color-mix(in oklab, var(--color-shell-950) 55%, transparent);
+        backdrop-filter: blur(3px);
+    }
+
+    .download-modal__panel {
+        display: grid;
+        grid-template-columns: 1fr;
+        /* A package with four mirrors and three notes scrolls inside the
+         * dialog rather than past it. */
+        max-height: calc(100dvh - 4rem);
+        overflow-y: auto;
+    }
+
+    /*
+     * Two columns once there is room for the picture to be worth its width.
+     * Below that it becomes a band across the top, which is the same reading
+     * order -- picture, then name, then buttons -- in one column.
+     *
+     * The floor matches the art column, so the picture lands square and the
+     * dialog keeps one height whether the package has four mirrors or none.
+     * Taken as a `min()` against the same room the max-height works from,
+     * because a floor that outgrew the ceiling would force the panel to scroll
+     * on a short window with nothing in it worth scrolling to.
+     */
+    @media (min-width: 48rem) {
+        .download-modal__panel {
+            grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+            min-height: min(24rem, calc(100dvh - 4rem));
+        }
+    }
+
+    .download-modal__art {
+        position: relative;
+        min-height: 12rem;
+        background-color: var(--surface-sunken);
+    }
+
+    .download-modal__art img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: 50% 25%;
+    }
+
+    .download-modal__body {
+        position: relative;
+        padding: 2rem;
+    }
+
+    .download-modal__close {
+        position: absolute;
+        inset-block-start: 1.25rem;
+        inset-inline-end: 1.25rem;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: var(--radius-panel);
+        color: var(--text-muted);
+        transition:
+            background-color 150ms ease,
+            color 150ms ease;
+    }
+
+    .download-modal__close:hover {
+        background-color: var(--surface-hover);
+        color: var(--text-primary);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .download-modal__close {
+            transition: none;
+        }
+    }
+
+    /*
+     * A mirror, as a square tile: the host's mark over its name.
+     *
+     * Square rather than a row, and all four drawn alike, so they read as one
+     * set of choices between equals -- which is what mirrors are. The same
+     * file is behind every one, so neither a stack of full-width bars nor a
+     * highlighted first tile should imply an order of preference that the
+     * operator did not write.
+     */
+    .download-mirror {
+        display: flex;
+        aspect-ratio: 1 / 1;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        text-align: center;
+    }
+
+    /*
+     * The mark itself. Square, with the host logos left to letterbox inside
+     * it: the Google one is drawn wider than it is tall, and a box that
+     * stretched it to fit would be the one thing its owner asks nobody to do.
+     */
+    .download-mirror__mark {
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .download-mirror__mark svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    /*
+     * The dialog's top layer keeps the page from being *clicked*, not from
+     * being scrolled, and a backdrop that slides away from what it is dimming
+     * looks broken. Set on <html> by whichever modal is open.
+     */
+    .app-modal-open {
+        overflow: hidden;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rendered Markdown
+    |--------------------------------------------------------------------------
+    |
+    | The wiki's body arrives as HTML the server rendered, so it carries no
+    | classes and cannot be styled by a utility in the template. It is styled
+    | by element instead, scoped to this one container.
+    |
+    | Written against the semantic tokens like everything else, so a theme
+    | that ships only a palette restyles the prose along with the rest of the
+    | panel. Nothing here sets a font family: the page's own is correct, and
+    | an article in a different typeface than the sidebar beside it reads as
+    | content somebody pasted in.
+    |
+    | Measure is capped at 70 characters. A full-width line of body text on a
+    | wide screen is the single most common way a documentation page becomes
+    | hard to read, and the fix is a limit rather than a narrower column --
+    | tables and images still get the whole width.
+    |
+    */
+
+    .wiki-prose {
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+        line-height: 1.7;
+    }
+
+    .wiki-prose > * {
+        max-width: 70ch;
+    }
+
+    .wiki-prose > table,
+    .wiki-prose > pre,
+    .wiki-prose > figure {
+        max-width: none;
+    }
+
+    .wiki-prose p,
+    .wiki-prose ul,
+    .wiki-prose ol,
+    .wiki-prose blockquote,
+    .wiki-prose pre,
+    .wiki-prose table {
+        margin-block: 0.9em;
+    }
+
+    .wiki-prose h2,
+    .wiki-prose h3,
+    .wiki-prose h4 {
+        color: var(--text-primary);
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        /*
+         * Room above a heading and none below it, so a heading sits with the
+         * text it introduces rather than floating between two blocks.
+         */
+        margin-block: 2em 0.6em;
+        /*
+         * A heading reached from the contents must not land under a sticky
+         * masthead. This is the whole scroll offset the anchors need.
+         */
+        scroll-margin-top: calc(var(--sticky-offset) + 2rem);
+    }
+
+    .wiki-prose h2 {
+        font-size: 1.25rem;
+        padding-bottom: 0.35em;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .wiki-prose h3 {
+        font-size: 1.0625rem;
+    }
+
+    .wiki-prose h4 {
+        font-size: 0.9375rem;
+    }
+
+    .wiki-prose > :first-child {
+        margin-block-start: 0;
+    }
+
+    .wiki-prose strong {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .wiki-prose a {
+        color: var(--color-accent-600);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    .wiki-prose ul,
+    .wiki-prose ol {
+        padding-inline-start: 1.4em;
+    }
+
+    .wiki-prose ul {
+        list-style: disc;
+    }
+
+    .wiki-prose ol {
+        list-style: decimal;
+    }
+
+    .wiki-prose li {
+        margin-block: 0.35em;
+    }
+
+    .wiki-prose li > ul,
+    .wiki-prose li > ol {
+        margin-block: 0.35em;
+    }
+
+    .wiki-prose blockquote {
+        padding-inline-start: 1em;
+        border-inline-start: 3px solid var(--border-strong);
+        color: var(--text-muted);
+    }
+
+    /*
+     * Inline code and code blocks. A fenced block is a <pre> wrapping a
+     * <code>, so the inner element has to give its own box back or the
+     * padding is applied twice and the scroll happens on the wrong element.
+     */
+    .wiki-prose code {
+        padding: 0.15em 0.35em;
+        font-size: 0.875em;
+        color: var(--text-primary);
+        background-color: var(--surface-sunken);
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.25rem;
+    }
+
+    .wiki-prose pre {
+        padding: 0.9rem 1rem;
+        overflow-x: auto;
+        background-color: var(--surface-sunken);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-panel);
+    }
+
+    .wiki-prose pre code {
+        padding: 0;
+        font-size: 0.875rem;
+        background: none;
+        border: 0;
+    }
+
+    .wiki-prose table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+
+    .wiki-prose th,
+    .wiki-prose td {
+        padding: 0.5rem 0.75rem;
+        text-align: start;
+        border: 1px solid var(--border-subtle);
+    }
+
+    .wiki-prose th {
+        color: var(--text-primary);
+        font-weight: 600;
+        background-color: var(--surface-sunken);
+    }
+
+    .wiki-prose img {
+        max-width: 100%;
+        height: auto;
+        border-radius: var(--radius-panel);
+    }
+
+    .wiki-prose hr {
+        margin-block: 2em;
+        border: 0;
+        border-top: 1px solid var(--border-subtle);
+    }
+}
+
+/*
+ * The dialog's entrance and exit.
+ *
+ * Outside the layer because `@keyframes` is not something a cascade layer
+ * holds -- the names are global either way, and keeping them here says so.
+ *
+ * Only the entrance is free: a closed dialog is removed from the top layer at
+ * once, so the exit is played while the element is still open and the script
+ * waits EXIT_MS before calling close(). `forwards` holds the last frame over
+ * that gap, which is what stops the panel flashing back to full opacity on the
+ * way out. The global reduced-motion rule cuts both to nothing, and the script
+ * skips the wait to match.
+ */
+@keyframes download-modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.97);
+    }
+}
+
+@keyframes download-modal-out {
+    to {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+}
+
+@keyframes download-backdrop-in {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes download-backdrop-out {
+    to {
+        opacity: 0;
+    }
+}
+
+.download-modal[open] {
+    animation: download-modal-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.download-modal[open]::backdrop {
+    animation: download-backdrop-in 220ms ease-out;
+}
+
+.download-modal--closing[open] {
+    animation: download-modal-out 160ms ease-in forwards;
+}
+
+.download-modal--closing[open]::backdrop {
+    animation: download-backdrop-out 160ms ease-in forwards;
+}
+
+/*
+|--------------------------------------------------------------------------
+| The game's cursor
+|--------------------------------------------------------------------------
+|
+| An arrow that turns, and the glove the client shows over anything you can
+| click. useAnimatedCursor() publishes the images as custom properties and adds
+| the class; these rules decide where each one applies, and with what hotspot.
+|
+| Deliberately outside every `@layer`. Theme stylesheets and SFC `<style>`
+| blocks are unlayered, and an unlayered declaration beats a layered one
+| whatever its specificity -- so a `cursor: pointer` on a themed navigation
+| button would quietly win against anything written in `base` or `components`.
+|
+| The class is only ever added once the composable has decided the cursor is
+| wanted, so a visitor on a touch screen never has these rules applied at all.
+| `auto` and `pointer` are the keywords the browser falls back to if an image
+| will not load: a missing file costs the decoration, not the pointer.
+|
+| A theme that wants none of this overrides the same declarations under its own
+| scope -- `:root[data-theme-slug='…']` is specific enough to win, and is
+| equally unlayered.
+|
+*/
+
+/*
+ * Every arrow frame is padded to a uniform 32x32 with the tip in the corner, so
+ * the hotspot is `0 0` throughout and the point does not wander across the
+ * spin.
+ *
+ * This sets only the *inherited* default. A disabled control asking for
+ * `not-allowed` and a text field's I-beam still win on their own rules.
+ */
+html.cursor-animated {
+    cursor:
+        var(--cursor-frame) 0 0,
+        auto;
+}
+
+/*
+ * The glove, for the things that can actually be clicked.
+ *
+ * Listed by element rather than inferred, because there is no way to ask CSS
+ * for "whatever computes to `cursor: pointer`". Native controls carry their own
+ * meaning; the ARIA roles cover the cases where a `div` has been given one.
+ *
+ * `:not()` keeps the glove off anything switched off. Offering a hand to a
+ * button that will refuse the click is worse than offering no affordance at
+ * all, and the panel already marks those `not-allowed`.
+ *
+ * `a[href]` rather than `a`, so an anchor with nowhere to go is left alone --
+ * which is also how a theme's deliberately inert links stay inert.
+ *
+ * The hotspot is the fingertip, and it differs by a pixel between the two
+ * stills because the finger curls as it presses. Following it is what keeps the
+ * tip pinned to one point on screen while the hand recoils underneath.
+ */
+html.cursor-animated
+    :is(
+        a[href],
+        button,
+        summary,
+        select,
+        label[for],
+        [role='button'],
+        [role='link'],
+        [role='tab'],
+        [role='menuitem'],
+        [role='option'],
+        [role='switch'],
+        input[type='checkbox'],
+        input[type='radio'],
+        input[type='file'],
+        input[type='submit'],
+        input[type='reset'],
+        input[type='button']
+    ):not(:disabled, [aria-disabled='true']) {
+    cursor:
+        var(--cursor-hand) 2 1,
+        pointer;
+
+    &:active {
+        cursor:
+            var(--cursor-hand-press) 2 2,
+            pointer;
+    }
+}
+
+/*
+ * Text fields, which would otherwise keep the browser's I-beam.
+ *
+ * Said out loud rather than left to inheritance, because the user-agent
+ * stylesheet gives form controls a cursor of their own and an author rule is
+ * what takes it back. The spin is the whole point: a stray I-beam in the middle
+ * of a page whose pointer is the game's reads as a bug rather than a detail.
+ *
+ * `text` stays as the fallback for a missing image, not `default`. The fallback
+ * is the last thing holding the affordance up, so it should be the honest one.
+ */
+html.cursor-animated
+    :is(
+        textarea,
+        input:not(
+            [type='button'],
+            [type='checkbox'],
+            [type='color'],
+            [type='file'],
+            [type='image'],
+            [type='radio'],
+            [type='range'],
+            [type='reset'],
+            [type='submit']
+        )
+    ) {
+    cursor:
+        var(--cursor-frame) 0 0,
+        text;
+}
+
+/*
+ * Disabled controls, which would otherwise keep `not-allowed` -- the panel sets
+ * it in `@layer components` and through Tailwind's utility, and both are
+ * layered, so this unlayered rule is what overrides them.
+ *
+ * Last, so that a disabled text field takes this rather than the rule above:
+ * the image is the same either way, but the fallback keyword should say the
+ * more important of the two things.
+ *
+ * Note what this costs. `not-allowed` is a recognised signal that a control
+ * will refuse the click and a spinning arrow is not, so the panel leans on the
+ * other half of that convention instead -- the dimming `AppButton` already
+ * applies alongside it.
+ */
+html.cursor-animated :is(:disabled, [aria-disabled='true']) {
+    cursor:
+        var(--cursor-frame) 0 0,
+        not-allowed;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Changing appearance
+|--------------------------------------------------------------------------
+|
+| The fade between light and dark. Driven from useAppearance, which picks one
+| of the two mechanisms below depending on what the browser can do; both are
+| timed from `--appearance-fade` so they feel the same.
+|
+| Outside `@layer components` on purpose. `::view-transition-*` are pseudo-
+| elements on the document itself rather than on anything a component renders,
+| and the fallback has to beat whatever transition the element it lands on
+| already declared -- which a layered rule would lose to on cascade order
+| before specificity ever came into it.
+|
+*/
+
+/*
+ * The good path: the browser cross-fades a snapshot of the old page into the
+ * new one. Everything is covered, including an element being replaced rather
+ * than restyled -- Skyward swaps to a different hero video after dark, and
+ * no colour transition can blend one video into another.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: var(--appearance-fade);
+    animation-timing-function: ease;
+}
+
+/*
+ * The fallback, for a browser without view transitions.
+ *
+ * Added for the length of the change and then taken off again, which is the
+ * whole reason it can be this broad: a universal selector carrying a
+ * transition is a real cost to leave on a page, and a hover that eased over
+ * well over a second would be unusable. For the one change it is on, it
+ * is the cheapest way to fade a page whose colours come from a hundred
+ * different rules.
+ *
+ * `transform` and `opacity` are in the list although this is nominally a
+ * colour change. The control that was just pressed turns its icon over as
+ * part of the same gesture, and Skyward's hero cross-fades between two
+ * stacked videos -- leaving either property out would override those
+ * transitions with this one and make both snap while everything around them
+ * faded.
+ */
+.appearance-fading,
+.appearance-fading *,
+.appearance-fading *::before,
+.appearance-fading *::after {
+    transition:
+        background-color var(--appearance-fade) ease,
+        border-color var(--appearance-fade) ease,
+        color var(--appearance-fade) ease,
+        fill var(--appearance-fade) ease,
+        stroke var(--appearance-fade) ease,
+        box-shadow var(--appearance-fade) ease,
+        outline-color var(--appearance-fade) ease,
+        opacity var(--appearance-fade) ease,
+        transform var(--appearance-fade) ease !important;
+}
+
+/*
+ * Reduced motion gets the change without the fade.
+ *
+ * The page still turns over -- that is the content, not decoration, and a
+ * visitor who asked for dark must get dark. useAppearance skips both
+ * mechanisms in that case; these rules are belt and braces for a transition
+ * that was already running when the preference changed.
+ */
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation: none;
+    }
+
+    .appearance-fading,
+    .appearance-fading *,
+    .appearance-fading *::before,
+    .appearance-fading *::after {
+        transition: none !important;
     }
 }

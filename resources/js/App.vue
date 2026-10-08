@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, type Component } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAnimatedCursor } from './composables/useAnimatedCursor'
 import { useServerStatusFeed } from './composables/useServerStatusFeed'
 import { layoutForRole, layoutRoleFor } from './theme/resolve'
 
@@ -15,9 +16,14 @@ import { layoutForRole, layoutRoleFor } from './theme/resolve'
  *
  * Server status is started once here and kept current for the session, so
  * every block reads it from the store rather than fetching it again.
+ *
+ * The cursor starts here for the same reason: it belongs to the window rather
+ * than to any one page, and starting it per route would restart the spin on
+ * every navigation.
  */
 const route = useRoute()
-const { start } = useServerStatusFeed()
+const { start: startServerStatus } = useServerStatusFeed()
+const { start: startCursor } = useAnimatedCursor()
 
 const layout = computed<Component>(() => {
     const pageKey = String(route.name ?? '')
@@ -26,7 +32,10 @@ const layout = computed<Component>(() => {
     return layoutForRole(layoutRoleFor(pageKey, declared))
 })
 
-onMounted(start)
+onMounted(() => {
+    void startServerStatus()
+    startCursor()
+})
 </script>
 
 <template>

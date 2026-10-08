@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\EnforceRoutePermission;
 use App\Http\Middleware\RefuseDuringWarOfEmperium;
 use App\Http\Middleware\ResolveServerGroup;
+use App\Http\Middleware\SetLocale;
 use App\Services\Notifications\DiscordWebhook;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -44,6 +45,12 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        /*
+         * Before anything renders or validates, so both the page and the
+         * messages the API returns speak the visitor's language.
+         */
+        $middleware->web(prepend: [SetLocale::class]);
+
         $middleware->alias([
             'permission' => EnforceRoutePermission::class,
             'not-during-woe' => RefuseDuringWarOfEmperium::class,

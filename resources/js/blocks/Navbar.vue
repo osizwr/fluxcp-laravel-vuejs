@@ -7,6 +7,9 @@ import { useGame } from '../composables/useGame'
 import { useShell } from '../composables/useShell'
 import { useAuthStore } from '../stores/auth'
 import { useServerStore } from '../stores/server'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * The core navigation bar.
@@ -46,7 +49,7 @@ const { links, isActive, menuOpen, signingOut, signOut } = useShell()
             />
 
             <div class="ml-auto flex items-center gap-1">
-                <nav aria-label="Main" class="hidden items-center gap-0.5 md:flex">
+                <nav :aria-label="t('nav.label')" class="hidden items-center gap-0.5 md:flex">
                     <RouterLink
                         v-for="link in links"
                         :key="link.to"
@@ -87,10 +90,12 @@ const { links, isActive, menuOpen, signingOut, signOut } = useShell()
                             {{ auth.account?.username }}
                         </span>
                         <AppButton size="sm" :loading="signingOut" @click="signOut">
-                            Sign out
+                            {{ t('nav.signOut') }}
                         </AppButton>
                     </template>
-                    <AppButton v-else variant="primary" size="sm" to="/sign-in">Sign in</AppButton>
+                    <AppButton v-else variant="primary" size="sm" to="/sign-in">{{
+                        t('auth.signIn')
+                    }}</AppButton>
                 </div>
 
                 <button
@@ -98,7 +103,7 @@ const { links, isActive, menuOpen, signingOut, signOut } = useShell()
                     class="rounded-[var(--radius-panel)] p-1.5 text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] md:hidden"
                     :aria-expanded="menuOpen"
                     aria-controls="core-nav"
-                    aria-label="Menu"
+                    :aria-label="t('nav.menu')"
                     @click="menuOpen = !menuOpen"
                 >
                     <svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -115,7 +120,7 @@ const { links, isActive, menuOpen, signingOut, signOut } = useShell()
         <nav
             v-if="menuOpen"
             id="core-nav"
-            aria-label="Main"
+            :aria-label="t('nav.label')"
             class="border-t border-[var(--border-subtle)] px-4 py-2 md:hidden"
         >
             <RouterLink
@@ -135,10 +140,10 @@ const { links, isActive, menuOpen, signingOut, signOut } = useShell()
 
             <div class="mt-2 border-t border-[var(--border-subtle)] pt-2">
                 <AppButton v-if="auth.isAuthenticated" block :loading="signingOut" @click="signOut">
-                    Sign out
+                    {{ t('nav.signOut') }}
                 </AppButton>
                 <AppButton v-else variant="primary" block to="/sign-in" @click="menuOpen = false">
-                    Sign in
+                    {{ t('auth.signIn') }}
                 </AppButton>
             </div>
         </nav>

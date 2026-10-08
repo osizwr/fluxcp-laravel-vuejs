@@ -1,0 +1,34 @@
+{
+    "name": "Skyward",
+    "version": "1.0.0",
+    "author": "",
+    "description": "A skin for a landing page, in two hours of the day: an open sky or a night valley, cards that float above it, and a masthead that rides over the hero before snapping flush to the top. Opens in daylight; the switch past Create Account takes it to night.",
+    "supports": {
+        "dark_mode": true,
+        "light_mode": true,
+        "mobile": true
+    },
+    "default_appearance": "light",
+
+    "layouts": {
+        "public": "PublicLayout",
+        "app": "AppLayout",
+        "auth": "AuthLayout"
+    },
+
+    "pages": {
+        "home": {
+            "layout": "public",
+            "blocks": [
+                "hero",
+                { "block": "server-status", "props": { "detailed": true } },
+                "statistics",
+                { "block": "news-section", "props": { "limit": 3, "featureFirst": true } },
+                { "block": "class-showcase", "props": { "limit": 6 } },
+                { "block": "ranking-showcase", "props": { "ladder": "level", "limit": 5, "showAll": true } },
+                "feature-grid",
+                "call-to-action"
+            ]
+        }
+    }
+}

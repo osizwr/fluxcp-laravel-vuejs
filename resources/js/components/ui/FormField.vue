@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useId } from 'vue'
+import { computed, useId, useSlots } from 'vue'
 
 /**
  * A labelled form control.
@@ -17,29 +17,40 @@ const props = defineProps<{
 const id = useId()
 const errorId = `${id}-error`
 const hintId = `${id}-hint`
+
+/*
+ * A hint can be a sentence or it can be something richer -- the password
+ * checklist, say. Either way the field has to point `aria-describedby` at it,
+ * so presence is what matters here, not which of the two it is.
+ */
+const slots = useSlots()
+const described = computed(() => Boolean(props.hint) || Boolean(slots.hint))
 </script>
 
 <template>
-    <div>
+    <!-- `relative`, so a floating hint positions against the field. -->
+    <div class="field-group relative">
         <label :for="id" class="field-label">{{ props.label }}</label>
 
         <slot
             :id="id"
             :invalid="Boolean(props.error)"
             :described-by="
-                [props.error ? errorId : null, props.hint ? hintId : null]
+                [props.error ? errorId : null, described ? hintId : null]
                     .filter(Boolean)
                     .join(' ') || undefined
             "
         />
 
-        <p
-            v-if="props.hint && !props.error"
-            :id="hintId"
-            class="mt-1 text-[0.8125rem] text-[var(--text-muted)]"
-        >
-            {{ props.hint }}
-        </p>
+        <slot :id="hintId" name="hint">
+            <p
+                v-if="props.hint && !props.error"
+                :id="hintId"
+                class="mt-1 text-[0.8125rem] text-[var(--text-muted)]"
+            >
+                {{ props.hint }}
+            </p>
+        </slot>
 
         <p
             v-if="props.error"

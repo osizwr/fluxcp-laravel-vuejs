@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Actions\Auth\AuthenticateAccount;
+use App\Enums\LoginFailure;
 use App\Exceptions\LoginFailed;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\AccountResource;
 use App\Models\Account;
 use App\Services\Auth\LoginAuditLog;
+use App\Support\Accounts\PendingConfirmationSession;
 use App\Support\Rathena\ServerRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -62,9 +64,42 @@ final class AuthController
              * password has already been verified, so they disclose nothing to
              * someone guessing.
              */
-            throw ValidationException::withMessages([
-                'username' => trans($e->reason->translationKey()),
-            ]);
+            $message = trans($e->reason->translationKey());
+
+            /*
+             * The password was right and the only thing in the way is the
+             * confirmation, so the client is about to offer the code form.
+             * Noting that here is what lets its resend reach the address on
+             * the account without asking for it: see
+             * {@see PendingConfirmationSession}.
+             */
+            if ($e->reason === LoginFailure::PendingConfirmation) {
+                PendingConfirmationSession::remember(
+                    $request,
+                    $this->servers->current()->key,
+                    $username,
+                );
+            }
+
+            /*
+             * The same body Laravel's validation exception produces, plus a
+             * stable `reason`.
+             *
+             * The client has to be able to tell "this account is waiting to be
+             * confirmed" from "that password is wrong", because the first has
+             * a next step -- the code form -- and the second does not. Without
+             * a key it would have to match on the message, which breaks the
+             * moment the message is translated, and it now is.
+             *
+             * It discloses nothing the message did not: the reasons that are
+             * specific at all are only reachable once the password has already
+             * been verified.
+             */
+            return response()->json([
+                'message' => $message,
+                'errors' => ['username' => [$message]],
+                'reason' => $e->reason->translationKey(),
+            ], 422);
         }
 
         $request->clearRateLimit();

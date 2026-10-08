@@ -7,6 +7,7 @@ namespace Tests\Feature\Notifications;
 use App\Jobs\SendDiscordNotification;
 use App\Models\Account;
 use App\Services\Notifications\DiscordWebhook;
+use App\Support\Rathena\ServerRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -229,9 +230,7 @@ final class DiscordWebhookTest extends TestCase
             'password' => 'A-strong-passphrase-1',
             'password_confirmation' => 'A-strong-passphrase-1',
             'email' => 'newplayer@example.com',
-            'email_confirmation' => 'newplayer@example.com',
             'gender' => 'M',
-            'birthdate' => '1995-04-12',
         ])->assertCreated();
 
         Http::assertSent(fn ($request): bool => str_contains((string) $request['content'], 'newplayer'));
@@ -353,9 +352,8 @@ final class DiscordWebhookTest extends TestCase
 
     private function loginConnectionName(): string
     {
-        return $this->app->make(\App\Support\Rathena\ServerRegistry::class)
+        return $this->app->make(ServerRegistry::class)
             ->current()
             ->loginConnection();
     }
-
 }

@@ -7,6 +7,7 @@ namespace Tests\Feature\Theme;
 use App\Models\Account;
 use App\Services\Theme\ClientBootstrap;
 use App\Services\Theme\ThemeService;
+use App\Support\Tokens\OneTimeCode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Concerns\InteractsWithRathena;
@@ -221,6 +222,25 @@ final class GameBrandingTest extends TestCase
     }
 
     #[Test]
+    public function the_confirmation_code_length_is_published_from_the_generator(): void
+    {
+        /*
+         * The confirmation form draws one input per digit, so it cannot work
+         * from a number written into a component -- six boxes would outlive a
+         * change to five, and a visitor would be given one box too many for a
+         * code that no longer fits it.
+         *
+         * Asserting against the constant rather than against 6 is the point:
+         * this fails if the payload is ever hardcoded away from the class that
+         * generates the codes.
+         */
+        $this->assertSame(
+            OneTimeCode::LENGTH,
+            $this->payload()['accounts']['confirmationCodeLength'],
+        );
+    }
+
+    #[Test]
     public function broadcasting_is_null_when_it_is_not_configured(): void
     {
         // Meaningful to the client: it polls instead of attempting a
@@ -239,6 +259,167 @@ final class GameBrandingTest extends TestCase
         ]);
 
         $this->assertNull($this->payload()['broadcasting']);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The download page's contents
+    |--------------------------------------------------------------------------
+    |
+    | Operator-authored configuration, like the feature list, so the same two
+    | questions apply: does what they wrote reach the browser, and is what they
+    | left half-finished dropped before it gets there.
+    |
+    */
+
+    #[Test]
+    public function the_configured_downloads_reach_the_browser(): void
+    {
+        config(['game.downloads' => [
+            'notice' => '  Mirrors rebuilt this morning.  ',
+            'clients' => [[
+                'name' => 'Full client',
+                'platform' => 'windows',
+                'badge' => 'New',
+                'version' => '1.2.0',
+                'size' => '5.6 GB',
+                'updated' => '7 October',
+                'description' => 'Everything needed to play.',
+                'mirrors' => [['label' => 'Mega', 'url' => 'https://mega.example/client']],
+                'notes' => ['Extract before running.'],
+            ]],
+            'requirements' => [[
+                'heading' => 'Minimum',
+                'rows' => [['label' => 'Memory', 'value' => '2 GB RAM']],
+            ]],
+            'steps' => [['title' => 'Download', 'description' => 'Pick a mirror.']],
+        ]]);
+
+        $downloads = $this->payload()['downloads'];
+
+        $this->assertSame('Mirrors rebuilt this morning.', $downloads['notice']);
+        $this->assertCount(1, $downloads['clients']);
+
+        $client = $downloads['clients'][0];
+
+        $this->assertSame('Full client', $client['name']);
+        $this->assertSame('windows', $client['platform']);
+        $this->assertSame('New', $client['badge']);
+        $this->assertSame('5.6 GB', $client['size']);
+        $this->assertSame(
+            [['label' => 'Mega', 'url' => 'https://mega.example/client']],
+            $client['mirrors'],
+        );
+        $this->assertSame(['Extract before running.'], $client['notes']);
+
+        $this->assertSame(
+            [['heading' => 'Minimum', 'rows' => [['label' => 'Memory', 'value' => '2 GB RAM']]]],
+            $downloads['requirements'],
+        );
+        $this->assertSame(
+            [['title' => 'Download', 'description' => 'Pick a mirror.']],
+            $downloads['steps'],
+        );
+    }
+
+    #[Test]
+    public function a_mirror_without_a_url_is_not_published(): void
+    {
+        /*
+         * A labelled button that leads nowhere is worse than an absent one:
+         * somebody clicks it, nothing happens, and they conclude the download
+         * is broken rather than unpublished.
+         */
+        config(['game.downloads.clients' => [[
+            'name' => 'Full client',
+            'mirrors' => [
+                ['label' => 'Mega', 'url' => 'https://mega.example/client'],
+                ['label' => 'MediaFire', 'url' => null],
+                ['label' => '', 'url' => 'https://nowhere.example/file'],
+            ],
+        ]]]);
+
+        $mirrors = $this->payload()['downloads']['clients'][0]['mirrors'];
+
+        $this->assertSame([['label' => 'Mega', 'url' => 'https://mega.example/client']], $mirrors);
+    }
+
+    #[Test]
+    public function a_package_with_no_mirrors_is_still_published(): void
+    {
+        /*
+         * The state every install starts in. The card is drawn and marked as
+         * not yet available, so an operator filling these in can see the shape
+         * of the page they are building.
+         */
+        config(['game.downloads.clients' => [
+            ['name' => 'Android', 'platform' => 'android', 'mirrors' => []],
+            ['name' => '', 'mirrors' => [['label' => 'Mega', 'url' => 'https://mega.example/x']]],
+        ]]);
+
+        $clients = $this->payload()['downloads']['clients'];
+
+        // The nameless one is dropped: there is nothing to label its card with.
+        $this->assertCount(1, $clients);
+        $this->assertSame('Android', $clients[0]['name']);
+        $this->assertSame([], $clients[0]['mirrors']);
+    }
+
+    #[Test]
+    public function an_unknown_platform_is_published_as_none(): void
+    {
+        // The client draws an icon per platform. A typo should cost the icon,
+        // not show the wrong operating system's.
+        config(['game.downloads.clients' => [
+            ['name' => 'Client', 'platform' => 'windoze', 'mirrors' => []],
+        ]]);
+
+        $this->assertNull($this->payload()['downloads']['clients'][0]['platform']);
+    }
+
+    #[Test]
+    public function half_filled_requirements_and_steps_are_dropped(): void
+    {
+        config(['game.downloads' => [
+            'requirements' => [
+                ['heading' => 'Minimum', 'rows' => []],
+                ['heading' => null, 'rows' => [['label' => 'Memory', 'value' => '2 GB']]],
+                [
+                    'heading' => 'Android',
+                    'rows' => [
+                        ['label' => 'Memory', 'value' => '3 GB'],
+                        ['label' => 'Storage', 'value' => null],
+                    ],
+                ],
+            ],
+            'steps' => [
+                ['title' => null, 'description' => 'Orphaned.'],
+                ['title' => 'Launch'],
+            ],
+        ]]);
+
+        $downloads = $this->payload()['downloads'];
+
+        // An empty tab and a headless one are both gaps in the page.
+        $this->assertSame(
+            [['heading' => 'Android', 'rows' => [['label' => 'Memory', 'value' => '3 GB']]]],
+            $downloads['requirements'],
+        );
+        $this->assertSame([['title' => 'Launch', 'description' => '']], $downloads['steps']);
+    }
+
+    #[Test]
+    public function a_server_with_nothing_configured_publishes_empty_lists(): void
+    {
+        // Not null, and not absent: the page distinguishes "nothing published
+        // yet" from "the payload failed to arrive", and can only do that if
+        // the key is always there.
+        config(['game.downloads' => []]);
+
+        $this->assertSame(
+            ['notice' => null, 'clients' => [], 'requirements' => [], 'steps' => []],
+            $this->payload()['downloads'],
+        );
     }
 
     /*

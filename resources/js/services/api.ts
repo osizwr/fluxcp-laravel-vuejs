@@ -1,3 +1,4 @@
+import { translate } from '../i18n'
 /**
  * The HTTP client every request goes through.
  *
@@ -13,6 +14,15 @@ export class ApiError extends Error {
         message: string,
         /** Laravel's field-keyed validation errors, when it sent any. */
         readonly errors: Record<string, string[]> = {},
+        /**
+         * A stable machine-readable cause, where the endpoint sends one.
+         *
+         * Sign-in uses it to tell an unconfirmed account apart from a wrong
+         * password: the first has a next step to offer and the second does
+         * not. Matching on the message would have worked until the day the
+         * messages were translated.
+         */
+        readonly reason: string | null = null,
     ) {
         super(message)
         this.name = 'ApiError'
@@ -107,17 +117,22 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
         } catch {
             // A non-JSON body means something upstream failed before the
             // application ran, such as a proxy error page.
-            throw new ApiError(response.status, 'The server returned an unexpected response.')
+            throw new ApiError(response.status, translate('api.unexpected'))
         }
     }
 
     if (!response.ok) {
-        const data = (payload ?? {}) as { message?: string; errors?: Record<string, string[]> }
+        const data = (payload ?? {}) as {
+            message?: string
+            errors?: Record<string, string[]>
+            reason?: string
+        }
 
         throw new ApiError(
             response.status,
             data.message ?? `Request failed with status ${response.status}.`,
             data.errors ?? {},
+            data.reason ?? null,
         )
     }
 

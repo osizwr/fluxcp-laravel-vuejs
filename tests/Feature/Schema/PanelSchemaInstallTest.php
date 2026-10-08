@@ -24,11 +24,11 @@ final class PanelSchemaInstallTest extends TestCase
     use InteractsWithRathena;
 
     #[Test]
-    public function it_declares_all_twenty_five_panel_owned_tables(): void
+    public function it_declares_all_twenty_six_panel_owned_tables(): void
     {
-        $this->assertCount(18, PanelSchema::loginTables());
+        $this->assertCount(19, PanelSchema::loginTables());
         $this->assertCount(7, PanelSchema::charMapTables());
-        $this->assertCount(25, PanelSchema::allTableNames());
+        $this->assertCount(26, PanelSchema::allTableNames());
     }
 
     #[Test]
@@ -40,6 +40,7 @@ final class PanelSchemaInstallTest extends TestCase
         $this->assertArrayHasKey('cp_credits', PanelSchema::loginTables());
         $this->assertArrayHasKey('cp_createlog', PanelSchema::loginTables());
         $this->assertArrayHasKey('cp_banlog', PanelSchema::loginTables());
+        $this->assertArrayHasKey('cp_registration_otp', PanelSchema::loginTables());
 
         $this->assertArrayHasKey('cp_charprefs', PanelSchema::charMapTables());
         $this->assertArrayHasKey('cp_itemshop', PanelSchema::charMapTables());

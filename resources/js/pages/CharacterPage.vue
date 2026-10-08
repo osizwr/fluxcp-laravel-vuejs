@@ -11,6 +11,9 @@ import StatusPill from '../components/ui/StatusPill.vue'
 import { api, ApiError } from '../services/api'
 import { useAuthStore } from '../stores/auth'
 import type { Character } from '../types/api'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * One character, and the maintenance its owner may do to it.
@@ -39,9 +42,9 @@ const slot = ref(1)
 const isOnline = computed(() => character.value?.online === true)
 
 const PREFERENCE_LABELS: Record<string, string> = {
-    HideFromWhosOnline: 'Hide this character from the who-is-online list',
-    HideMapFromWhosOnline: 'Hide which map this character is on',
-    HideFromZenyRanking: 'Hide this character from the zeny ladder',
+    HideFromWhosOnline: t('characters.hideFromOnline'),
+    HideMapFromWhosOnline: t('characters.hideMap'),
+    HideFromZenyRanking: t('characters.hideFromZeny'),
 }
 
 async function load(): Promise<void> {
@@ -59,8 +62,8 @@ async function load(): Promise<void> {
     } catch (caught) {
         error.value =
             caught instanceof ApiError && caught.isForbidden
-                ? 'That is not your character.'
-                : 'This character could not be loaded.'
+                ? t('characters.notYours')
+                : t('characters.oneError')
         character.value = null
     } finally {
         loading.value = false
@@ -80,15 +83,12 @@ async function act(key: string, call: () => Promise<unknown>): Promise<void> {
     try {
         const response = (await call()) as { message?: string }
 
-        notice.value = { tone: 'success', message: response.message ?? 'Done.' }
+        notice.value = { tone: 'success', message: response.message ?? t('common.done') }
         await load()
     } catch (caught) {
         notice.value = {
             tone: 'error',
-            message:
-                caught instanceof ApiError
-                    ? caught.message
-                    : 'That could not be done. Please try again.',
+            message: caught instanceof ApiError ? caught.message : t('common.actionFailed'),
         }
     } finally {
         busy.value = null
@@ -114,9 +114,7 @@ function divorce(): void {
 }
 
 function savePreferences(): void {
-    void act('prefs', () =>
-        api.put(`characters/${id.value}/preferences`, { ...preferences.value }),
-    )
+    void act('prefs', () => api.put(`characters/${id.value}/preferences`, { ...preferences.value }))
 }
 
 onMounted(load)
@@ -125,15 +123,17 @@ watch(() => route.params.id, load)
 
 <template>
     <div class="py-6">
-        <StateBlock v-if="loading" variant="loading" title="Loading character…" />
+        <StateBlock v-if="loading" variant="loading" :title="t('characters.loadingOne')" />
 
         <StateBlock
             v-else-if="error || !character"
             variant="error"
-            title="Character unavailable"
+            :title="t('characters.unavailable')"
             :description="error ?? ''"
         >
-            <template #action><AppButton to="/characters">My characters</AppButton></template>
+            <template #action
+                ><AppButton to="/characters">{{ t('characters.title') }}</AppButton></template
+            >
         </StateBlock>
 
         <template v-else>
@@ -151,27 +151,35 @@ watch(() => route.params.id, load)
             </AlertMessage>
 
             <AlertMessage v-if="isOnline" tone="warning" class="mt-4">
-                This character is logged in. Nothing below can be changed until they log out —
-                the game server holds the character in memory and would overwrite the change.
+                This character is logged in. Nothing below can be changed until they log out — the
+                game server holds the character in memory and would overwrite the change.
             </AlertMessage>
 
             <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <StatTile label="Base level" :value="character.base_level.toLocaleString()" />
-                <StatTile label="Job level" :value="character.job_level.toLocaleString()" />
-                <StatTile label="Zeny" :value="character.zeny.toLocaleString()" />
-                <StatTile label="Slot" :value="String(character.slot + 1)" />
+                <StatTile
+                    :label="t('characters.baseLevel')"
+                    :value="character.base_level.toLocaleString()"
+                />
+                <StatTile
+                    :label="t('characters.jobLevel')"
+                    :value="character.job_level.toLocaleString()"
+                />
+                <StatTile :label="t('common.zeny')" :value="character.zeny.toLocaleString()" />
+                <StatTile :label="t('characters.slot')" :value="String(character.slot + 1)" />
             </div>
 
             <div class="mt-5 grid gap-5 lg:grid-cols-2">
                 <section class="panel p-4">
-                    <h2 class="text-base font-semibold tracking-tight">Slot</h2>
+                    <h2 class="text-base font-semibold tracking-tight">
+                        {{ t('characters.slot') }}
+                    </h2>
                     <p class="mt-0.5 mb-3 text-sm text-[var(--text-secondary)]">
-                        Move this character to another slot on the character select screen.
-                        Whoever is in that slot swaps with them.
+                        Move this character to another slot on the character select screen. Whoever
+                        is in that slot swaps with them.
                     </p>
 
                     <form class="flex items-end gap-2" @submit.prevent="changeSlot">
-                        <FormField label="Slot number" class="flex-1">
+                        <FormField :label="t('characters.slotNumber')" class="flex-1">
                             <template #default="{ id: fieldId }">
                                 <input
                                     :id="fieldId"
@@ -184,21 +192,19 @@ watch(() => route.params.id, load)
                             </template>
                         </FormField>
 
-                        <AppButton
-                            type="submit"
-                            :disabled="isOnline"
-                            :loading="busy === 'slot'"
-                        >
-                            Move
+                        <AppButton type="submit" :disabled="isOnline" :loading="busy === 'slot'">
+                            {{ t('characters.move') }}
                         </AppButton>
                     </form>
                 </section>
 
                 <section class="panel p-4">
-                    <h2 class="text-base font-semibold tracking-tight">Repairs</h2>
+                    <h2 class="text-base font-semibold tracking-tight">
+                        {{ t('characters.repairs') }}
+                    </h2>
                     <p class="mt-0.5 mb-3 text-sm text-[var(--text-secondary)]">
-                        For a character who cannot log in — usually a missing sprite, or being
-                        stuck somewhere the client cannot load.
+                        For a character who cannot log in — usually a missing sprite, or being stuck
+                        somewhere the client cannot load.
                     </p>
 
                     <div class="flex flex-wrap gap-2">
@@ -207,7 +213,7 @@ watch(() => route.params.id, load)
                             :loading="busy === 'look'"
                             @click="resetLook"
                         >
-                            Reset appearance
+                            {{ t('characters.resetAppearance') }}
                         </AppButton>
 
                         <AppButton
@@ -215,7 +221,7 @@ watch(() => route.params.id, load)
                             :loading="busy === 'position'"
                             @click="resetPosition"
                         >
-                            Return to save point
+                            {{ t('characters.returnToSavePoint') }}
                         </AppButton>
                     </div>
 
@@ -226,9 +232,11 @@ watch(() => route.params.id, load)
                 </section>
 
                 <section v-if="character.is_married" class="panel p-4">
-                    <h2 class="text-base font-semibold tracking-tight">Marriage</h2>
+                    <h2 class="text-base font-semibold tracking-tight">
+                        {{ t('characters.marriage') }}
+                    </h2>
                     <p class="mt-0.5 mb-3 text-sm text-[var(--text-secondary)]">
-                        Both partners have to be logged out. This cannot be undone from here.
+                        {{ t('characters.divorceBody') }}
                     </p>
 
                     <AppButton
@@ -237,14 +245,16 @@ watch(() => route.params.id, load)
                         :loading="busy === 'divorce'"
                         @click="divorce"
                     >
-                        Divorce
+                        {{ t('characters.divorce') }}
                     </AppButton>
                 </section>
 
                 <section class="panel p-4">
-                    <h2 class="text-base font-semibold tracking-tight">Privacy</h2>
+                    <h2 class="text-base font-semibold tracking-tight">
+                        {{ t('characters.privacy') }}
+                    </h2>
                     <p class="mt-0.5 mb-3 text-sm text-[var(--text-secondary)]">
-                        What this character reveals on the public pages.
+                        {{ t('characters.privacyBody') }}
                     </p>
 
                     <form class="space-y-2.5" @submit.prevent="savePreferences">
@@ -262,14 +272,14 @@ watch(() => route.params.id, load)
                         </label>
 
                         <AppButton type="submit" :loading="busy === 'prefs'">
-                            Save preferences
+                            {{ t('common.save') }}
                         </AppButton>
                     </form>
                 </section>
             </div>
 
             <AppButton :to="auth.isAuthenticated ? '/characters' : '/'" class="mt-5">
-                Back
+                {{ t('common.back') }}
             </AppButton>
         </template>
     </div>

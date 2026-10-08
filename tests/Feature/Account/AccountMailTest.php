@@ -45,7 +45,7 @@ final class AccountMailTest extends TestCase
 
         return [
             'account confirmation' => [
-                new AccountConfirmationMail('merchant', $url, 48),
+                new AccountConfirmationMail('merchant', $url, '418302', 48),
                 true,
             ],
             'password reset' => [

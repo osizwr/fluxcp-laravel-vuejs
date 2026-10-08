@@ -58,6 +58,7 @@ pointed at an existing install without migrating data.
 | Branding | Game name, logo and links from config, no component edits |
 | News | Public listing and article view, from the legacy CMS table |
 | Statistics | Account, character and guild counts; class distribution |
+| Wiki | A player guide at `/wiki`, written as Markdown files in version control |
 
 Not built yet, among much else: the item shop and its cart, donations, the
 support desk, the admin half of the news CMS and all of the static-page CMS,
@@ -443,6 +444,7 @@ of the emulator's schema. Enabling `UseMD5` is weak but better than cleartext.
 | [API.md](docs/API.md) | Endpoint reference |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment |
 | [THEMING.md](docs/THEMING.md) | Switching, creating and overriding themes |
+| [WIKI.md](docs/WIKI.md) | Writing the player guide served at `/wiki` |
 | [FINAL_MIGRATION_AUDIT.md](docs/FINAL_MIGRATION_AUDIT.md) | Counts and what remains |
 
 ## Licence and attribution

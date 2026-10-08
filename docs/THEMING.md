@@ -332,7 +332,7 @@ blocks to change three of them.
 
 ### The core blocks
 
-Eleven ship, in `resources/js/blocks/`:
+Fourteen ship, in `resources/js/blocks/`:
 
 | Block name | Component | Shows |
 | --- | --- | --- |
@@ -345,6 +345,9 @@ Eleven ship, in `resources/js/blocks/`:
 | `ranking-showcase` | `RankingShowcase.vue` | A short ladder with a link onward |
 | `news-section` | `NewsSection.vue` | Recent news |
 | `feature-grid` | `FeatureGrid.vue` | Operator-configured features |
+| `download-clients` | `DownloadClients.vue` | The packages on offer, and their mirrors |
+| `system-requirements` | `SystemRequirements.vue` | What a machine needs, one tab per set |
+| `install-guide` | `InstallGuide.vue` | The numbered steps after a download |
 | `call-to-action` | `CallToAction.vue` | A closing action |
 | `footer` | `Footer.vue` | Branding, navigation, configured links |
 
@@ -404,7 +407,10 @@ Reordering that list reorders the page. Removing an entry removes a section.
 Neither touches a component.
 
 Keys are **route names**, so a theme composes `home` without knowing a file
-path. A block with no options may be a bare string; `{ "block": …, "props": … }`
+path. `downloads` is the other page built this way out of the box: it is a
+heading plus `download-clients`, `system-requirements` and `install-guide`, so a
+theme that wants the packages somewhere else in the order, or wants to drop the
+specification tables, composes those three rather than overriding a page. A block with no options may be a bare string; `{ "block": …, "props": … }`
 is for when it has some.
 
 ### How a page is chosen
@@ -533,6 +539,136 @@ called.
 
 Web fonts are the theme's own business. Fantasy loads Cinzel (SIL Open Font
 License) from its `theme.css`.
+
+### The animated cursor
+
+The panel replaces the ordinary pointer with the game's: an arrow that turns
+everywhere, and a glove over anything that can be clicked. Core looks for them
+at fixed paths:
+
+```
+public/images/cursors/arrow-00.png … arrow-05.png   the arrow, spun in order
+public/images/cursors/hand.png                      hovering something clickable
+public/images/cursors/hand-press.png                the same, held down
+public/images/cursors/arrow-still.png               available, unused by core
+```
+
+Each may be joined by an `@2x.png` twin — `arrow-00@2x.png`, `hand@2x.png` — at
+double the size. Those are optional, and only used on a high-density screen.
+
+This is core rather than a theme, because a cursor belongs to the window and
+not to a page. It is also a drop-in slot like the rest of the artwork: with no
+files there, `useAnimatedCursor()` still runs and every image resolves to
+nothing, so the browser takes the `auto` and `pointer` fallbacks and the
+pointer is simply the ordinary one. Nothing to configure and nothing to break.
+
+Three rules the art has to follow:
+
+- **Pad every image to the same canvas, anchored at its hotspot.** The arrow's
+  is fixed at `0 0`, so a frame whose tip sits elsewhere makes the pointer
+  wander as the arrow turns. Cropped sprite frames need padding back out:
+
+  ```bash
+  magick frame_000.png -background none -gravity NorthWest -extent 32x32 \
+         public/images/cursors/arrow-00.png
+  ```
+
+  `arrow-still.png` is declared at `1 1` and the glove's hotspot is its
+  fingertip, `2 1` for `hand.png` and `2 2` for `hand-press.png`. The pixel of
+  difference is not a mistake: the finger curls as it presses, and moving the
+  hotspot with it is what keeps the tip pinned to one point on screen while the
+  hand recoils underneath. Art with the finger somewhere else needs those two
+  numbers changed to match.
+
+- **Stay at or under 32×32.** Browsers ignore a cursor image beyond about
+  128px, and several platforms quietly refuse anything over 32.
+
+- **Scale the `@2x` pair with nearest-neighbour.** Cursor images are drawn at
+  their intrinsic size in CSS pixels, so a 32px file on a high-density screen
+  is upscaled by the compositor and pixel art turns to mush. Smooth filtering
+  defeats the point:
+
+  ```bash
+  magick hand.png -filter point -resize 200% hand@2x.png
+  ```
+
+  The high-density pair is offered through `image-set()`, which is asked for
+  with `CSS.supports()` first — Safari only dropped the prefix in 17, and a
+  `cursor` the browser cannot parse is discarded rather than fallen back on.
+
+The arrow spends 160ms on each frame but rests on `arrow-00.png` for 200ms, so
+it comes to a stop facing forward before going round again rather than tumbling
+continuously — a full turn is a round second. Both numbers are constants at the
+top of `useAnimatedCursor.ts`.
+
+The cursor turns itself off for a coarse or hover-less pointer, holds that same
+resting frame under `prefers-reduced-motion`, and stops spinning while the tab
+is hidden.
+
+The spinning arrow is the *inherited* default, which is why it needs no selector
+of its own and why the three stills can take it back simply by saying so. The
+glove is listed by element instead — `a[href]`, `button`, `summary`, the form
+controls that take a click, and the ARIA roles that stand in for them — because
+CSS has no way to ask for "whatever computes to `cursor: pointer`". A theme
+that builds a clickable thing out of a plain `div` should give it the matching
+role, which is worth doing for screen readers anyway. Anything `:disabled` or
+`aria-disabled` is left out: offering a hand to a button that will refuse the
+click is worse than offering no affordance at all.
+
+Two more rules say the spin out loud where it would otherwise be lost. Text
+fields keep the browser's I-beam unless an author rule takes it back, and
+disabled controls keep `not-allowed`, which the panel sets both in
+`@layer components` and through Tailwind's utility. Both now spin like
+everything else. Each keeps its own fallback keyword — `text` and
+`not-allowed` — for the case where the image is missing, since the fallback is
+the last thing holding the affordance up.
+
+The disabled case is the one place this costs something. `not-allowed` is a
+recognised signal that a control will refuse the click and a spinning arrow is
+not, so the panel leans on the other half of that convention instead — the
+dimming `AppButton` already applies alongside it. If you would rather keep the
+native cursor there, drop the last rule in `app.css`; if you would rather be
+more emphatic than either, `cursor.spr` carries a red "forbidden" arrow as its
+own five-frame spin.
+
+`arrow-still.png` is the arrow at rest. **Core applies it nowhere** — nothing in
+the panel stops spinning — but `--cursor-arrow-still` is published for a theme
+that has made something genuinely inert and wants the turning to stop over it:
+
+```css
+:root[data-theme-slug='my-theme'] .my-inert-link {
+    cursor: var(--cursor-arrow-still) 1 1, default;
+}
+```
+
+It is left out of the preload for the same reason, so a theme that uses it pays
+that one fetch itself.
+
+All of these rules sit **outside every `@layer`**, which is worth knowing before
+you try to override them. Theme stylesheets and SFC `<style>` blocks are
+unlayered, and an unlayered declaration beats a layered one whatever its
+specificity — a rule in `base` or `components` would quietly lose to a
+`cursor: pointer` on a themed navigation button. So a theme that wants none of
+this overrides the same declarations under its own scope, which is specific
+enough to win and is equally unlayered:
+
+```css
+:root[data-theme-slug='my-theme'].cursor-animated {
+    cursor: auto;
+}
+
+:root[data-theme-slug='my-theme'].cursor-animated
+    :is(a[href], button, summary, select, [role='button']) {
+    cursor: pointer;
+}
+```
+
+**This is artwork.** The pointers a Ragnarok server wants are extracted from the
+client's `cursor.spr`, and that art is Gravity's. It is why the path is
+a slot rather than something core ships, on the same footing as the hero art
+above: whoever drops files in is the one who has to hold the rights to them.
+See the licensing note in
+[`resources/themes/README.md`](../resources/themes/README.md).
 
 ---
 

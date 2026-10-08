@@ -2,6 +2,9 @@
 import AppButton from '../components/ui/AppButton.vue'
 import { useHeroData } from './data'
 import type { HeroProps } from './contracts'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * The core hero.
@@ -31,7 +34,7 @@ const hero = useHeroData(props)
                 <template v-if="hero.serversUp">
                     {{ hero.playersOnline.toLocaleString() }} players online
                 </template>
-                <template v-else>Servers are offline</template>
+                <template v-else>{{ t('server.offline') }}</template>
             </p>
 
             <div class="mt-7 flex flex-wrap justify-center gap-2">

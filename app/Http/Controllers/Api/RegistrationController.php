@@ -12,6 +12,7 @@ use App\Http\Resources\AccountResource;
 use App\Services\Mail\AccountMailer;
 use App\Services\Notifications\DiscordWebhook;
 use App\Services\Rathena\AccountConfirmationService;
+use App\Support\Accounts\PendingConfirmationSession;
 use App\Support\Rathena\ServerRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -58,7 +59,6 @@ final class RegistrationController
             password: (string) $request->input('password'),
             email: (string) $request->input('email'),
             gender: $request->gender(),
-            birthdate: (string) $request->input('birthdate'),
             registeredFromIp: (string) $request->ip(),
         );
 
@@ -114,13 +114,30 @@ final class RegistrationController
         $group = $this->servers->get((string) $request->input('server'));
         $this->servers->use($group->key);
 
-        $account = $this->confirmations->confirm($group, (string) $request->input('token'));
+        /*
+         * The token wins when both are present: it is the stronger secret, and
+         * a request carrying both is most likely a client that filled the code
+         * in from a link it had already followed.
+         */
+        $token = (string) $request->input('token');
+
+        $account = $token !== ''
+            ? $this->confirmations->confirm($group, $token)
+            : $this->confirmations->confirmByCode(
+                $group,
+                (string) $request->input('username'),
+                (string) $request->input('code'),
+            );
 
         if ($account === null) {
             return response()->json([
                 'message' => trans('accounts.confirmation.invalid'),
             ], 422);
         }
+
+        // Nothing is pending any more, so the note that allowed a resend
+        // without the address has nothing left to authorise.
+        PendingConfirmationSession::forget($request);
 
         return response()->json([
             'message' => trans('accounts.confirmation.confirmed'),
@@ -142,16 +159,23 @@ final class RegistrationController
         $group = $this->servers->get((string) $request->input('server'));
         $this->servers->use($group->key);
 
-        $reissued = $this->confirmations->reissue(
-            $group,
-            (string) $request->input('username'),
-            (string) $request->input('email'),
-        );
+        $username = (string) $request->input('username');
+
+        /*
+         * A session that has already proved the account is its own -- by
+         * signing in with the right password and being turned away only for
+         * the confirmation -- does not have to quote the address back. The
+         * resend goes to the one on the account, which is the address the
+         * registration used. See {@see PendingConfirmationSession}.
+         */
+        $reissued = $request->ownershipAlreadyProved()
+            ? $this->confirmations->reissueForVerifiedOwner($group, $username)
+            : $this->confirmations->reissue($group, $username, (string) $request->input('email'));
 
         if ($reissued !== null) {
-            [$account, $token] = $reissued;
+            [$account, $secrets] = $reissued;
 
-            $this->mailer->sendAccountConfirmation($group, $account, $token);
+            $this->mailer->sendAccountConfirmation($group, $account, $secrets);
         }
 
         return response()->json([

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { bootstrap } from '../theme/bootstrap'
 import { themedRoute } from '../theme/resolve'
+import { translate } from '../i18n'
 
 /**
  * Client routes.
@@ -18,19 +19,73 @@ const routes: RouteRecordRaw[] = [
         component: themedRoute('home', 'HomePage', () => import('../pages/HomePage.vue')),
         // The front page is public-facing, so it uses the public shell by
         // default. A theme's composition may override the role per page.
-        meta: { title: 'Server status', layout: 'public' },
+        meta: { title: 'routes.home', layout: 'public' },
+    },
+    {
+        /*
+         * Public-facing, like the front page: somebody looking for the client
+         * has not signed in yet, and most of the time never will before they
+         * download it.
+         *
+         * Stays routed even when GAME_DOWNLOADS_URL points the navigation at a
+         * CDN instead. An operator who later clears that variable gets the
+         * page back without a deploy, and a link somebody bookmarked in the
+         * meantime still resolves.
+         */
+        path: '/downloads',
+        name: 'downloads',
+        component: themedRoute(
+            'downloads',
+            'DownloadsPage',
+            () => import('../pages/DownloadsPage.vue'),
+        ),
+        meta: { title: 'routes.downloads', layout: 'public' },
+    },
+    {
+        /*
+         * The wiki. Public, and on the public shell rather than the
+         * application one: most of the people reading it do not have an
+         * account yet, which is frequently what they are reading about.
+         */
+        path: '/wiki',
+        name: 'wiki',
+        component: themedRoute('wiki', 'WikiPage', () => import('../pages/WikiPage.vue')),
+        meta: { title: 'routes.wiki', layout: 'public' },
+    },
+    {
+        /*
+         * One page, addressed exactly as it is laid out on disk: a section
+         * and a page within it.
+         *
+         * Spelled as two constrained segments rather than as a catch-all so
+         * that `/wiki/anything/else/deeper` falls through to the not-found
+         * page instead of being requested from an endpoint that cannot
+         * answer it. The constraint matches the route on the server.
+         */
+        path: '/wiki/:category([a-z0-9-]+)/:page([a-z0-9-]+)',
+        name: 'wiki-page',
+        component: themedRoute(
+            'wiki-page',
+            'WikiArticlePage',
+            () => import('../pages/WikiArticlePage.vue'),
+        ),
+        meta: { title: 'routes.wiki', layout: 'public' },
     },
     {
         path: '/sign-in',
         name: 'login',
         component: themedRoute('login', 'LoginPage', () => import('../pages/LoginPage.vue')),
-        meta: { title: 'Sign in', guestOnly: true, layout: 'auth' },
+        meta: { title: 'routes.signIn', guestOnly: true, layout: 'auth' },
     },
     {
         path: '/register',
         name: 'register',
-        component: themedRoute('register', 'RegisterPage', () => import('../pages/RegisterPage.vue')),
-        meta: { title: 'Create an account', guestOnly: true, layout: 'auth' },
+        component: themedRoute(
+            'register',
+            'RegisterPage',
+            () => import('../pages/RegisterPage.vue'),
+        ),
+        meta: { title: 'routes.register', guestOnly: true, layout: 'auth' },
     },
     {
         /*
@@ -40,34 +95,42 @@ const routes: RouteRecordRaw[] = [
          */
         path: '/confirm-account',
         name: 'confirm-account',
-        component: themedRoute('confirm-account', 'ConfirmAccountPage', () =>
-            import('../pages/ConfirmAccountPage.vue'),
+        component: themedRoute(
+            'confirm-account',
+            'ConfirmAccountPage',
+            () => import('../pages/ConfirmAccountPage.vue'),
         ),
-        meta: { title: 'Confirm your account', layout: 'auth' },
+        meta: { title: 'routes.confirmAccount', layout: 'auth' },
     },
     {
         path: '/resend-confirmation',
         name: 'resend-confirmation',
-        component: themedRoute('resend-confirmation', 'ResendConfirmationPage', () =>
-            import('../pages/ResendConfirmationPage.vue'),
+        component: themedRoute(
+            'resend-confirmation',
+            'ResendConfirmationPage',
+            () => import('../pages/ResendConfirmationPage.vue'),
         ),
-        meta: { title: 'Resend confirmation', layout: 'auth' },
+        meta: { title: 'routes.resendConfirmation', layout: 'auth' },
     },
     {
         path: '/forgot-password',
         name: 'forgot-password',
-        component: themedRoute('forgot-password', 'ForgotPasswordPage', () =>
-            import('../pages/ForgotPasswordPage.vue'),
+        component: themedRoute(
+            'forgot-password',
+            'ForgotPasswordPage',
+            () => import('../pages/ForgotPasswordPage.vue'),
         ),
-        meta: { title: 'Forgot your password', guestOnly: true, layout: 'auth' },
+        meta: { title: 'routes.forgotPassword', guestOnly: true, layout: 'auth' },
     },
     {
         path: '/reset-password',
         name: 'reset-password',
-        component: themedRoute('reset-password', 'ResetPasswordPage', () =>
-            import('../pages/ResetPasswordPage.vue'),
+        component: themedRoute(
+            'reset-password',
+            'ResetPasswordPage',
+            () => import('../pages/ResetPasswordPage.vue'),
         ),
-        meta: { title: 'Choose a new password', guestOnly: true, layout: 'auth' },
+        meta: { title: 'routes.resetPassword', guestOnly: true, layout: 'auth' },
     },
     {
         /*
@@ -77,94 +140,118 @@ const routes: RouteRecordRaw[] = [
          */
         path: '/confirm-email',
         name: 'confirm-email',
-        component: themedRoute('confirm-email', 'ConfirmEmailPage', () =>
-            import('../pages/ConfirmEmailPage.vue'),
+        component: themedRoute(
+            'confirm-email',
+            'ConfirmEmailPage',
+            () => import('../pages/ConfirmEmailPage.vue'),
         ),
-        meta: { title: 'Confirm your e-mail address', requiresAuth: true, layout: 'auth' },
+        meta: { title: 'routes.confirmEmail', requiresAuth: true, layout: 'auth' },
     },
     {
         path: '/account/history/:tab(panel-logins|game-logins|password-changes|password-resets|email-changes)?',
         name: 'account-history',
-        component: themedRoute('account-history', 'AccountHistoryPage', () =>
-            import('../pages/AccountHistoryPage.vue'),
+        component: themedRoute(
+            'account-history',
+            'AccountHistoryPage',
+            () => import('../pages/AccountHistoryPage.vue'),
         ),
-        meta: { title: 'Account history', requiresAuth: true },
+        meta: { title: 'routes.accountHistory', requiresAuth: true },
     },
     {
         path: '/account/security',
         name: 'account-security',
-        component: themedRoute('account-security', 'AccountSecurityPage', () =>
-            import('../pages/AccountSecurityPage.vue'),
+        component: themedRoute(
+            'account-security',
+            'AccountSecurityPage',
+            () => import('../pages/AccountSecurityPage.vue'),
         ),
-        meta: { title: 'Security', requiresAuth: true },
+        meta: { title: 'routes.security', requiresAuth: true },
     },
     {
         path: '/account',
         name: 'account',
         component: themedRoute('account', 'AccountPage', () => import('../pages/AccountPage.vue')),
-        meta: { title: 'My account', requiresAuth: true },
+        meta: { title: 'routes.account', requiresAuth: true },
     },
     {
         path: '/characters',
         name: 'characters',
-        component: themedRoute('characters', 'CharactersPage', () => import('../pages/CharactersPage.vue')),
-        meta: { title: 'My characters', requiresAuth: true },
+        component: themedRoute(
+            'characters',
+            'CharactersPage',
+            () => import('../pages/CharactersPage.vue'),
+        ),
+        meta: { title: 'routes.characters', requiresAuth: true },
     },
     {
         path: '/characters/:id(\\d+)',
         name: 'character',
-        component: themedRoute('character', 'CharacterPage', () =>
-            import('../pages/CharacterPage.vue'),
+        component: themedRoute(
+            'character',
+            'CharacterPage',
+            () => import('../pages/CharacterPage.vue'),
         ),
-        meta: { title: 'Character', requiresAuth: true },
+        meta: { title: 'routes.character', requiresAuth: true },
     },
     {
         path: '/maps',
         name: 'maps',
         component: themedRoute('maps', 'MapsPage', () => import('../pages/MapsPage.vue')),
-        meta: { title: 'Map activity' },
+        meta: { title: 'routes.maps' },
     },
     {
         path: '/who-is-online',
         name: 'online',
         component: themedRoute('online', 'OnlinePage', () => import('../pages/OnlinePage.vue')),
-        meta: { title: "Who's online" },
+        meta: { title: 'routes.online' },
     },
     {
         path: '/rankings/:ladder(level|zeny|alchemist|blacksmith|deaths|homunculus|guilds|mvp)',
         name: 'rankings',
-        component: themedRoute('rankings', 'RankingsPage', () => import('../pages/RankingsPage.vue')),
-        meta: { title: 'Rankings' },
+        component: themedRoute(
+            'rankings',
+            'RankingsPage',
+            () => import('../pages/RankingsPage.vue'),
+        ),
+        meta: { title: 'routes.rankings' },
     },
     {
         path: '/items',
         name: 'items',
         component: themedRoute('items', 'ItemsPage', () => import('../pages/ItemsPage.vue')),
-        meta: { title: 'Items' },
+        meta: { title: 'routes.items' },
     },
     {
         path: '/items/:id(\\d+)',
         name: 'item',
         component: themedRoute('item', 'ItemPage', () => import('../pages/ItemPage.vue')),
-        meta: { title: 'Item' },
+        meta: { title: 'routes.item' },
     },
     {
         path: '/monsters',
         name: 'monsters',
-        component: themedRoute('monsters', 'MonstersPage', () => import('../pages/MonstersPage.vue')),
-        meta: { title: 'Monsters' },
+        component: themedRoute(
+            'monsters',
+            'MonstersPage',
+            () => import('../pages/MonstersPage.vue'),
+        ),
+        meta: { title: 'routes.monsters' },
     },
     {
         path: '/monsters/:id(\\d+)',
         name: 'monster',
         component: themedRoute('monster', 'MonsterPage', () => import('../pages/MonsterPage.vue')),
-        meta: { title: 'Monster' },
+        meta: { title: 'routes.monster' },
     },
     {
         path: '/:pathMatch(.*)*',
         name: 'not-found',
-        component: themedRoute('not-found', 'NotFoundPage', () => import('../pages/NotFoundPage.vue')),
-        meta: { title: 'Page not found' },
+        component: themedRoute(
+            'not-found',
+            'NotFoundPage',
+            () => import('../pages/NotFoundPage.vue'),
+        ),
+        meta: { title: 'routes.notFound' },
     },
 ]
 
@@ -197,7 +284,12 @@ router.beforeEach(async (to) => {
 })
 
 router.afterEach((to) => {
-    const title = typeof to.meta.title === 'string' ? to.meta.title : null
+    /*
+     * `meta.title` holds a translation key rather than a sentence, so that the
+     * tab reads in the visitor's language. An unknown key renders as itself,
+     * which is visible in a tab title and therefore gets noticed.
+     */
+    const title = typeof to.meta.title === 'string' ? translate(to.meta.title) : null
     const site = bootstrap().game.name
 
     document.title = title ? `${title} — ${site}` : site

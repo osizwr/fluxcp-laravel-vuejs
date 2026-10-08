@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import StateBlock from '../components/ui/StateBlock.vue'
 import StatusPill from '../components/ui/StatusPill.vue'
 import { useServerStatusData } from './data'
 import type { ServerStatusProps } from './contracts'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * The core server status block.
@@ -15,27 +19,30 @@ import type { ServerStatusProps } from './contracts'
  * player whether to wait or to report it.
  */
 const props = withDefaults(defineProps<ServerStatusProps>(), {
-    heading: 'Server status',
     detailed: false,
 })
 
 const status = useServerStatusData()
+
+/* The default lives here rather than in defineProps, which is hoisted out
+ * of setup() and so cannot call t(). */
+const headingText = computed(() => props.heading ?? t('server.heading'))
 </script>
 
 <template>
     <section class="mx-auto max-w-6xl px-4 py-10" aria-labelledby="block-server-status">
-        <h2 id="block-server-status" class="mb-4 text-lg font-semibold">{{ props.heading }}</h2>
+        <h2 id="block-server-status" class="mb-4 text-lg font-semibold">{{ headingText }}</h2>
 
         <StateBlock
             v-if="status.state.error"
             variant="error"
-            title="Status unavailable"
+            :title="t('server.unavailable')"
             :description="status.state.error"
         />
         <StateBlock
             v-else-if="status.state.loading && status.state.empty"
             variant="loading"
-            title="Checking servers…"
+            :title="t('common.checkingServers')"
         />
 
         <template v-else>
@@ -51,14 +58,14 @@ const status = useServerStatusData()
                     <p class="mt-1.5 flex justify-center">
                         <StatusPill
                             :state="process.up ? 'up' : 'down'"
-                            :label="process.up ? 'Online' : 'Offline'"
+                            :label="process.up ? t('common.online') : t('common.offline')"
                         />
                     </p>
                 </div>
 
                 <div class="bg-[var(--surface-raised)] px-4 py-3.5 text-center">
                     <p class="text-[0.75rem] tracking-wide text-[var(--text-muted)] uppercase">
-                        Players
+                        {{ t('common.players') }}
                     </p>
                     <p class="tabular mt-1.5 text-xl font-semibold">
                         {{ status.playersOnline.toLocaleString() }}
@@ -85,7 +92,9 @@ const status = useServerStatusData()
                         </div>
                         <StatusPill
                             :state="server.playable ? 'up' : 'down'"
-                            :label="server.playable ? 'Playable' : 'Unavailable'"
+                            :label="
+                                server.playable ? t('common.playable') : t('common.unavailable')
+                            "
                         />
                     </div>
                 </article>

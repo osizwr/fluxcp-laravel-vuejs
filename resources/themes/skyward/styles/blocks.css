@@ -1,0 +1,1527 @@
+/*
+|--------------------------------------------------------------------------
+| Skyward — the floating shell
+|--------------------------------------------------------------------------
+|
+| The masthead and the ticker do not sit above the page, they ride over it.
+| At rest they are two rounded white cards inset from the viewport edge with
+| the hero artwork running underneath; once the visitor scrolls they snap flush
+| to the edges and square off into a solid bar.
+|
+| Three things make that work, and they are worth stating because they are the
+| only part of this theme that is structural rather than decorative:
+|
+|   1. The shell is `position: fixed` in BOTH states. It never changes
+|      positioning scheme, so there is no reflow at the moment it pins and no
+|      jump when it unpins -- the usual failure of a sticky masthead that
+|      swaps between static and fixed.
+|
+|   2. The inset is `padding-inline` on the shell, expressed as
+|      `max(gap, (100% - measure) / 2)`. That one length both centres the card
+|      at its measure on a wide screen and falls back to the gap on a narrow
+|      one -- and because it is a length rather than a `max-width` switch, it
+|      interpolates, so the snap animates instead of jumping.
+|
+|   3. Being fixed, the shell is out of flow, so `.sky-main` is padded by the
+|      shell's measured height. The hero cancels exactly that padding with a
+|      negative margin and re-adds it as its own, which is what lets the sky
+|      run under the cards while the hero's text still clears them. The height
+|      is measured, not guessed: see layouts/PublicLayout.vue.
+|
+| Everything is scoped to the slug, so none of it leaks into another theme.
+|
+*/
+
+/* -------------------------------------------------------------------------- */
+/* The shell                                                                  */
+/* -------------------------------------------------------------------------- */
+
+:root[data-theme-slug='skyward'] .sky-shell {
+    position: fixed;
+    inset-inline: 0;
+    top: 0;
+    z-index: 50;
+
+    /* See (2) above. The measure is the navbar's; the ticker insets further. */
+    padding-block: var(--sky-shell-gap) 0;
+    padding-inline: max(var(--sky-shell-gap), (100% - 76rem) / 2);
+
+    /*
+     * The shell spans the full width but is mostly empty space, and that empty
+     * space sits over the hero's buttons. Only the cards themselves take the
+     * pointer.
+     */
+    pointer-events: none;
+
+    transition:
+        padding 240ms ease,
+        background-color 240ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-shell--pinned {
+    padding-block: 0;
+    padding-inline: 0;
+    background-color: var(--surface-raised);
+}
+
+/* -------------------------------------------------------------------------- */
+/* The masthead                                                               */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The base state is a plain flush bar, which is what the block renders when it
+ * appears outside the floating shell -- the core AppLayout on an account page,
+ * for instance. The floating treatment is added by the shell, not assumed by
+ * the block, so the masthead is never left floating over nothing.
+ */
+:root[data-theme-slug='skyward'] .sky-navbar {
+    /*
+     * The positioning context for the menu sheet, and a stacking context above
+     * the ticker -- which follows the masthead in the DOM and would otherwise
+     * paint over a menu hanging down across it.
+     */
+    position: relative;
+    z-index: 1;
+    background-color: var(--surface-raised);
+    /*
+     * An inset shadow rather than a bottom border.
+     *
+     * A border occupies a row of the box that the children cannot paint into:
+     * these bars stretch their children to full height, so a 1px border -- even
+     * a transparent one -- leaves a 1px strip of the bar's own background below
+     * every child. On the ticker that showed as a white line under the blue
+     * NEWS badge; here it let a sliver of the hero's video through the bottom
+     * edge of the card. An inset shadow draws in the same place and takes no
+     * layout, so the children reach the edge.
+     */
+    box-shadow: inset 0 -1px 0 var(--border-subtle);
+}
+
+:root[data-theme-slug='skyward'] .sky-shell .sky-navbar {
+    pointer-events: auto;
+    border-radius: var(--sky-card-radius);
+    /* Floating: elevation instead of a hairline. */
+    box-shadow: var(--sky-card-shadow);
+    transition:
+        border-radius 240ms ease,
+        box-shadow 240ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-shell--pinned .sky-navbar {
+    border-radius: 0;
+    box-shadow: inset 0 -1px 0 var(--border-subtle);
+}
+
+/* The mobile sheet hangs off the card, so it has to match its corners. */
+/*
+ * The mobile menu hangs below the masthead instead of growing it.
+ *
+ * In the flow it made the card taller, and the card's height is measured and
+ * fed back as `--sky-shell-height` -- so opening the menu pushed the ticker
+ * down 276px and the hero's artwork 168px, and closing it hauled them back up.
+ * Taking the sheet out of the flow leaves the card at its own height whatever
+ * the menu is doing, and the page underneath holds still.
+ *
+ * Its own card rather than a flap on the bottom of the masthead: once it is
+ * floating it is no longer attached to anything, and a panel with one square
+ * edge reads as a rendering fault rather than as a choice.
+ */
+:root[data-theme-slug='skyward'] .sky-navbar__sheet {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(100% + 0.5rem);
+    border-radius: var(--sky-card-radius);
+    background-color: var(--surface-raised);
+    box-shadow: var(--sky-card-shadow);
+}
+
+/* Flush against the viewport, so only the lower corners are rounded. */
+:root[data-theme-slug='skyward'] .sky-shell--pinned .sky-navbar__sheet {
+    top: 100%;
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
+}
+
+/*
+ * Opening and closing.
+ *
+ * `translate` and `opacity` only: both are compositor properties, so the menu
+ * does not cost a layout pass on the frame it appears -- which is the frame the
+ * visitor is most likely to notice.
+ */
+:root[data-theme-slug='skyward'] .sky-sheet-enter-active,
+:root[data-theme-slug='skyward'] .sky-sheet-leave-active {
+    transition:
+        opacity 180ms ease,
+        translate 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root[data-theme-slug='skyward'] .sky-sheet-enter-from,
+:root[data-theme-slug='skyward'] .sky-sheet-leave-to {
+    opacity: 0;
+    translate: 0 -0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root[data-theme-slug='skyward'] .sky-sheet-enter-active,
+    :root[data-theme-slug='skyward'] .sky-sheet-leave-active {
+        transition: none;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* The ticker                                                                 */
+/* -------------------------------------------------------------------------- */
+
+:root[data-theme-slug='skyward'] .sky-ticker {
+    display: flex;
+    align-items: stretch;
+    /*
+     * A floor rather than a fixed height: the strip is a single line of text,
+     * so without one the bar collapses to the cap height and reads as a rule
+     * with words on it instead of a card.
+     */
+    min-height: 2.5rem;
+    overflow: hidden;
+    background-color: var(--surface-raised);
+    /* See the masthead above: a border would strand a line under the badge. */
+    box-shadow: inset 0 -1px 0 var(--border-subtle);
+}
+
+:root[data-theme-slug='skyward'] .sky-shell .sky-ticker {
+    pointer-events: auto;
+    /* Inset further than the masthead, and dropped clear of it. */
+    margin-block-start: var(--sky-shell-stack);
+    margin-inline: clamp(0rem, 4vw, 3.5rem);
+    border-radius: 999px;
+    box-shadow: var(--sky-card-shadow);
+    transition:
+        margin 240ms ease,
+        border-radius 240ms ease,
+        box-shadow 240ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-shell--pinned .sky-ticker {
+    margin-block-start: 0;
+    margin-inline: 0;
+    border-radius: 0;
+    box-shadow: inset 0 -1px 0 var(--border-subtle);
+}
+
+/*
+ * The standing badge. It does not scroll -- it labels the strip that does, so
+ * moving it would make the label as hard to read as the thing it labels.
+ */
+:root[data-theme-slug='skyward'] .sky-ticker__label {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.4rem;
+    /*
+     * Tighter on a phone, where the badge and the headline are competing for
+     * roughly three hundred pixels and the badge is the one that repeats.
+     */
+    padding-inline: clamp(0.65rem, 3vw, 1.1rem);
+    background-color: var(--color-accent-600);
+    color: white;
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/*
+ * The viewport one headline occupies.
+ *
+ * A carousel rather than a marquee: headlines take turns in one place instead
+ * of filing past. The difference matters for reading -- a moving line has to
+ * be tracked, where a still one is simply read, and a reader who looks up
+ * mid-sentence has not lost their place.
+ *
+ * `position: relative` because the outgoing and incoming slides are stacked on
+ * top of each other during the change, which is what lets one rise as the
+ * other leaves rather than the bar reflowing between them.
+ */
+:root[data-theme-slug='skyward'] .sky-ticker__window {
+    position: relative;
+    flex: 1;
+    /* A long headline must not push the controls off the bar. */
+    min-width: 0;
+    overflow: hidden;
+    /*
+     * A query container, so the single-headline drift can express its starting
+     * position as "just past the right edge of this box" -- see `100cqw` in
+     * the keyframes below. Nothing else depends on it.
+     */
+    container-type: inline-size;
+
+    /*
+     * Headlines fade in and out at the two ends of the window rather than
+     * appearing and vanishing at a line.
+     *
+     * `overflow: hidden` above is what keeps the text inside the strip, but on
+     * its own it cuts each letter in half at the boundary -- which reads as a
+     * clipping bug rather than as motion, and is most obvious exactly where
+     * the eye is, on the character currently crossing it. The mask takes the
+     * glyphs to nothing over the last couple of characters' width instead, so
+     * a headline arrives out of the white and leaves back into it.
+     *
+     * Only the content is masked. The white underneath belongs to the strip,
+     * not to this box, so it stays solid and the bar keeps its own edges.
+     */
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        #000 2rem,
+        #000 calc(100% - 2rem),
+        transparent 100%
+    );
+    mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        #000 2rem,
+        #000 calc(100% - 2rem),
+        transparent 100%
+    );
+}
+
+:root[data-theme-slug='skyward'] .sky-ticker__slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding-inline: 1rem;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+/* The headline yields before the link does: the link is the actionable half. */
+:root[data-theme-slug='skyward'] .sky-ticker__text {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+:root[data-theme-slug='skyward'] .sky-ticker__link {
+    flex-shrink: 0;
+    color: var(--color-accent-600);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------------- */
+/* One headline: the drift                                                    */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * A lone headline has nothing to take turns with, so it travels instead.
+ *
+ * This is the common state on a server with no news posted yet, where the bar
+ * falls back to the operator's standing announcement. Parking it there leaves
+ * a strip that looks switched off next to a masthead that is plainly alive, so
+ * the single case keeps the motion a news bar is expected to have -- it just
+ * gets it by moving the headline rather than by changing it.
+ *
+ * One copy, crossing the bar: in from the right edge, out past the left. The
+ * usual marquee trick of doubling the strip and translating by half is wrong
+ * here, because one short headline is narrower than the bar -- both copies
+ * would be on screen at once, and the same sentence printed twice side by side
+ * reads as a bug rather than as a loop.
+ *
+ * Expressing the start as `100cqw` is what makes that work without measuring
+ * anything in script: it is the width of the window the headline moves
+ * through, so the text begins just past its right edge whatever the bar's
+ * width happens to be. The end is `-100%`, which is the headline's own width,
+ * so it has fully left before the loop restarts.
+ */
+:root[data-theme-slug='skyward'] .sky-ticker__drift {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: max-content;
+    height: 100%;
+    white-space: nowrap;
+    will-change: transform;
+    animation: sky-ticker-drift 26s linear infinite;
+}
+
+@keyframes sky-ticker-drift {
+    from {
+        translate: 100cqw 0;
+    }
+
+    to {
+        translate: -100% 0;
+    }
+}
+
+/* Reading something is a reason to stop it moving. */
+:root[data-theme-slug='skyward'] .sky-ticker:hover .sky-ticker__drift,
+:root[data-theme-slug='skyward'] .sky-ticker:focus-within .sky-ticker__drift {
+    animation-play-state: paused;
+}
+
+/* -------------------------------------------------------------------------- */
+/* The change                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Headlines travel in the direction they were asked for: forward sends the old
+ * one up and brings the new one from below, back does the reverse. Without
+ * that, pressing "previous" still moves everything the same way and the
+ * control reads as broken.
+ *
+ * `translate` and `opacity` only -- both are compositor properties, so the
+ * change costs no layout.
+ */
+:root[data-theme-slug='skyward'] .sky-slide-next-enter-active,
+:root[data-theme-slug='skyward'] .sky-slide-next-leave-active,
+:root[data-theme-slug='skyward'] .sky-slide-prev-enter-active,
+:root[data-theme-slug='skyward'] .sky-slide-prev-leave-active {
+    transition:
+        translate 420ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 320ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-slide-next-enter-from {
+    translate: 0 100%;
+    opacity: 0;
+}
+
+:root[data-theme-slug='skyward'] .sky-slide-next-leave-to {
+    translate: 0 -100%;
+    opacity: 0;
+}
+
+:root[data-theme-slug='skyward'] .sky-slide-prev-enter-from {
+    translate: 0 -100%;
+    opacity: 0;
+}
+
+:root[data-theme-slug='skyward'] .sky-slide-prev-leave-to {
+    translate: 0 100%;
+    opacity: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* The controls                                                               */
+/* -------------------------------------------------------------------------- */
+
+:root[data-theme-slug='skyward'] .sky-ticker__controls {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.1rem;
+    padding-inline-end: 0.5rem;
+}
+
+:root[data-theme-slug='skyward'] .sky-ticker__count {
+    /*
+     * Tabular figures so the counter does not jitter the buttons sideways as
+     * it counts past a digit whose glyph happens to be narrower.
+     */
+    font-variant-numeric: tabular-nums;
+    padding-inline: 0.35rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+:root[data-theme-slug='skyward'] .sky-ticker__control {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--sky-radius-control);
+    color: var(--text-muted);
+    transition:
+        background-color 150ms ease,
+        color 150ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-ticker__control:hover {
+    background-color: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+/*
+ * On a phone the bar is a single line roughly three hundred pixels wide, and
+ * the badge, the counter, three controls and the link together leave the
+ * headline about twenty of them -- which clips it to "He...", a bar that
+ * announces news and then refuses to say what it is.
+ *
+ * So the furniture goes and the words stay. The badge keeps its megaphone and
+ * drops its label, the counter goes, and stepping by hand gives way to the
+ * rotation, which reaches every headline on its own. Pause stays: content that
+ * advances by itself has to be stoppable, and on a touch screen there is no
+ * hover to stop it with.
+ */
+@media (width < 40rem) {
+    :root[data-theme-slug='skyward'] .sky-ticker__label-text,
+    :root[data-theme-slug='skyward'] .sky-ticker__count,
+    :root[data-theme-slug='skyward'] .sky-ticker__control--step {
+        display: none;
+    }
+
+    :root[data-theme-slug='skyward'] .sky-ticker__slide {
+        padding-inline: 0.75rem;
+    }
+
+    /*
+     * A shorter fade, for the same reason the padding is shorter: on a phone
+     * the window is a few hundred pixels wide, and two full fades at the
+     * desktop length would be softening most of the headline rather than its
+     * ends.
+     */
+    :root[data-theme-slug='skyward'] .sky-ticker__window {
+        -webkit-mask-image: linear-gradient(
+            to right,
+            transparent 0,
+            #000 1rem,
+            #000 calc(100% - 1rem),
+            transparent 100%
+        );
+        mask-image: linear-gradient(
+            to right,
+            transparent 0,
+            #000 1rem,
+            #000 calc(100% - 1rem),
+            transparent 100%
+        );
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Main and hero                                                              */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The shell is out of flow, so content starts underneath it. Every public page
+ * is pushed clear by the shell's measured height; the hero is the one block
+ * that deliberately takes it back.
+ */
+:root[data-theme-slug='skyward'] .sky-main {
+    padding-block-start: var(--sky-shell-height);
+}
+
+:root[data-theme-slug='skyward'] .sky-hero {
+    /*
+     * Cancel the padding `.sky-main` just added, so the sky runs up behind the
+     * cards, then re-add it so the hero's own text still clears them. The two
+     * reference the same variable, which is the point: a taller masthead moves
+     * both at once.
+     */
+    margin-block-start: calc(-1 * var(--sky-shell-height));
+    padding-block-start: calc(var(--sky-shell-height) + 3rem);
+}
+
+/*
+ * A full viewport of artwork.
+ *
+ * `100svh` -- the *small* viewport height -- rather than `100vh`, because on a
+ * phone `100vh` measures the viewport with the browser's toolbars retracted.
+ * The hero would then be taller than what is actually on screen at rest, and
+ * the buttons would sit below the fold until the visitor scrolled. `svh`
+ * measures it with the toolbars showing, which is the state the page loads in.
+ * `100vh` stays first as the fallback for browsers that do not know `svh`.
+ */
+:root[data-theme-slug='skyward'] .sky-hero--full {
+    min-height: 100vh;
+    min-height: 100svh;
+    padding-block-end: 3rem;
+}
+
+/*
+ * The video fills the hero and is cropped, never letterboxed or stretched:
+ * key art has a subject, and `cover` keeps it the right shape at every aspect
+ * ratio the hero is asked to be.
+ */
+:root[data-theme-slug='skyward'] .sky-hero__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /*
+     * Both loops are mounted and stacked; this is the one that is showing.
+     *
+     * No transition declared here. Where the browser supports view
+     * transitions it cross-fades the two paints itself over
+     * `--appearance-fade`, and a second fade underneath that one would run
+     * after it finished and double the length of the change. The fallback
+     * path in app.css is what fades this instead, for the length of the
+     * change and no longer.
+     */
+    opacity: 1;
+    /*
+     * A decorative background is not a control. Without this a click lands on
+     * the video rather than on what is drawn over it, and the element can take
+     * focus in some browsers.
+     */
+    pointer-events: none;
+}
+
+/* The other hour of the day, waiting its turn. */
+:root[data-theme-slug='skyward'] .sky-hero__video--standby {
+    opacity: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reduced motion                                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Neither of this theme's movements carries information.
+ *
+ * The carousel still changes headline -- that is the content, not the motion
+ * -- but it cuts between them instead of sliding, and the block stops
+ * advancing on its own, so a reader moves through the news with the controls
+ * at their own pace. The shell snaps between its two states rather than easing
+ * between them. Nothing is lost either way.
+ */
+@media (prefers-reduced-motion: reduce) {
+    :root[data-theme-slug='skyward'] .sky-slide-next-enter-active,
+    :root[data-theme-slug='skyward'] .sky-slide-next-leave-active,
+    :root[data-theme-slug='skyward'] .sky-slide-prev-enter-active,
+    :root[data-theme-slug='skyward'] .sky-slide-prev-leave-active {
+        transition: none;
+    }
+
+    :root[data-theme-slug='skyward'] .sky-ticker__drift {
+        animation: none;
+    }
+
+    :root[data-theme-slug='skyward'] .sky-shell,
+    :root[data-theme-slug='skyward'] .sky-shell .sky-navbar,
+    :root[data-theme-slug='skyward'] .sky-shell .sky-ticker {
+        transition: none;
+    }
+}
+
+/*
+ * Forced colours drop shadows entirely, which is what separates a floating
+ * card from the page here. The hairline border is restored so the masthead
+ * still has an edge.
+ */
+@media (forced-colors: active) {
+    :root[data-theme-slug='skyward'] .sky-shell .sky-navbar,
+    :root[data-theme-slug='skyward'] .sky-shell .sky-ticker {
+        border: 1px solid CanvasText;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* The gate                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Covers everything while the hero's media downloads, including the floating
+ * shell, which is why its z-index is above the shell's 50 rather than beside
+ * it. See components/LoadingScreen.vue.
+ */
+:root[data-theme-slug='skyward'] .sky-gate {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background-color: var(--surface-page);
+}
+
+:root[data-theme-slug='skyward'] .sky-gate__panel {
+    display: flex;
+    width: 100%;
+    max-width: 22rem;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+:root[data-theme-slug='skyward'] .sky-gate__title {
+    margin-block-start: 1.25rem;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+}
+
+:root[data-theme-slug='skyward'] .sky-gate__percent {
+    margin-block-start: 1.75rem;
+    font-family: var(--font-display);
+    /*
+     * Tabular figures, because this number changes several times a second and
+     * proportional digits make it jitter sideways as it counts.
+     */
+    font-variant-numeric: tabular-nums;
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-primary);
+}
+
+:root[data-theme-slug='skyward'] .sky-gate__unit {
+    margin-inline-start: 0.1em;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+:root[data-theme-slug='skyward'] .sky-gate__track {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 0.375rem;
+    margin-block-start: 1.25rem;
+    border-radius: 999px;
+    /*
+     * `--surface-hover` is the obvious token here and the wrong one: it sits at
+     * the same lightness as `--surface-page`, which is what the gate is painted
+     * on, so the unfilled part of the bar disappears and the fill reads as a
+     * stray blue dash. The border token is the lightest one that actually
+     * separates from the page.
+     */
+    background-color: var(--border-subtle);
+}
+
+:root[data-theme-slug='skyward'] .sky-gate__fill {
+    height: 100%;
+    border-radius: 999px;
+    background-color: var(--color-accent-600);
+    /*
+     * Eased, because byte progress arrives in bursts as chunks land. Animating
+     * between them turns a bar that lurches into one that moves.
+     */
+    transition: width 220ms ease-out;
+}
+
+/*
+ * Before the first Content-Length arrives there is no percentage to draw, so
+ * the bar says "working" rather than standing at zero.
+ */
+:root[data-theme-slug='skyward'] .sky-gate__fill--measuring {
+    width: 35%;
+    animation: sky-gate-measuring 1.4s ease-in-out infinite;
+}
+
+@keyframes sky-gate-measuring {
+    from {
+        translate: -100% 0;
+    }
+
+    to {
+        translate: 340% 0;
+    }
+}
+
+:root[data-theme-slug='skyward'] .sky-gate__detail {
+    margin-block-start: 0.75rem;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+}
+
+/* Out of the way once the media is here. */
+:root[data-theme-slug='skyward'] .sky-gate-leave-active {
+    transition: opacity 420ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-gate-leave-to {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root[data-theme-slug='skyward'] .sky-gate__fill {
+        transition: none;
+    }
+
+    :root[data-theme-slug='skyward'] .sky-gate__fill--measuring {
+        animation: none;
+    }
+
+    :root[data-theme-slug='skyward'] .sky-gate-leave-active {
+        transition: none;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* The arrival                                                                */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The landing page fades up as the gate clears.
+ *
+ * An animation rather than a transition from a resting `opacity: 0`, and the
+ * difference matters: a resting zero means that if the class never arrives --
+ * a script error, a state that never settles -- the page is invisible with no
+ * way back. Here the resting state is fully opaque, the gate covers the page
+ * while it loads, and the fade is something that happens once on the way out.
+ * The worst failure is a missing animation, not a blank site.
+ */
+/*
+ * Starts with the gate's own fade and outlasts it.
+ *
+ * The delay matches the gate's hold, so the two begin together; the duration is
+ * nearly twice the gate's, so the page is still visibly rising after the gate
+ * has gone. Without that the page reaches full opacity underneath an overlay
+ * that is still opaque, and the arrival reads as a curtain being removed rather
+ * than as the page coming up.
+ *
+ * `both` holds opacity at 0 through the delay. That is safe here only because
+ * the gate is covering the page for exactly that period.
+ */
+:root[data-theme-slug='skyward'] .sky-reveal--in {
+    animation: sky-reveal 760ms ease 150ms both;
+}
+
+@keyframes sky-reveal {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root[data-theme-slug='skyward'] .sky-reveal--in {
+        animation: none;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* The auth modal                                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * A native dialog, so the browser handles the focus trap, Escape, and making
+ * the page behind inert. These rules only dress it.
+ */
+:root[data-theme-slug='skyward'] .sky-modal {
+    /* The UA gives a dialog a border, a background and a fixed width. */
+    max-width: min(32rem, calc(100vw - 2rem));
+    width: 100%;
+    /*
+     * Restores the centring the UA stylesheet provides and Tailwind's preflight
+     * takes away: a modal dialog is laid out `position: fixed; inset: 0` with
+     * `margin: auto` doing the centring, and preflight zeroes the margin on
+     * every element. Without this the dialog sits in the top-left corner.
+     */
+    margin: auto;
+    padding: 0;
+    border: 0;
+    border-radius: var(--sky-card-radius);
+    background-color: var(--surface-raised);
+    box-shadow: 0 32px 64px -24px oklch(0.3 0.08 258 / 0.55);
+    color: var(--text-primary);
+    overflow: visible;
+}
+
+:root[data-theme-slug='skyward'] .sky-modal::backdrop {
+    background-color: oklch(0.3 0.045 262 / 0.45);
+    backdrop-filter: blur(3px);
+}
+
+:root[data-theme-slug='skyward'] .sky-modal__panel {
+    position: relative;
+    padding: 0.5rem 1.75rem 1.75rem;
+    /* A long registration form must scroll inside the dialog, not past it. */
+    max-height: calc(100dvh - 4rem);
+    overflow-y: auto;
+}
+
+:root[data-theme-slug='skyward'] .sky-modal__close {
+    position: absolute;
+    inset-block-start: 0.75rem;
+    inset-inline-end: 0.75rem;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--sky-radius-control);
+    color: var(--text-muted);
+    transition:
+        background-color 150ms ease,
+        color 150ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-modal__close:hover {
+    background-color: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+/*
+ * The dialog's top layer keeps the page from being *clicked*, not from being
+ * scrolled, and a backdrop that slides away from what it is dimming looks
+ * broken. Set on <html> by the modal while it is open.
+ */
+:root[data-theme-slug='skyward'].sky-modal-open {
+    overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root[data-theme-slug='skyward'] .sky-modal__close {
+        transition: none;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* The footer                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Matched to the reference design rather than derived from this skin's tokens,
+ * so the measurements and the palette below are literal.
+ *
+ * That is a deliberate exception and worth knowing about: everything else in
+ * this stylesheet reads `--text-secondary` and friends, so retuning the
+ * palette in variables.css moves the whole skin at once. The footer will not
+ * follow. Point these five variables at the theme's tokens instead and it
+ * will -- at the cost of no longer matching the reference exactly.
+ */
+:root[data-theme-slug='skyward'] .sky-footer {
+    --sky-footer-border: #cce5ff;
+    --sky-footer-text: #445c8b;
+    --sky-footer-heading: #071b60;
+    --sky-footer-accent: #064bc7;
+    --sky-footer-muted: #53689a;
+    --sky-footer-pill: #e3f0ff;
+    --sky-footer-primary: #0961ff;
+
+    /*
+     * A hairline and a near-white ground. This is where the skin stops
+     * floating -- a card with nothing below it reads as unfinished, so the
+     * page closes on a flat band instead.
+     */
+    border-top: 1px solid var(--sky-footer-border);
+    background-color: rgb(255 255 255 / 0.8);
+}
+
+:root[data-theme-slug='skyward'] .sky-footer__card {
+    display: grid;
+    gap: 2rem;
+    margin-inline: auto;
+    max-width: 80rem;
+    padding: 2rem 1.25rem;
+}
+
+/*
+ * The brand column takes what it needs, each group an equal share, and the
+ * small print the largest -- it is the only prose here, and a legal notice in
+ * a narrow column turns into a ladder of three-word lines.
+ *
+ * `repeat(var(--sky-footer-groups), ...)` rather than a fixed count because
+ * how many groups there are is configuration: a server that adds a third would
+ * overflow a hardcoded four-track grid. The component does not set that
+ * variable, so the fallback below is what a two-group footer uses.
+ */
+@media (min-width: 48rem) {
+    :root[data-theme-slug='skyward'] .sky-footer__card {
+        grid-template-columns: auto repeat(var(--sky-footer-groups, 2), minmax(0, 1fr)) 1.3fr;
+        align-items: start;
+        gap: 2.5rem;
+    }
+}
+
+/* ---- The mark, and the social buttons ----------------------------------- */
+
+:root[data-theme-slug='skyward'] .sky-footer__brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+@media (min-width: 48rem) {
+    :root[data-theme-slug='skyward'] .sky-footer__brand {
+        align-items: flex-start;
+    }
+}
+
+:root[data-theme-slug='skyward'] .sky-footer__mark {
+    border-radius: 0.75rem;
+}
+
+:root[data-theme-slug='skyward'] .sky-footer__socials {
+    display: flex;
+    gap: 0.5rem;
+}
+
+:root[data-theme-slug='skyward'] .sky-footer__social {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid var(--sky-footer-border);
+    border-radius: 50%;
+    background-color: #fff;
+    color: var(--sky-footer-accent);
+    transition:
+        border-color 150ms ease,
+        background-color 150ms ease;
+}
+
+/*
+ * Hover on the anchor only. A network with no URL yet is a <span>, and an
+ * affordance on something that cannot respond is the part that reads as
+ * broken -- not the missing link.
+ */
+:root[data-theme-slug='skyward'] a.sky-footer__social:hover {
+    border-color: var(--sky-footer-primary);
+    background-color: var(--sky-footer-pill);
+}
+
+/* ---- The link groups ---------------------------------------------------- */
+
+/*
+ * Fredoka, which is the reference's display face and not this skin's. Set here
+ * rather than on `--font-display` so it stays confined to these two words: the
+ * masthead, the hero and every section heading keep Nunito, and switching the
+ * whole skin over is a one-line change in variables.css instead.
+ */
+:root[data-theme-slug='skyward'] .sky-footer__heading {
+    font-family: 'Fredoka', var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--sky-footer-heading);
+}
+
+/*
+ * Two columns filled left-to-right, so a group of seven falls
+ *
+ *     Home         Accounts
+ *     Information  Rankings
+ *     Marketplace  Auctions
+ *     Streamers
+ *
+ * and the order in config/game.php reads across the rows. A single column
+ * until the group itself is wide enough -- a container query rather than a
+ * viewport one, because what decides this is how much room the column got,
+ * which on a tablet is not something the viewport width predicts.
+ */
+:root[data-theme-slug='skyward'] .sky-footer__group {
+    container-type: inline-size;
+}
+
+:root[data-theme-slug='skyward'] .sky-footer__links {
+    display: grid;
+    grid-template-columns: 1fr;
+    column-gap: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+@container (min-width: 15rem) {
+    :root[data-theme-slug='skyward'] .sky-footer__links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/*
+ * The row rhythm is a 2.75rem minimum height on the link itself rather than a
+ * margin on the item. That is also the comfortable minimum for a touch target,
+ * so the spacing and the tap area are the same number instead of two that can
+ * drift apart.
+ */
+:root[data-theme-slug='skyward'] .sky-footer__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--sky-footer-text);
+}
+
+:root[data-theme-slug='skyward'] a.sky-footer__link:hover {
+    color: var(--sky-footer-accent);
+    text-decoration: underline;
+}
+
+:root[data-theme-slug='skyward'] .sky-footer__link--inert {
+    cursor: default;
+}
+
+/* ---- The small print ---------------------------------------------------- */
+
+:root[data-theme-slug='skyward'] .sky-footer__legal {
+    font-size: 0.875rem;
+    line-height: 1.625;
+    color: var(--sky-footer-text);
+}
+
+:root[data-theme-slug='skyward'] .sky-footer__credit {
+    font-weight: 600;
+    color: var(--sky-footer-heading);
+}
+
+:root[data-theme-slug='skyward'] .sky-footer__credit a:hover {
+    text-decoration: underline;
+}
+
+:root[data-theme-slug='skyward'] .sky-footer__disclaimer {
+    margin-top: 0.5rem;
+    /* The operator may break the notice into paragraphs with newlines. */
+    white-space: pre-line;
+}
+
+:root[data-theme-slug='skyward'] .sky-footer__copyright {
+    margin-top: 0.75rem;
+    color: var(--sky-footer-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* The language picker                                                        */
+/* -------------------------------------------------------------------------- */
+
+:root[data-theme-slug='skyward'] .sky-lang {
+    position: relative;
+    flex-shrink: 0;
+}
+
+:root[data-theme-slug='skyward'] .sky-lang__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    transition:
+        background-color 150ms ease,
+        color 150ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-lang__trigger:hover {
+    background-color: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+/*
+ * Hangs below the masthead rather than growing it, for the reason the mobile
+ * menu does: the card's height is measured and drives where the hero sits, so
+ * a menu in the flow would shove the page down as it opened.
+ */
+:root[data-theme-slug='skyward'] .sky-lang__menu {
+    /*
+     * Published as a property because the rows inside subtract it from the
+     * panel's radius to find their own. Written once here, the two cannot
+     * drift apart the day somebody changes the breathing room.
+     */
+    --sky-menu-pad: 0.3rem;
+
+    position: absolute;
+    inset-inline-end: 0;
+    top: calc(100% + 0.5rem);
+    z-index: 2;
+    min-width: 11rem;
+    padding: var(--sky-menu-pad);
+    border-radius: var(--sky-card-radius);
+    background-color: var(--surface-raised);
+    box-shadow: var(--sky-card-shadow);
+}
+
+:root[data-theme-slug='skyward'] .sky-lang__option {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    /*
+     * Concentric with the panel: an inner radius of the outer one less the
+     * padding traces the same curve as the corner it sits in. A square
+     * highlight against a 1.75rem corner reads as a mistake, because at the
+     * corners it is one -- the fill crosses ground the panel has rounded away.
+     */
+    border-radius: calc(var(--sky-card-radius) - var(--sky-menu-pad));
+    padding: 0.5rem 0.7rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-align: start;
+    color: var(--text-secondary);
+    transition: background-color 150ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-lang__option:hover {
+    background-color: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+:root[data-theme-slug='skyward'] .sky-lang__option--active {
+    color: var(--color-accent-600);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root[data-theme-slug='skyward'] .sky-lang__trigger,
+    :root[data-theme-slug='skyward'] .sky-lang__option {
+        transition: none;
+    }
+}
+
+/*
+ * In the mobile sheet the picker is a full-width row like the links above it,
+ * and its menu drops in place rather than hanging off the masthead's corner.
+ */
+:root[data-theme-slug='skyward'] .sky-navbar__sheet .sky-lang__trigger {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.5rem 0.75rem;
+}
+
+:root[data-theme-slug='skyward'] .sky-navbar__sheet .sky-lang__menu {
+    position: static;
+    margin-block-start: 0.25rem;
+    box-shadow: none;
+    background-color: var(--surface-sunken);
+}
+
+/* -------------------------------------------------------------------------- */
+/* The account menu                                                           */
+/* -------------------------------------------------------------------------- */
+
+:root[data-theme-slug='skyward'] .sky-account {
+    position: relative;
+    flex-shrink: 0;
+}
+
+/*
+ * The accent pill Play Now was, so the masthead's loudest corner stays in the
+ * same place and at the same weight whether or not anybody is signed in.
+ */
+:root[data-theme-slug='skyward'] .sky-account__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--sky-radius-control);
+    background-color: var(--color-accent-600);
+    font-size: 0.8125rem;
+    font-weight: 800;
+    color: white;
+    white-space: nowrap;
+    transition: background-color 150ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-account__trigger:hover {
+    background-color: var(--color-accent-700);
+}
+
+/*
+ * An account name is the operator's data, not this theme's copy: rAthena allows
+ * 23 characters and nothing stops somebody using all of them. Truncated rather
+ * than wrapped, because the bar's height is measured to place the hero under
+ * it, so a name that wrapped would move the page rather than the pill.
+ */
+:root[data-theme-slug='skyward'] .sky-account__name {
+    overflow: hidden;
+    max-width: 6.5rem;
+    text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+    :root[data-theme-slug='skyward'] .sky-account__name {
+        max-width: 9rem;
+    }
+}
+
+:root[data-theme-slug='skyward'] .sky-account__chevron {
+    transition: transform 150ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-account__trigger[aria-expanded='true'] .sky-account__chevron {
+    transform: rotate(180deg);
+}
+
+/*
+ * Hangs below the masthead, for the reason the language menu does, and squared
+ * to the pill above it.
+ *
+ * Both edges are pinned rather than just the trailing one, so the panel is the
+ * width of the trigger instead of a width of its own: the wrapper shrink-wraps
+ * the pill, so inset-inline: 0 *is* the pill's box. A min-width here would
+ * undo that -- the moment it exceeded the trigger the panel would overhang one
+ * side -- and it is not needed, because the pill's own padding and icons make
+ * it wider than these two labels at every name length rAthena allows.
+ */
+:root[data-theme-slug='skyward'] .sky-account__menu {
+    /* Read by the items below, as in the language menu. */
+    --sky-menu-pad: 0.3rem;
+
+    position: absolute;
+    inset-inline: 0;
+    top: calc(100% + 0.5rem);
+    z-index: 2;
+    padding: var(--sky-menu-pad);
+    border-radius: var(--sky-card-radius);
+    background-color: var(--surface-raised);
+    box-shadow: var(--sky-card-shadow);
+}
+
+:root[data-theme-slug='skyward'] .sky-account__item {
+    display: block;
+    width: 100%;
+    /* Concentric with the panel, for the reason the language rows are. */
+    border-radius: calc(var(--sky-card-radius) - var(--sky-menu-pad));
+    padding: 0.5rem 0.7rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-align: start;
+    color: var(--text-secondary);
+    transition: background-color 150ms ease;
+}
+
+:root[data-theme-slug='skyward'] .sky-account__item:hover {
+    background-color: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+:root[data-theme-slug='skyward'] .sky-account__item:disabled {
+    opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root[data-theme-slug='skyward'] .sky-account__trigger,
+    :root[data-theme-slug='skyward'] .sky-account__chevron,
+    :root[data-theme-slug='skyward'] .sky-account__item {
+        transition: none;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* The last word                                                              */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The closing band: key art edge to edge, the mark, one line of type and the
+ * one control left to press.
+ *
+ * It runs full bleed out of the centred column the rest of the page sits in,
+ * which is what makes it read as the page closing rather than as one more
+ * card. Nothing is pulled into the footer: that band has no top margin of its
+ * own, only a hairline, and the gradient below already fades to the page
+ * colour -- so the two meet cleanly and the hairline stays visible.
+ */
+:root[data-theme-slug='skyward'] .sky-cta {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    margin-block-start: 4rem;
+    padding-block: clamp(4.5rem, 11vw, 7.5rem);
+}
+
+/*
+ * The generated sky, and on an installation with no artwork the whole
+ * background. Brightest at the horizon, as in the hero, so the two ends of the
+ * page are lit the same way.
+ */
+:root[data-theme-slug='skyward'] .sky-cta__sky {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background-image:
+        radial-gradient(
+            120% 90% at 50% 115%,
+            color-mix(in oklab, var(--color-accent-400) 42%, transparent),
+            transparent 64%
+        ),
+        radial-gradient(
+            80% 70% at 50% -10%,
+            color-mix(in oklab, var(--surface-raised) 90%, transparent),
+            transparent 72%
+        );
+    background-color: var(--surface-sunken);
+}
+
+:root[data-theme-slug='skyward'] .sky-cta__art {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /*
+     * Held above centre. The band is wide and short, so `cover` throws away
+     * about half the height of art drawn in any normal shape -- and what it
+     * keeps, by default, is the middle: the one strip of a character study
+     * that has no face in it. Biasing upward keeps heads and horizon in frame
+     * and spends the crop on foreground instead.
+     */
+    object-position: 50% 30%;
+    /*
+     * Faded into the generated sky rather than laid over it, so art that was
+     * cropped for a different shape still hands off to something, and the band
+     * does not change character depending on whether the file is there.
+     *
+     * The legibility this costs is bought back by the scrim below rather than
+     * by washing the whole frame out. Fading the artwork uniformly is the
+     * obvious way to make type readable over it and the wrong one: it pays
+     * everywhere for a problem that exists only behind the words, and what it
+     * takes first is the colour that made the art worth showing.
+     */
+    opacity: 0.8;
+}
+
+/*
+ * The scrim: a bright pocket under the text block, gone well before the edges.
+ *
+ * Tight and strong rather than broad and faint, which is the whole trade. The
+ * two settings read almost identically behind the words -- the lead line
+ * measures 4.2:1 either way -- but the narrow one leaves the artwork at full
+ * strength everywhere else, where there is nothing to be legible against.
+ *
+ * Mixed from `--surface-raised`, which is white, rather than `--surface-page`,
+ * which is a pale blue: a wash in the page colour casts its tint over the whole
+ * frame and delivers the key art desaturated, where a white one only lifts what
+ * is already there.
+ *
+ * Only the top is faded, and kept short for the same reason the pocket is: a
+ * long fade is a wide strip of flat page colour where the picture should be.
+ * It is there because the section above ends on nothing in particular, so
+ * without it the artwork would start on a hard horizontal line in the middle
+ * of the page. The foot needs no such help -- the footer opens with its own
+ * hairline, which is a deliberate edge rather than an accidental one, so the
+ * picture runs straight into it.
+ */
+:root[data-theme-slug='skyward'] .sky-cta__scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        radial-gradient(
+            46% 42% at 50% 50%,
+            color-mix(in oklab, var(--surface-raised) 90%, transparent),
+            transparent 88%
+        ),
+        linear-gradient(to bottom, var(--surface-page) 0%, transparent 12%);
+}
+
+:root[data-theme-slug='skyward'] .sky-cta__inner {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 44rem;
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+    text-align: center;
+}
+
+:root[data-theme-slug='skyward'] .sky-cta__mark {
+    /* Sits on the art rather than the scrim, so it needs its own lift. */
+    filter: drop-shadow(0 6px 16px oklch(0.3 0.08 258 / 0.35));
+}
+
+:root[data-theme-slug='skyward'] .sky-cta__title {
+    margin-top: 1.75rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.9rem, 5.2vw, 2.9rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    color: var(--text-primary);
+    text-wrap: balance;
+}
+
+:root[data-theme-slug='skyward'] .sky-cta__lead {
+    max-width: 34rem;
+    margin-top: 1rem;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    text-wrap: balance;
+}
+
+/*
+ * Stacked and full width on a narrow screen, side by side once there is room.
+ * The cap stops a lone button stretching the width of a phone, which reads as a
+ * banner rather than as something to press.
+ */
+:root[data-theme-slug='skyward'] .sky-cta__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 18rem;
+    margin-top: 2.25rem;
+}
+
+@media (min-width: 640px) {
+    :root[data-theme-slug='skyward'] .sky-cta__actions {
+        flex-direction: row;
+        justify-content: center;
+        width: auto;
+        max-width: none;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Night                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * What this stylesheet draws that the palette cannot reach.
+ *
+ * Almost everything here reads `--surface-raised` and friends, so night is
+ * handled by variables.css and this section stays short on purpose. Two
+ * things are not reachable that way:
+ *
+ *   1. The footer, which carries a literal palette of its own -- a deliberate
+ *      exception noted where it is declared, because it was matched to a
+ *      reference design rather than derived from the tokens. An exception
+ *      made once has to be paid for twice, and this is the second payment.
+ *
+ *   2. A handful of places that mix a literal white or a daylight-weight
+ *      scrim, where the mix itself is wrong after dark rather than merely
+ *      the colour going into it.
+ *
+ * Nothing here changes layout. If a rule below moves something, it is in the
+ * wrong section.
+ */
+
+/*
+ * The footer's seven variables, re-pointed for night.
+ *
+ * Kept literal to match how they are declared in daylight, rather than
+ * pointed at the tokens. That is the same trade the daylight block makes and
+ * it is worth restating: retuning the skin's palette will not move these, and
+ * whoever changes one should change both.
+ */
+:root[data-theme-slug='skyward'][data-appearance='dark'] .sky-footer {
+    --sky-footer-border: oklch(0.34 0.03 262);
+    --sky-footer-text: oklch(0.78 0.022 252);
+    --sky-footer-heading: oklch(0.95 0.012 250);
+    --sky-footer-accent: oklch(0.78 0.15 260);
+    --sky-footer-muted: oklch(0.64 0.025 254);
+    --sky-footer-pill: oklch(0.3 0.04 262);
+    --sky-footer-primary: oklch(0.72 0.18 262);
+
+    /*
+     * Darker than the page rather than lighter, which is the one place this
+     * skin inverts its own rule about cards. The footer is not a card -- it
+     * is where the page stops floating and closes on a flat band -- and
+     * after dark the way to say "the page ends here" is to go down, not up.
+     */
+    background-color: oklch(0.17 0.03 264 / 0.85);
+}
+
+:root[data-theme-slug='skyward'][data-appearance='dark'] .sky-footer__social {
+    background-color: oklch(0.25 0.035 262);
+}
+
+/*
+ * The modal's backdrop.
+ *
+ * In daylight it is a navy wash at 45%, which is enough to push a bright page
+ * back. Over a night page the same wash is nearly invisible -- there is not
+ * much left to darken -- so it goes to near-black and heavier, and the panel
+ * above it does the lifting.
+ */
+:root[data-theme-slug='skyward'][data-appearance='dark'] .sky-modal::backdrop {
+    background-color: oklch(0.1 0.025 264 / 0.7);
+}

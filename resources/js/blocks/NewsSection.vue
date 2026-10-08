@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import StateBlock from '../components/ui/StateBlock.vue'
 import { useNewsData } from './data'
 import type { NewsProps } from './contracts'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * Recent news, from the legacy CMS table.
@@ -14,7 +18,6 @@ import type { NewsProps } from './contracts'
  * becomes an XSS vector.
  */
 const props = withDefaults(defineProps<NewsProps>(), {
-    heading: 'Latest news',
     limit: 3,
     featureFirst: false,
 })
@@ -24,24 +27,28 @@ const news = useNewsData(props.limit)
 function published(at: string | null): string {
     return at === null ? '' : new Date(at).toLocaleDateString()
 }
+
+/* The default lives here rather than in defineProps, which is hoisted out
+ * of setup() and so cannot call t(). */
+const headingText = computed(() => props.heading ?? t('news.heading'))
 </script>
 
 <template>
     <section class="mx-auto max-w-6xl px-4 py-10" aria-labelledby="block-news">
-        <h2 id="block-news" class="mb-4 text-lg font-semibold">{{ props.heading }}</h2>
+        <h2 id="block-news" class="mb-4 text-lg font-semibold">{{ headingText }}</h2>
 
         <StateBlock
             v-if="news.state.error"
             variant="error"
-            title="News unavailable"
+            :title="t('news.unavailable')"
             :description="news.state.error"
         />
-        <StateBlock v-else-if="news.state.loading" variant="loading" title="Loading…" />
+        <StateBlock v-else-if="news.state.loading" variant="loading" :title="t('common.loading')" />
         <StateBlock
             v-else-if="news.state.empty"
             variant="empty"
-            title="No news yet"
-            description="Announcements posted by the server staff appear here."
+            :title="t('news.empty')"
+            :description="t('news.emptyBody')"
         />
 
         <div v-else class="grid gap-3 md:grid-cols-3">
@@ -68,7 +75,7 @@ function published(at: string | null): string {
                     rel="noreferrer noopener"
                     class="mt-2 inline-block text-sm font-medium text-[var(--color-accent-600)] underline"
                 >
-                    Read more
+                    {{ t('news.readMore') }}
                 </a>
             </article>
         </div>

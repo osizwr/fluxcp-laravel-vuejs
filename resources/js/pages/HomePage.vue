@@ -7,6 +7,9 @@ import StateBlock from '../components/ui/StateBlock.vue'
 import StatTile from '../components/ui/StatTile.vue'
 import StatusPill from '../components/ui/StatusPill.vue'
 import { useServerStore } from '../stores/server'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * Server status.
@@ -41,24 +44,20 @@ function processState(up: boolean): 'up' | 'down' {
 
 <template>
     <div>
-        <PageHeader title="Server status" description="Live status of the game servers.">
+        <PageHeader :title="t('server.heading')" description="Live status of the game servers.">
             <template #actions>
                 <AppButton size="sm" :loading="servers.loading" @click="servers.load()">
-                    Refresh
+                    {{ t('common.refresh') }}
                 </AppButton>
             </template>
         </PageHeader>
 
-        <AlertMessage
-            v-if="servers.woeInProgress"
-            tone="warning"
-            title="War of Emperium in progress"
-        >
-            Some pages are unavailable until the siege ends.
+        <AlertMessage v-if="servers.woeInProgress" tone="warning" :title="t('server.woe')">
+            {{ t('server.woeSomePages') }}
         </AlertMessage>
 
         <div v-if="servers.error" class="mt-4">
-            <AlertMessage tone="error" title="Status unavailable">
+            <AlertMessage tone="error" :title="t('server.unavailable')">
                 {{ servers.error }}
             </AlertMessage>
         </div>
@@ -66,24 +65,24 @@ function processState(up: boolean): 'up' | 'down' {
         <StateBlock
             v-else-if="servers.loading && servers.groups.length === 0"
             variant="loading"
-            title="Checking servers…"
+            :title="t('common.checkingServers')"
         />
 
         <template v-else>
             <div class="mt-4 grid gap-3 sm:grid-cols-3">
                 <StatTile
-                    label="Players online"
+                    :label="t('server.playersOnline')"
                     :value="servers.playersOnline.toLocaleString()"
                     :context="measuredAt"
                 />
                 <StatTile
-                    label="Status"
+                    :label="t('common.status')"
                     :value="servers.anyServerUp ? 'Online' : 'Offline'"
                     :context="servers.anyServerUp ? 'Accepting connections' : 'Not reachable'"
                 />
                 <StatTile
                     v-if="totalPeak !== null"
-                    label="Peak players"
+                    :label="t('server.peakPlayers')"
                     :value="totalPeak.toLocaleString()"
                     context="Highest recorded"
                 />
@@ -130,7 +129,9 @@ function processState(up: boolean): 'up' | 'down' {
                             class="mt-3 grid grid-cols-3 gap-2 border-t border-[var(--border-subtle)] pt-3"
                         >
                             <div>
-                                <dt class="text-[0.75rem] text-[var(--text-muted)]">Login</dt>
+                                <dt class="text-[0.75rem] text-[var(--text-muted)]">
+                                    {{ t('server.login') }}
+                                </dt>
                                 <dd class="mt-0.5">
                                     <StatusPill
                                         bare
@@ -140,7 +141,9 @@ function processState(up: boolean): 'up' | 'down' {
                                 </dd>
                             </div>
                             <div>
-                                <dt class="text-[0.75rem] text-[var(--text-muted)]">Character</dt>
+                                <dt class="text-[0.75rem] text-[var(--text-muted)]">
+                                    {{ t('common.character') }}
+                                </dt>
                                 <dd class="mt-0.5">
                                     <StatusPill
                                         bare
@@ -150,7 +153,9 @@ function processState(up: boolean): 'up' | 'down' {
                                 </dd>
                             </div>
                             <div>
-                                <dt class="text-[0.75rem] text-[var(--text-muted)]">Map</dt>
+                                <dt class="text-[0.75rem] text-[var(--text-muted)]">
+                                    {{ t('server.map') }}
+                                </dt>
                                 <dd class="mt-0.5">
                                     <StatusPill
                                         bare
@@ -165,7 +170,7 @@ function processState(up: boolean): 'up' | 'down' {
                             v-if="server.woe_active"
                             class="mt-3 text-[0.8125rem] font-medium text-[var(--color-warn)]"
                         >
-                            War of Emperium in progress
+                            {{ t('server.woe') }}
                         </p>
                     </article>
                 </div>

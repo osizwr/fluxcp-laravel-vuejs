@@ -48,9 +48,7 @@ final class CaptchaTest extends TestCase
             'password' => self::PASSWORD,
             'password_confirmation' => self::PASSWORD,
             'email' => 'newplayer@example.com',
-            'email_confirmation' => 'newplayer@example.com',
             'gender' => 'M',
-            'birthdate' => '1995-04-12',
             ...$overrides,
         ];
     }
@@ -235,7 +233,6 @@ final class CaptchaTest extends TestCase
         $this->postJson('/api/auth/register', $this->payload([
             'username' => 'second',
             'email' => 'second@example.com',
-            'email_confirmation' => 'second@example.com',
             'captcha' => $answer,
         ]))->assertStatus(422)->assertJsonValidationErrors('captcha');
     }

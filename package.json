@@ -10,7 +10,8 @@
         "lint:fix": "eslint . --fix",
         "format": "prettier --write \"resources/**/*.{ts,vue,css}\"",
         "format:check": "prettier --check \"resources/**/*.{ts,vue,css}\"",
-        "verify:themes": "node scripts/verify-themes.mjs"
+        "verify:themes": "node scripts/verify-themes.mjs",
+        "verify:locales": "node scripts/verify-locales.mjs"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",

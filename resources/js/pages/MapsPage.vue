@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import DataTable, { type Column } from '../components/ui/DataTable.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import { api } from '../services/api'
+import { useTranslation } from '../i18n'
 
 /**
  * Where people are playing right now.
@@ -16,21 +17,21 @@ interface MapRow {
     players: number
 }
 
+const { t } = useTranslation()
+
 const rows = ref<MapRow[]>([])
 const totalOnline = ref(0)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
 const columns = computed<Column[]>(() => [
-    { key: 'map', label: 'Map' },
-    { key: 'players', label: 'Players', numeric: true },
-    { key: 'share', label: 'Share', numeric: true, secondary: true },
+    { key: 'map', label: t('server.map') },
+    { key: 'players', label: t('common.players'), numeric: true },
+    { key: 'share', label: t('maps.share'), numeric: true, secondary: true },
 ])
 
 function share(players: number): string {
-    return totalOnline.value === 0
-        ? '—'
-        : `${Math.round((players / totalOnline.value) * 100)}%`
+    return totalOnline.value === 0 ? '—' : `${Math.round((players / totalOnline.value) * 100)}%`
 }
 
 async function load(): Promise<void> {
@@ -45,7 +46,7 @@ async function load(): Promise<void> {
         rows.value = response.data
         totalOnline.value = response.meta.total_online
     } catch {
-        error.value = 'Map activity could not be loaded.'
+        error.value = t('maps.error')
         rows.value = []
     } finally {
         loading.value = false
@@ -58,7 +59,7 @@ onMounted(load)
 <template>
     <div class="py-6">
         <PageHeader
-            title="Map activity"
+            :title="t('maps.title')"
             :description="
                 totalOnline > 0
                     ? `${totalOnline.toLocaleString()} players across ${rows.length} maps.`
@@ -74,7 +75,7 @@ onMounted(load)
             :loading="loading"
             :error="error"
             caption="Players per map"
-            empty-title="Nobody is online"
+            empty-:title="t('online.empty')"
             empty-description="Nothing to show until players log in."
         >
             <template #cell:map="{ row }">{{ row.map }}</template>

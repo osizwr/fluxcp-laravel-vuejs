@@ -7,6 +7,9 @@ import FormField from '../components/ui/FormField.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import { api, ApiError } from '../services/api'
 import type { Item, ListMeta, Paginated } from '../types/api'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * The item database.
@@ -42,11 +45,11 @@ const direction = computed<'asc' | 'desc'>(() =>
 
 const columns = computed<Column[]>(() => [
     { key: 'id', label: 'ID', numeric: true, sort: 'id' },
-    { key: 'name', label: 'Name', sort: 'name' },
-    { key: 'type', label: 'Type', secondary: true, sort: 'type' },
-    { key: 'slots', label: 'Slots', numeric: true, sort: 'slots' },
+    { key: 'name', label: t('common.name'), sort: 'name' },
+    { key: 'type', label: t('common.type'), secondary: true, sort: 'type' },
+    { key: 'slots', label: t('common.slots'), numeric: true, sort: 'slots' },
     { key: 'price', label: 'Buy', numeric: true, secondary: true, sort: 'price_buy' },
-    { key: 'weight', label: 'Weight', numeric: true, secondary: true, sort: 'weight' },
+    { key: 'weight', label: t('common.weight'), numeric: true, secondary: true, sort: 'weight' },
 ])
 
 async function load(): Promise<void> {
@@ -67,8 +70,7 @@ async function load(): Promise<void> {
         total.value = response.meta.total
         lastPage.value = response.meta.last_page
     } catch (caught) {
-        error.value =
-            caught instanceof ApiError ? caught.message : 'The item list could not be loaded.'
+        error.value = caught instanceof ApiError ? caught.message : t('items.error')
         items.value = []
         total.value = 0
     } finally {
@@ -131,27 +133,27 @@ void (async () => {
 <template>
     <div class="py-6">
         <PageHeader
-            title="Items"
+            :title="t('nav.items')"
             description="Every item on the server, including its own custom entries."
         />
 
         <form class="panel mt-4 grid gap-3 p-4 sm:grid-cols-4" @submit.prevent="applyFilters">
-            <FormField label="Name">
+            <FormField :label="t('common.name')">
                 <template #default="{ id }">
                     <input
                         :id="id"
                         v-model.trim="filters.name"
                         class="field-input"
                         type="search"
-                        placeholder="Red Potion"
+                        :placeholder="t('items.namePlaceholder')"
                     />
                 </template>
             </FormField>
 
-            <FormField v-if="Object.keys(types).length > 0" label="Type">
+            <FormField v-if="Object.keys(types).length > 0" :label="t('common.type')">
                 <template #default="{ id }">
                     <select :id="id" v-model="filters.type" class="field-input">
-                        <option value="">Any type</option>
+                        <option value="">{{ t('items.anyType') }}</option>
                         <option v-for="(label, key) in types" :key="key" :value="key">
                             {{ label }}
                         </option>
@@ -159,18 +161,20 @@ void (async () => {
                 </template>
             </FormField>
 
-            <FormField label="Source">
+            <FormField :label="t('items.source')">
                 <template #default="{ id }">
                     <select :id="id" v-model="filters.origin" class="field-input">
-                        <option value="">Everything</option>
-                        <option value="stock">Standard items</option>
-                        <option value="custom">This server's items</option>
+                        <option value="">{{ t('items.everything') }}</option>
+                        <option value="stock">{{ t('items.standard') }}</option>
+                        <option value="custom">{{ t('items.serverOwn') }}</option>
                     </select>
                 </template>
             </FormField>
 
             <div class="flex items-end">
-                <AppButton type="submit" variant="primary" block>Search</AppButton>
+                <AppButton type="submit" variant="primary" block>{{
+                    t('common.search')
+                }}</AppButton>
             </div>
         </form>
 
@@ -184,7 +188,7 @@ void (async () => {
             :sort="sort"
             :direction="direction"
             caption="Items on this server"
-            empty-title="No items match those filters"
+            empty-:title="t('items.empty')"
             empty-description="Try a broader search."
             @sort="sortBy"
         >
@@ -212,18 +216,21 @@ void (async () => {
             </template>
         </DataTable>
 
-        <div v-if="!loading && !error && items.length > 0" class="mt-4 flex items-center justify-between text-sm">
+        <div
+            v-if="!loading && !error && items.length > 0"
+            class="mt-4 flex items-center justify-between text-sm"
+        >
             <span class="text-[var(--text-secondary)]">
                 {{ total.toLocaleString() }} item{{ total === 1 ? '' : 's' }}
             </span>
 
             <div class="flex items-center gap-2">
                 <AppButton size="sm" :disabled="page <= 1" @click="goToPage(page - 1)">
-                    Previous
+                    {{ t('common.previous') }}
                 </AppButton>
                 <span class="text-[var(--text-muted)]">Page {{ page }} of {{ lastPage }}</span>
                 <AppButton size="sm" :disabled="page >= lastPage" @click="goToPage(page + 1)">
-                    Next
+                    {{ t('common.next') }}
                 </AppButton>
             </div>
         </div>

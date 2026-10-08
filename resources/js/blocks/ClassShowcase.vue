@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import StateBlock from '../components/ui/StateBlock.vue'
 import { useClassShowcaseData } from './data'
 import type { ClassShowcaseProps } from './contracts'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * How the player base is distributed across job classes.
@@ -12,7 +16,6 @@ import type { ClassShowcaseProps } from './contracts'
  * dressed as data.
  */
 const props = withDefaults(defineProps<ClassShowcaseProps>(), {
-    heading: 'Who plays what',
     limit: 8,
 })
 
@@ -24,23 +27,31 @@ function share(characters: number): number {
         ? 0
         : Math.round((characters / showcase.value.busiest) * 100)
 }
+
+/* The default lives here rather than in defineProps, which is hoisted out
+ * of setup() and so cannot call t(). */
+const headingText = computed(() => props.heading ?? t('classes.heading'))
 </script>
 
 <template>
     <section class="mx-auto max-w-6xl px-4 py-10" aria-labelledby="block-classes">
-        <h2 id="block-classes" class="mb-4 text-lg font-semibold">{{ props.heading }}</h2>
+        <h2 id="block-classes" class="mb-4 text-lg font-semibold">{{ headingText }}</h2>
 
         <StateBlock
             v-if="showcase.state.error"
             variant="error"
-            title="Class information unavailable"
+            :title="t('classes.unavailable')"
             :description="showcase.state.error"
         />
-        <StateBlock v-else-if="showcase.state.loading" variant="loading" title="Counting…" />
+        <StateBlock
+            v-else-if="showcase.state.loading"
+            variant="loading"
+            :title="t('common.counting')"
+        />
         <StateBlock
             v-else-if="showcase.state.empty"
             variant="empty"
-            title="No characters yet"
+            :title="t('classes.empty')"
             description="Class popularity appears here once characters have been created."
         />
 

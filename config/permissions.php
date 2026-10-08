@@ -329,6 +329,19 @@ return [
         // server.info action covered server information generally, but this
         // is a distinct endpoint rather than a reinterpretation of it.
         'server.statistics' => AccountLevel::Anyone,
+
+        /*
+         * The wiki. Public, all three, and deliberately so: a guide that
+         * needs an account to read cannot answer "how do I make an account",
+         * which is the first thing it is asked.
+         *
+         * There is no write half. The content is files in version control,
+         * so the way to add a page is a commit, not an endpoint -- see
+         * config/wiki.php.
+         */
+        'wiki.index' => AccountLevel::Anyone,
+        'wiki.page' => AccountLevel::Anyone,
+        'wiki.search' => AccountLevel::Anyone,
     ],
 
     /*

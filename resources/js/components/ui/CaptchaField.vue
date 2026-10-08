@@ -2,6 +2,9 @@
 import { onMounted, ref } from 'vue'
 import { useAccounts } from '../../composables/useAccounts'
 import FormField from './FormField.vue'
+import { useTranslation } from '../../i18n'
+
+const { t } = useTranslation()
 
 /**
  * The security check on a public form.
@@ -47,7 +50,7 @@ defineExpose({ refresh })
 <template>
     <div v-if="captchaOnRegistration">
         <template v-if="captchaSelfHosted">
-            <FormField label="Security check" :error="props.error">
+            <FormField :label="t('captcha.label')" :error="props.error">
                 <template #default="{ id, invalid, describedBy }">
                     <div class="flex flex-wrap items-center gap-2.5">
                         <img
@@ -56,7 +59,7 @@ defineExpose({ refresh })
                             width="200"
                             height="70"
                             class="rounded-[var(--radius-control)] border border-[var(--border-strong)] bg-white"
-                            alt="Characters to type into the field beside this image"
+                            :alt="t('captcha.alt')"
                         />
 
                         <button
@@ -64,7 +67,7 @@ defineExpose({ refresh })
                             class="text-sm text-[var(--text-secondary)] underline underline-offset-2 hover:text-[var(--text-primary)]"
                             @click="refresh"
                         >
-                            New image
+                            {{ t('captcha.newImage') }}
                         </button>
                     </div>
 

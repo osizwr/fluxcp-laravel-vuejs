@@ -49,9 +49,7 @@ final class RegistrationTest extends TestCase
             'password' => self::PASSWORD,
             'password_confirmation' => self::PASSWORD,
             'email' => 'newplayer@example.com',
-            'email_confirmation' => 'newplayer@example.com',
             'gender' => 'M',
-            'birthdate' => '1995-04-12',
             ...$overrides,
         ];
     }
@@ -275,14 +273,6 @@ final class RegistrationTest extends TestCase
     }
 
     #[Test]
-    public function mismatched_emails_are_refused(): void
-    {
-        $this->postJson('/api/auth/register', $this->payload([
-            'email_confirmation' => 'typo@example.com',
-        ]))->assertStatus(422)->assertJsonValidationErrors('email');
-    }
-
-    #[Test]
     public function a_taken_account_name_is_refused(): void
     {
         Account::factory()->named('newplayer')->create();
@@ -329,6 +319,30 @@ final class RegistrationTest extends TestCase
         ]))->assertStatus(422)->assertJsonValidationErrors('password');
     }
 
+    /**
+     * The form no longer asks, so the endpoint must not insist.
+     *
+     * The default lives in the request rather than in the client, so this is
+     * where it is proved: a payload with no gender at all has to produce a
+     * usable account rather than a validation error, whichever client sent it.
+     */
+    #[Test]
+    public function an_omitted_gender_defaults_to_male(): void
+    {
+        $payload = $this->payload();
+        unset($payload['gender']);
+
+        $this->postJson('/api/auth/register', $payload)->assertCreated();
+
+        $this->assertSame(
+            'M',
+            DB::connection($this->serverGroup()->loginConnection())
+                ->table('login')
+                ->where('userid', 'newplayer')
+                ->value('sex'),
+        );
+    }
+
     #[Test]
     public function a_server_gender_cannot_be_chosen(): void
     {
@@ -337,29 +351,22 @@ final class RegistrationTest extends TestCase
             ->assertJsonValidationErrors('gender');
     }
 
+    /**
+     * The form no longer asks for a date of birth, and a client that sends
+     * one anyway does not get it stored: rAthena's column stays empty for
+     * accounts made here, rather than carrying a number nobody checked.
+     */
     #[Test]
-    public function the_minimum_age_is_enforced(): void
+    public function no_birthdate_is_asked_for_or_stored(): void
     {
-        config()->set('panel.registration.minimum_age', 13);
-
         $this->postJson('/api/auth/register', $this->payload([
-            'birthdate' => now()->subYears(9)->format('Y-m-d'),
-        ]))->assertStatus(422)->assertJsonValidationErrors('birthdate');
-
-        $this->postJson('/api/auth/register', $this->payload([
-            'birthdate' => now()->subYears(20)->format('Y-m-d'),
+            'birthdate' => '1995-04-12',
         ]))->assertCreated();
-    }
 
-    #[Test]
-    public function a_birthdate_is_required(): void
-    {
-        $payload = $this->payload();
-        unset($payload['birthdate']);
+        $account = Account::query()->where('userid', 'newplayer')->first();
 
-        $this->postJson('/api/auth/register', $payload)
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('birthdate');
+        $this->assertInstanceOf(Account::class, $account);
+        $this->assertNull($account->birthdate);
     }
 
     #[Test]
@@ -369,7 +376,6 @@ final class RegistrationTest extends TestCase
             $this->postJson('/api/auth/register', $this->payload([
                 'username' => 'bulk'.$i,
                 'email' => "bulk{$i}@example.com",
-                'email_confirmation' => "bulk{$i}@example.com",
             ]));
 
             // Each success signs the visitor in, and registration is
@@ -380,7 +386,6 @@ final class RegistrationTest extends TestCase
         $this->postJson('/api/auth/register', $this->payload([
             'username' => 'onemore',
             'email' => 'onemore@example.com',
-            'email_confirmation' => 'onemore@example.com',
         ]))->assertStatus(429);
     }
 

@@ -6,18 +6,21 @@ import PageHeader from '../components/ui/PageHeader.vue'
 import StatusPill from '../components/ui/StatusPill.vue'
 import { api } from '../services/api'
 import type { Character } from '../types/api'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 const characters = ref<Character[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
 const columns: Column[] = [
-    { key: 'slot', label: 'Slot', numeric: true },
-    { key: 'name', label: 'Name' },
+    { key: 'slot', label: t('characters.slot'), numeric: true },
+    { key: 'name', label: t('common.name') },
     { key: 'job', label: 'Job', secondary: true },
-    { key: 'level', label: 'Level', numeric: true },
-    { key: 'zeny', label: 'Zeny', numeric: true, secondary: true },
-    { key: 'status', label: 'Status' },
+    { key: 'level', label: t('common.level'), numeric: true },
+    { key: 'zeny', label: t('common.zeny'), numeric: true, secondary: true },
+    { key: 'status', label: t('common.status') },
 ]
 
 async function load(): Promise<void> {
@@ -28,7 +31,7 @@ async function load(): Promise<void> {
         const response = await api.get<{ data: Character[] }>('characters/mine')
         characters.value = response.data
     } catch {
-        error.value = 'Your characters could not be loaded.'
+        error.value = t('characters.error')
     } finally {
         loading.value = false
     }
@@ -39,7 +42,7 @@ onMounted(load)
 
 <template>
     <div>
-        <PageHeader title="My characters" description="Characters on this account." />
+        <PageHeader :title="t('characters.title')" description="Characters on this account." />
 
         <DataTable
             :columns="columns"
@@ -47,11 +50,13 @@ onMounted(load)
             :row-key="(character: Character) => character.id"
             :loading="loading"
             :error="error"
-            empty-title="No characters yet"
+            empty-:title="t('characters.empty')"
             empty-description="Characters you create in the game will appear here."
             caption="Characters on this account"
         >
-            <template #retry><AppButton size="sm" @click="load">Try again</AppButton></template>
+            <template #retry
+                ><AppButton size="sm" @click="load">{{ t('common.retry') }}</AppButton></template
+            >
 
             <template #[`cell:slot`]="{ row }">
                 <span class="text-[var(--text-muted)]">{{ row.slot + 1 }}</span>
@@ -89,7 +94,11 @@ onMounted(load)
                     rAthena finalises it, so the pending state is shown rather
                     than the row being hidden.
                 -->
-                <StatusPill v-if="row.pending_deletion" state="warn" label="Deleting" />
+                <StatusPill
+                    v-if="row.pending_deletion"
+                    state="warn"
+                    :label="t('characters.deleting')"
+                />
                 <StatusPill
                     v-else
                     :state="row.online ? 'up' : 'down'"

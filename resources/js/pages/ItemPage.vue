@@ -6,6 +6,9 @@ import PageHeader from '../components/ui/PageHeader.vue'
 import StateBlock from '../components/ui/StateBlock.vue'
 import { api, ApiError } from '../services/api'
 import type { Item } from '../types/api'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 const route = useRoute()
 
@@ -23,8 +26,8 @@ async function load(): Promise<void> {
     } catch (caught) {
         error.value =
             caught instanceof ApiError && caught.status === 404
-                ? 'There is no item with that id.'
-                : 'This item could not be loaded.'
+                ? t('items.notFound')
+                : t('items.oneError')
         item.value = null
     } finally {
         loading.value = false
@@ -37,11 +40,16 @@ watch(() => route.params.id, load)
 
 <template>
     <div class="py-6">
-        <StateBlock v-if="loading" variant="loading" title="Loading item…" />
+        <StateBlock v-if="loading" variant="loading" :title="t('items.loadingOne')" />
 
-        <StateBlock v-else-if="error || !item" variant="error" title="Item unavailable" :description="error ?? ''">
+        <StateBlock
+            v-else-if="error || !item"
+            variant="error"
+            :title="t('items.unavailable')"
+            :description="error ?? ''"
+        >
             <template #action>
-                <AppButton to="/items">Back to items</AppButton>
+                <AppButton to="/items">{{ t('items.back') }}</AppButton>
             </template>
         </StateBlock>
 
@@ -50,61 +58,83 @@ watch(() => route.params.id, load)
 
             <div class="mt-5 grid gap-5 lg:grid-cols-3">
                 <section class="panel p-4 lg:col-span-2">
-                    <h2 class="mb-3 text-base font-semibold tracking-tight">Statistics</h2>
+                    <h2 class="mb-3 text-base font-semibold tracking-tight">
+                        {{ t('items.statistics') }}
+                    </h2>
 
                     <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
                         <div>
-                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">Type</dt>
+                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">
+                                {{ t('common.type') }}
+                            </dt>
                             <dd class="font-medium">{{ item.type ?? '—' }}</dd>
                         </div>
                         <div v-if="item.subtype">
-                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">Subtype</dt>
+                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">
+                                {{ t('items.subtype') }}
+                            </dt>
                             <dd class="font-medium">{{ item.subtype }}</dd>
                         </div>
                         <div>
-                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">Slots</dt>
+                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">
+                                {{ t('common.slots') }}
+                            </dt>
                             <dd class="font-medium tabular-nums">{{ item.slots }}</dd>
                         </div>
                         <div v-if="item.attack !== null">
-                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">Attack</dt>
+                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">
+                                {{ t('items.attack') }}
+                            </dt>
                             <dd class="font-medium tabular-nums">{{ item.attack }}</dd>
                         </div>
                         <div v-if="item.defense !== null">
-                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">Defense</dt>
+                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">
+                                {{ t('items.defense') }}
+                            </dt>
                             <dd class="font-medium tabular-nums">{{ item.defense }}</dd>
                         </div>
                         <div v-if="item.weapon_level !== null">
-                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">Weapon level</dt>
+                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">
+                                {{ t('items.weaponLevel') }}
+                            </dt>
                             <dd class="font-medium tabular-nums">{{ item.weapon_level }}</dd>
                         </div>
                         <div>
-                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">Weight</dt>
+                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">
+                                {{ t('common.weight') }}
+                            </dt>
                             <dd class="font-medium tabular-nums">
                                 {{ item.weight?.toLocaleString() ?? '—' }}
                             </dd>
                         </div>
                         <div>
-                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">Buy / Sell</dt>
+                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">
+                                {{ t('items.buySell') }}
+                            </dt>
                             <dd class="font-medium tabular-nums">
                                 {{ item.price.buy?.toLocaleString() ?? '—' }} /
                                 {{ item.price.sell?.toLocaleString() ?? '—' }}
                             </dd>
                         </div>
                         <div v-if="item.equip_level.min !== null">
-                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">Required level</dt>
+                            <dt class="text-[0.8125rem] text-[var(--text-muted)]">
+                                {{ t('items.requiredLevel') }}
+                            </dt>
                             <dd class="font-medium tabular-nums">{{ item.equip_level.min }}</dd>
                         </div>
                     </dl>
 
                     <div v-if="item.script" class="mt-5">
-                        <h3 class="mb-1.5 text-sm font-semibold">Script</h3>
-                        <pre class="overflow-x-auto rounded-[var(--radius-control)] bg-[var(--surface-sunken)] p-3 text-[0.8125rem] leading-relaxed"><code>{{ item.script }}</code></pre>
+                        <h3 class="mb-1.5 text-sm font-semibold">{{ t('items.script') }}</h3>
+                        <pre
+                            class="overflow-x-auto rounded-[var(--radius-control)] bg-[var(--surface-sunken)] p-3 text-[0.8125rem] leading-relaxed"
+                        ><code>{{ item.script }}</code></pre>
                     </div>
                 </section>
 
                 <aside class="space-y-4">
                     <section v-if="item.equip_locations.length" class="panel p-4">
-                        <h2 class="mb-2 text-sm font-semibold">Equipped at</h2>
+                        <h2 class="mb-2 text-sm font-semibold">{{ t('items.equippedAt') }}</h2>
                         <ul class="space-y-1 text-sm text-[var(--text-secondary)]">
                             <li v-for="location in item.equip_locations" :key="location">
                                 {{ location }}
@@ -113,12 +143,14 @@ watch(() => route.params.id, load)
                     </section>
 
                     <section v-if="item.jobs.length" class="panel p-4">
-                        <h2 class="mb-2 text-sm font-semibold">Jobs</h2>
-                        <p class="text-sm text-[var(--text-secondary)]">{{ item.jobs.join(', ') }}</p>
+                        <h2 class="mb-2 text-sm font-semibold">{{ t('items.jobs') }}</h2>
+                        <p class="text-sm text-[var(--text-secondary)]">
+                            {{ item.jobs.join(', ') }}
+                        </p>
                     </section>
 
                     <section v-if="item.trade_restrictions.length" class="panel p-4">
-                        <h2 class="mb-2 text-sm font-semibold">Restrictions</h2>
+                        <h2 class="mb-2 text-sm font-semibold">{{ t('items.restrictions') }}</h2>
                         <ul class="space-y-1 text-sm text-[var(--text-secondary)]">
                             <li v-for="restriction in item.trade_restrictions" :key="restriction">
                                 {{ restriction }}
@@ -127,7 +159,7 @@ watch(() => route.params.id, load)
                     </section>
 
                     <section v-if="item.flags.length" class="panel p-4">
-                        <h2 class="mb-2 text-sm font-semibold">Notes</h2>
+                        <h2 class="mb-2 text-sm font-semibold">{{ t('items.notes') }}</h2>
                         <ul class="space-y-1 text-sm text-[var(--text-secondary)]">
                             <li v-for="flag in item.flags" :key="flag">{{ flag }}</li>
                         </ul>
@@ -135,7 +167,7 @@ watch(() => route.params.id, load)
                 </aside>
             </div>
 
-            <AppButton to="/items" class="mt-5">Back to items</AppButton>
+            <AppButton to="/items" class="mt-5">{{ t('items.back') }}</AppButton>
         </template>
     </div>
 </template>

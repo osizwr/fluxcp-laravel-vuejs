@@ -6,6 +6,9 @@ import FormField from '../components/ui/FormField.vue'
 import { useAccounts } from '../composables/useAccounts'
 import { useFormSubmit } from '../composables/useFormSubmit'
 import { api } from '../services/api'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * Asking for a password reset link.
@@ -32,15 +35,15 @@ async function request(): Promise<void> {
 <template>
     <div class="mx-auto max-w-sm py-6">
         <template v-if="!passwordResetEnabled">
-            <h1 class="text-xl font-semibold tracking-tight">Password reset is unavailable</h1>
+            <h1 class="text-xl font-semibold tracking-tight">{{ t('forgot.unavailable') }}</h1>
             <p class="mt-1 text-sm text-[var(--text-secondary)]">
-                Contact an administrator to recover your account.
+                {{ t('forgot.contactAdmin') }}
             </p>
-            <AppButton to="/sign-in" class="mt-4">Back to sign in</AppButton>
+            <AppButton to="/sign-in" class="mt-4">{{ t('auth.backToSignIn') }}</AppButton>
         </template>
 
         <template v-else-if="sentMessage">
-            <h1 class="text-xl font-semibold tracking-tight">Check your e-mail</h1>
+            <h1 class="text-xl font-semibold tracking-tight">{{ t('register.checkEmail') }}</h1>
 
             <AlertMessage tone="success" class="mt-4">{{ sentMessage }}</AlertMessage>
 
@@ -49,11 +52,11 @@ async function request(): Promise<void> {
                 you choose a new one.
             </p>
 
-            <AppButton to="/sign-in" class="mt-4">Back to sign in</AppButton>
+            <AppButton to="/sign-in" class="mt-4">{{ t('auth.backToSignIn') }}</AppButton>
         </template>
 
         <template v-else>
-            <h1 class="text-xl font-semibold tracking-tight">Forgot your password?</h1>
+            <h1 class="text-xl font-semibold tracking-tight">{{ t('auth.forgotPassword') }}</h1>
             <p class="mt-0.5 mb-5 text-sm text-[var(--text-secondary)]">
                 Give the account name and the e-mail address on it, and we will send a link to
                 choose a new password.
@@ -62,7 +65,7 @@ async function request(): Promise<void> {
             <AlertMessage v-if="error" tone="error" class="mb-4">{{ error }}</AlertMessage>
 
             <form class="panel space-y-4 p-4" novalidate @submit.prevent="request">
-                <FormField label="Account name" :error="errors.username">
+                <FormField :label="t('auth.accountName')" :error="errors.username">
                     <template #default="{ id, invalid, describedBy }">
                         <input
                             :id="id"
@@ -79,7 +82,7 @@ async function request(): Promise<void> {
                     </template>
                 </FormField>
 
-                <FormField label="E-mail address" :error="errors.email">
+                <FormField :label="t('register.email')" :error="errors.email">
                     <template #default="{ id, invalid, describedBy }">
                         <input
                             :id="id"
@@ -97,13 +100,13 @@ async function request(): Promise<void> {
                 </FormField>
 
                 <AppButton type="submit" variant="primary" block :loading="submitting">
-                    Send reset link
+                    {{ t('forgot.sendResetLink') }}
                 </AppButton>
             </form>
 
             <p class="mt-4 text-center text-sm text-[var(--text-secondary)]">
                 <RouterLink to="/sign-in" class="underline underline-offset-2">
-                    Back to sign in
+                    {{ t('auth.backToSignIn') }}
                 </RouterLink>
             </p>
         </template>

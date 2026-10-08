@@ -5,6 +5,9 @@ import AppButton from '../components/ui/AppButton.vue'
 import FormField from '../components/ui/FormField.vue'
 import { useFormSubmit } from '../composables/useFormSubmit'
 import { api } from '../services/api'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * Asking for another account confirmation e-mail.
@@ -29,19 +32,19 @@ async function resend(): Promise<void> {
 <template>
     <div class="mx-auto max-w-sm py-6">
         <template v-if="sentMessage">
-            <h1 class="text-xl font-semibold tracking-tight">Check your e-mail</h1>
+            <h1 class="text-xl font-semibold tracking-tight">{{ t('register.checkEmail') }}</h1>
 
             <AlertMessage tone="success" class="mt-4">{{ sentMessage }}</AlertMessage>
 
             <p class="mt-4 text-sm text-[var(--text-secondary)]">
-                Any earlier link stops working, so use the newest one.
+                {{ t('confirm.anyEarlierStops') }}
             </p>
 
-            <AppButton to="/sign-in" class="mt-4">Back to sign in</AppButton>
+            <AppButton to="/sign-in" class="mt-4">{{ t('auth.backToSignIn') }}</AppButton>
         </template>
 
         <template v-else>
-            <h1 class="text-xl font-semibold tracking-tight">Resend confirmation</h1>
+            <h1 class="text-xl font-semibold tracking-tight">{{ t('confirm.resendTitle') }}</h1>
             <p class="mt-0.5 mb-5 text-sm text-[var(--text-secondary)]">
                 If your account is still waiting to be confirmed, we will send a new link.
             </p>
@@ -49,7 +52,7 @@ async function resend(): Promise<void> {
             <AlertMessage v-if="error" tone="error" class="mb-4">{{ error }}</AlertMessage>
 
             <form class="panel space-y-4 p-4" novalidate @submit.prevent="resend">
-                <FormField label="Account name" :error="errors.username">
+                <FormField :label="t('auth.accountName')" :error="errors.username">
                     <template #default="{ id, invalid, describedBy }">
                         <input
                             :id="id"
@@ -66,7 +69,7 @@ async function resend(): Promise<void> {
                     </template>
                 </FormField>
 
-                <FormField label="E-mail address" :error="errors.email">
+                <FormField :label="t('register.email')" :error="errors.email">
                     <template #default="{ id, invalid, describedBy }">
                         <input
                             :id="id"
@@ -84,7 +87,7 @@ async function resend(): Promise<void> {
                 </FormField>
 
                 <AppButton type="submit" variant="primary" block :loading="submitting">
-                    Send new link
+                    {{ t('confirm.sendNewLink') }}
                 </AppButton>
             </form>
         </template>

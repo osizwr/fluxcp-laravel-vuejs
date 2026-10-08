@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api } from '../services/api'
 import type { ClassDistributionEntry, NewsArticle, ServerStatistics } from '../types/api'
+import { translate as t } from '../i18n'
 
 /**
  * Site-wide data the front-page blocks consume.
@@ -44,7 +45,7 @@ export const useSiteStore = defineStore('site', () => {
             statistics.value = response.data
             statisticsLoaded = true
         } catch {
-            statisticsError.value = 'Statistics are unavailable.'
+            statisticsError.value = t('stats.error')
         } finally {
             loadingStatistics.value = false
         }
@@ -66,7 +67,7 @@ export const useSiteStore = defineStore('site', () => {
             classes.value = response.data
             classesLoaded = true
         } catch {
-            classesError.value = 'Class information is unavailable.'
+            classesError.value = t('classes.error')
         } finally {
             loadingClasses.value = false
         }
@@ -90,7 +91,7 @@ export const useSiteStore = defineStore('site', () => {
             news.value = response.data
             newsLoaded = limit
         } catch {
-            newsError.value = 'News is unavailable.'
+            newsError.value = t('news.error')
         } finally {
             loadingNews.value = false
         }

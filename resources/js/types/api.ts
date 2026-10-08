@@ -451,3 +451,84 @@ export interface ListMeta {
     sort: string | null
     direction: 'asc' | 'desc'
 }
+
+/*
+|--------------------------------------------------------------------------
+| The wiki
+|--------------------------------------------------------------------------
+|
+| Mirrors App\Services\Content\WikiLibrary. The content is Markdown files on
+| disk rather than rows, so the shapes here describe a directory rather than
+| a table: a section, the pages in it, and one rendered page.
+|
+*/
+
+/** A page as something to link to: the smallest shape that is still a link. */
+export interface WikiReference {
+    path: string
+    title: string
+    category: string
+}
+
+/** A page as the index lists it, without its body. */
+export interface WikiPageSummary {
+    path: string
+    title: string
+    summary: string | null
+    updated_at: string | null
+}
+
+export interface WikiCategory {
+    slug: string
+    title: string
+    description: string | null
+    /** A name from the icon set, or null to let the client pick its default. */
+    icon: string | null
+    count: number
+    pages: WikiPageSummary[]
+}
+
+/** One figure in the rates panel. Free text, because "Disabled" is an answer. */
+export interface WikiRate {
+    label: string
+    value: string
+    note: string | null
+}
+
+/** Everything the landing page and every article's sidebar need. */
+export interface WikiIndex {
+    categories: WikiCategory[]
+    recent: Array<WikiReference & { updated_at: string | null }>
+    popular: WikiReference[]
+    rates: WikiRate[]
+    totals: { pages: number; categories: number }
+    updated_at: string | null
+}
+
+/** A heading a reader can jump to. Only h2 and h3 are anchored. */
+export interface WikiHeading {
+    id: string
+    text: string
+    level: number
+}
+
+export interface WikiArticle {
+    path: string
+    title: string
+    summary: string | null
+    updated_at: string | null
+    reading_minutes: number
+    /** Markdown rendered with raw HTML stripped; see ContentRenderer. */
+    html: string
+    headings: WikiHeading[]
+    category: { slug: string; title: string; icon: string | null } | null
+    previous: WikiReference | null
+    next: WikiReference | null
+}
+
+export interface WikiSearchResult {
+    path: string
+    title: string
+    category: string
+    snippet: string
+}

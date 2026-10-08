@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../services/api'
 import type { ServerGroupStatus, ServerStatusResponse } from '../types/api'
+import { translate as t } from '../i18n'
 
 /**
  * Live status of the game servers.
@@ -40,7 +41,7 @@ export const useServerStore = defineStore('server', () => {
         try {
             apply(await api.get<ServerStatusResponse>('server/status'))
         } catch {
-            error.value = 'Server status is unavailable.'
+            error.value = t('server.error')
         } finally {
             loading.value = false
         }

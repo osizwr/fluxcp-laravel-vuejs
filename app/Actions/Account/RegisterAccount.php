@@ -12,7 +12,7 @@ use App\Services\Rathena\AccountConfirmationService;
 use App\Services\Rathena\RathenaAccountService;
 use App\Support\Rathena\ServerGroup;
 use App\Support\Rathena\ServerRegistry;
-use App\Support\Tokens\SecureToken;
+use App\Support\Tokens\ConfirmationSecrets;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -51,7 +51,6 @@ final readonly class RegisterAccount
         string $password,
         string $email,
         Gender $gender,
-        ?string $birthdate,
         string $registeredFromIp,
     ): RegistrationOutcome {
         $group = $serverGroup === null || $serverGroup === ''
@@ -62,18 +61,17 @@ final readonly class RegisterAccount
 
         $requiresConfirmation = config('panel.registration.require_email_confirmation') === true;
 
-        [$account, $token] = $this->persist(
+        [$account, $secrets] = $this->persist(
             $group,
             $username,
             $password,
             $email,
             $gender,
-            $birthdate,
             $registeredFromIp,
             $requiresConfirmation,
         );
 
-        if ($token === null) {
+        if ($secrets === null) {
             return new RegistrationOutcome($account, false, false);
         }
 
@@ -82,7 +80,7 @@ final readonly class RegisterAccount
          * confirmation link could reach somebody for an account the database
          * then rolled back.
          */
-        $sent = $this->mailer->sendAccountConfirmation($group, $account, $token);
+        $sent = $this->mailer->sendAccountConfirmation($group, $account, $secrets);
 
         return new RegistrationOutcome($account, true, $sent);
     }
@@ -90,7 +88,7 @@ final readonly class RegisterAccount
     /**
      * The database half, as one unit.
      *
-     * @return array{0: Account, 1: SecureToken|null}
+     * @return array{0: Account, 1: ConfirmationSecrets|null}
      *
      * @throws ValidationException
      */
@@ -100,7 +98,6 @@ final readonly class RegisterAccount
         string $password,
         string $email,
         Gender $gender,
-        ?string $birthdate,
         string $registeredFromIp,
         bool $requiresConfirmation,
     ): array {
@@ -115,7 +112,6 @@ final readonly class RegisterAccount
                 $password,
                 $email,
                 $gender,
-                $birthdate,
                 $registeredFromIp,
                 $requiresConfirmation,
                 &$account,
@@ -125,7 +121,6 @@ final readonly class RegisterAccount
                     password: $password,
                     email: $email,
                     gender: $gender,
-                    birthdate: $birthdate,
                     registeredFromIp: $registeredFromIp,
                     serverGroup: $group->key,
                 );

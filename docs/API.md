@@ -163,9 +163,7 @@ Route name `account.create`. Access: **guests only**.
   "password": "…",
   "password_confirmation": "…",
   "email": "player@example.com",
-  "email_confirmation": "player@example.com",
   "gender": "M",
-  "birthdate": "1995-04-12",
   "server": "main",
   "captcha": "ABCDE"
 }
@@ -175,9 +173,8 @@ Route name `account.create`. Access: **guests only**.
 | --- | --- |
 | `username` | required. Length and character rules come from `panel.registration.username`; the maximum is 23, the width of `login.userid` |
 | `password` | required, must match `password_confirmation`. Policy from `panel.registration.password`; the maximum is capped at 32 by `login.user_pass` regardless of the setting |
-| `email` | required, valid, max 39 — the width of `login.email` — and must match `email_confirmation` |
+| `email` | required, valid, max 39 — the width of `login.email` |
 | `gender` | required, `M` or `F`. `S` is rAthena's server-account marker and is refused |
-| `birthdate` | required, `YYYY-MM-DD`, in the past, and at least `panel.registration.minimum_age` years ago |
 | `server` | optional, defaults to the configured default group |
 | `captcha` | required when `panel.captcha.on_registration` is on |
 
@@ -698,6 +695,139 @@ client renders it as HTML deliberately.
 
 Read-only. The admin half of the legacy CMS — manage, add, edit, delete — is
 not built, so there is no write path rather than a stub that looks like one.
+
+---
+
+## Wiki
+
+The server's own player guide, read from Markdown files in `resources/wiki`
+rather than from a table. Not a port of anything — FluxCP had no wiki. See
+[WIKI.md](WIKI.md) for the file layout and the front matter, and
+`config/wiki.php` for why the content is on disk.
+
+All three are public and read-only: a guide that needs an account to read
+cannot answer "how do I make an account". There is no write half, because the
+way to add a page is a commit.
+
+Every one of them answers **404** when `WIKI_ENABLED=false`, rather than
+returning empty collections a client would render as a wiki with nothing in
+it.
+
+### `GET /api/wiki`
+
+Route name `wiki.index`. Access: **anyone**.
+
+The whole table of contents in one response — it serves both the landing page
+and every article's sidebar, so a client fetches it once per page load.
+
+```json
+{
+  "data": {
+    "categories": [
+      {
+        "slug": "getting-started",
+        "title": "Getting started",
+        "description": "The first things to do.",
+        "icon": "play",
+        "count": 3,
+        "pages": [
+          {
+            "path": "getting-started/welcome",
+            "title": "Welcome",
+            "summary": "Start here.",
+            "updated_at": "2026-10-07T09:12:44+00:00"
+          }
+        ]
+      }
+    ],
+    "recent": [
+      {
+        "path": "help/faq",
+        "title": "Frequently asked questions",
+        "category": "Help",
+        "updated_at": "2026-10-07T09:12:44+00:00"
+      }
+    ],
+    "popular": [
+      { "path": "getting-started/welcome", "title": "Welcome", "category": "Getting started" }
+    ],
+    "rates": [{ "label": "Base EXP", "value": "15x", "note": null }],
+    "totals": { "pages": 9, "categories": 3 },
+    "updated_at": "2026-10-07T09:12:44+00:00"
+  }
+}
+```
+
+`icon` is a name from a fixed set, not a path — a filename there would be a
+way to point the page at an arbitrary URL. `rates` is empty until an operator
+configures it: the panel cannot read rates out of rAthena, and a default would
+be inventing a claim about somebody else's server. A `popular` entry whose
+page no longer resolves is dropped rather than returned as a dead link.
+
+### `GET /api/wiki/{section}/{page}`
+
+Route name `wiki.page`. Access: **anyone**. **404** if there is no such page.
+
+```json
+{
+  "data": {
+    "path": "getting-started/welcome",
+    "title": "Welcome",
+    "summary": "Start here.",
+    "updated_at": "2026-10-07T09:12:44+00:00",
+    "reading_minutes": 2,
+    "html": "<p>Hello.</p>\n<h2 id=\"first-section\">First section</h2>",
+    "headings": [{ "id": "first-section", "text": "First section", "level": 2 }],
+    "category": { "slug": "getting-started", "title": "Getting started", "icon": "play" },
+    "previous": null,
+    "next": { "path": "getting-started/second-steps", "title": "Second steps", "category": "Getting started" }
+  }
+}
+```
+
+`html` is Markdown rendered with **raw HTML stripped** and unsafe link schemes
+refused, by the same `ContentRenderer` the news and the CMS pages use — see
+[MIGRATION_DECISIONS.md](MIGRATION_DECISIONS.md) (D20). Only `h2` and `h3` are
+anchored and listed in `headings`: the title comes from the front matter, so
+an `h1` in the body would be the page listed inside itself.
+
+`previous` and `next` run across sections in reading order, not within one, so
+the last page of a section leads into the next section rather than to a dead
+end.
+
+The path is **two plain slugs**, enforced by the route constraint. Nothing
+builds a filename from it either way: the content directory is scanned and the
+requested path is matched against the pages found, so a traversal is a 404
+before any file is opened.
+
+### `GET /api/wiki/search`
+
+Route name `wiki.search`. Access: **anyone**.
+
+| Parameter | |
+| --- | --- |
+| `q` | The term. Shorter than `wiki.search.minimum_length` returns no results rather than a validation error — somebody has typed one letter so far, which is not a mistake. |
+
+```json
+{
+  "data": [
+    {
+      "path": "getting-started/creating-an-account",
+      "title": "Creating an account",
+      "category": "Getting started",
+      "snippet": "What you need, and what happens after you register."
+    }
+  ],
+  "meta": { "term": "account", "count": 1 }
+}
+```
+
+Substring matching over titles, summaries and bodies, ranked by **where** the
+term was found rather than how often — a page whose title is the question is
+the answer, however many times a longer page mentions the word in passing.
+Alphabetical within a tier, so a short list stays stable instead of
+reshuffling. Not an index: a server's guide is tens of pages, and the honest
+way to search tens of pages is to read them.
 
 ---
 

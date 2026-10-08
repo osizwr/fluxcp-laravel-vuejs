@@ -3,6 +3,9 @@ import AppButton from '../components/ui/AppButton.vue'
 import StateBlock from '../components/ui/StateBlock.vue'
 import { useRankingData } from './data'
 import type { RankingProps } from './contracts'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * A short ladder, with a link through to the full one.
@@ -19,7 +22,9 @@ const props = withDefaults(defineProps<RankingProps>(), {
 
 const ranking = useRankingData(props.ladder, props.limit)
 
-const heading = props.heading ?? (props.ladder === 'zeny' ? 'Wealthiest' : 'Top adventurers')
+const heading =
+    props.heading ??
+    (props.ladder === 'zeny' ? t('rankings.wealthiest') : t('rankings.topAdventurers'))
 </script>
 
 <template>
@@ -27,21 +32,25 @@ const heading = props.heading ?? (props.ladder === 'zeny' ? 'Wealthiest' : 'Top 
         <div class="mb-4 flex items-end justify-between gap-3">
             <h2 id="block-ranking" class="text-lg font-semibold">{{ heading }}</h2>
             <AppButton v-if="props.showAll" size="sm" :to="`/rankings/${props.ladder}`">
-                View all
+                {{ t('rankings.viewAll') }}
             </AppButton>
         </div>
 
         <StateBlock
             v-if="ranking.state.error"
             variant="error"
-            title="Ranking unavailable"
+            :title="t('rankings.unavailable')"
             :description="ranking.state.error"
         />
-        <StateBlock v-else-if="ranking.state.loading" variant="loading" title="Loading…" />
+        <StateBlock
+            v-else-if="ranking.state.loading"
+            variant="loading"
+            :title="t('common.loading')"
+        />
         <StateBlock
             v-else-if="ranking.state.empty"
             variant="empty"
-            title="No characters ranked yet"
+            :title="t('rankings.noneRanked')"
             description="Characters appear here once they have been created and played."
         />
 
@@ -67,7 +76,9 @@ const heading = props.heading ?? (props.ladder === 'zeny' ? 'Wealthiest' : 'Top 
                     </template>
                     <template v-else>
                         {{ entry.character.base_level }}
-                        <span class="text-[var(--text-muted)]">/ {{ entry.character.job_level }}</span>
+                        <span class="text-[var(--text-muted)]"
+                            >/ {{ entry.character.job_level }}</span
+                        >
                     </template>
                 </span>
             </li>

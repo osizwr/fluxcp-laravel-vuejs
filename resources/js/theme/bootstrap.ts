@@ -13,6 +13,12 @@ import type { PanelBootstrap } from '../types/bootstrap'
  */
 
 const FALLBACK: PanelBootstrap = {
+    /*
+     * English, because a payload that failed to arrive is not evidence about
+     * what language the visitor reads -- and the strings compiled into the
+     * bundle are English.
+     */
+    locale: { active: 'en', available: ['en'] },
     game: {
         name: 'Control Panel',
         shortName: 'CP',
@@ -20,6 +26,16 @@ const FALLBACK: PanelBootstrap = {
         version: null,
         logo: null,
         links: {},
+        // Empty, so the shell falls back to its own built-in navigation.
+        nav: [],
+        // No groups, so the footer renders its brand and small print only.
+        footer: { groups: [], socials: [] },
+        /*
+         * No small print. The disclaimer and the credit are the operator's
+         * words, and a payload that failed to arrive is the last place to
+         * invent a legal notice on their behalf.
+         */
+        legal: { disclaimer: null, copyright: null, credit: null },
     },
     theme: {
         slug: 'default',
@@ -34,6 +50,12 @@ const FALLBACK: PanelBootstrap = {
     announcement: null,
     features: [],
     /*
+     * No downloads. The page renders its own "nothing published yet" state
+     * rather than inventing a mirror, which would hand somebody a link that
+     * cannot work.
+     */
+    downloads: { notice: null, clients: [], requirements: [], steps: [] },
+    /*
      * Everything off. A payload that failed to arrive must not leave the
      * account forms guessing: offering registration that the server then
      * refuses is worse than not offering it, and a password hint invented here
@@ -44,7 +66,7 @@ const FALLBACK: PanelBootstrap = {
         passwordResetEnabled: false,
         emailChangeRequiresConfirmation: true,
         registrationRequiresConfirmation: false,
-        minimumAge: 0,
+        confirmationCodeLength: 6,
         username: { minLength: 4, maxLength: 23 },
         password: {
             minLength: 8,
@@ -81,11 +103,13 @@ export function bootstrap(): PanelBootstrap {
         const parsed = JSON.parse(element.textContent) as Partial<PanelBootstrap>
 
         cached = {
+            locale: { ...FALLBACK.locale, ...(parsed.locale ?? {}) },
             game: { ...FALLBACK.game, ...(parsed.game ?? {}) },
             theme: { ...FALLBACK.theme, ...(parsed.theme ?? {}) },
             broadcasting: parsed.broadcasting ?? null,
             announcement: parsed.announcement ?? null,
             features: parsed.features ?? [],
+            downloads: { ...FALLBACK.downloads, ...(parsed.downloads ?? {}) },
             accounts: { ...FALLBACK.accounts, ...(parsed.accounts ?? {}) },
         }
     } catch {

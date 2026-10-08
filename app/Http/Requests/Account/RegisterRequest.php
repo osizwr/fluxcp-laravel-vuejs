@@ -59,21 +59,13 @@ final class RegisterRequest extends FormRequest
              */
             'password' => ['required', 'string', 'confirmed'],
 
-            'email' => ['required', 'string', 'email', 'max:39', 'confirmed'],
+            'email' => ['required', 'string', 'email', 'max:39'],
 
             'gender' => [
                 'required',
                 'string',
                 Rule::in(array_map(fn (Gender $gender): string => $gender->value, Gender::selectable())),
             ],
-
-            /*
-             * Required here, though the service treats it as optional, because
-             * rAthena stores the birthdate and uses it for its own age-gated
-             * features. An account created from the console may omit it; a
-             * person registering may not.
-             */
-            'birthdate' => ['required', 'date_format:Y-m-d', 'before:today'],
 
             ...$this->captchaRules(),
         ];
@@ -89,12 +81,8 @@ final class RegisterRequest extends FormRequest
             'password.required' => 'Choose a password.',
             'password.confirmed' => 'The two passwords do not match.',
             'email.required' => 'Enter your e-mail address.',
-            'email.confirmed' => 'The two e-mail addresses do not match.',
             'gender.required' => 'Choose a gender for your characters.',
             'gender.in' => 'Choose a gender for your characters.',
-            'birthdate.required' => 'Enter your date of birth.',
-            'birthdate.date_format' => 'Enter your date of birth as YYYY-MM-DD.',
-            'birthdate.before' => 'Enter a date of birth in the past.',
             'captcha.required' => 'Enter the characters shown in the image.',
         ];
     }
@@ -107,9 +95,26 @@ final class RegisterRequest extends FormRequest
             $this->merge(['server' => app(ServerRegistry::class)->default()->key]);
         }
 
-        if (is_string($gender = $this->input('gender'))) {
-            $this->merge(['gender' => mb_strtoupper($gender)]);
-        }
+        /*
+         * Absent means Male.
+         *
+         * The account's sex decides nothing a player can see: rAthena carries
+         * it on the account, but every character picks its own look, so the
+         * question only ever added a step to the form. It is defaulted here
+         * rather than hidden in the client so that the default belongs to the
+         * API -- any client that stops asking gets the same answer, instead of
+         * each one having to remember to send a value nobody chooses.
+         *
+         * A value that *is* sent still has to be a real one: an explicit 'S'
+         * is a client sending nonsense, which is worth refusing.
+         */
+        $gender = $this->input('gender');
+
+        $this->merge([
+            'gender' => is_string($gender) && $gender !== ''
+                ? mb_strtoupper($gender)
+                : Gender::Male->value,
+        ]);
     }
 
     /**
@@ -118,45 +123,8 @@ final class RegisterRequest extends FormRequest
     public function after(): array
     {
         return [
-            fn (Validator $validator) => $this->enforceMinimumAge($validator),
             fn (Validator $validator) => $this->verifyCaptcha($validator),
         ];
-    }
-
-    /**
-     * The configured minimum age, measured from the submitted birthdate.
-     *
-     * Self-declared and therefore trivially false, which is true of every
-     * age gate on a registration form. It is here because the operator
-     * configured it and because rAthena's own age-gated features read this
-     * column, not because it is a meaningful control.
-     */
-    private function enforceMinimumAge(Validator $validator): void
-    {
-        $minimumAge = (int) config('panel.registration.minimum_age', 0);
-
-        if ($minimumAge <= 0 || $validator->errors()->has('birthdate')) {
-            return;
-        }
-
-        $birthdate = $this->date('birthdate', 'Y-m-d');
-
-        if ($birthdate === null) {
-            return;
-        }
-
-        /*
-         * Expressed as a date comparison rather than a difference in years,
-         * because a difference is a float whose sign depends on which operand
-         * it is called on -- and getting that backwards would make the gate
-         * reject every adult instead of every child.
-         */
-        if ($birthdate->addYears($minimumAge)->isFuture()) {
-            $validator->errors()->add(
-                'birthdate',
-                "You must be at least {$minimumAge} years old to register.",
-            );
-        }
     }
 
     public function gender(): Gender

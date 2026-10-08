@@ -2,6 +2,9 @@
 import { RouterLink } from 'vue-router'
 import { useGame } from '../composables/useGame'
 import { useShell } from '../composables/useShell'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 /**
  * The core footer.
@@ -15,7 +18,9 @@ const { links } = useShell()
 
 <template>
     <footer class="mt-8 border-t border-[var(--border-subtle)] py-6">
-        <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 text-[0.8125rem] text-[var(--text-muted)]">
+        <div
+            class="mx-auto flex max-w-6xl flex-col gap-4 px-4 text-[0.8125rem] text-[var(--text-muted)]"
+        >
             <div class="flex flex-wrap items-start justify-between gap-5">
                 <div>
                     <p class="font-semibold text-[var(--text-secondary)]">{{ title }}</p>
@@ -23,7 +28,7 @@ const { links } = useShell()
                     <p v-if="game.version" class="mt-0.5">Version {{ game.version }}</p>
                 </div>
 
-                <nav aria-label="Pages" class="flex flex-col gap-1.5">
+                <nav :aria-label="t('footer.pages')" class="flex flex-col gap-1.5">
                     <RouterLink
                         v-for="link in links"
                         :key="link.to"
@@ -34,7 +39,11 @@ const { links } = useShell()
                     </RouterLink>
                 </nav>
 
-                <nav v-if="externalLinks.length > 0" aria-label="Elsewhere" class="flex flex-col gap-1.5">
+                <nav
+                    v-if="externalLinks.length > 0"
+                    :aria-label="t('footer.elsewhere')"
+                    class="flex flex-col gap-1.5"
+                >
                     <a
                         v-for="[key, url] in externalLinks"
                         :key="key"

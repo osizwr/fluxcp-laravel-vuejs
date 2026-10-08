@@ -7,6 +7,9 @@ import FormField from '../components/ui/FormField.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import { api, ApiError } from '../services/api'
 import type { ListMeta, Monster, Paginated } from '../types/api'
+import { useTranslation } from '../i18n'
+
+const { t } = useTranslation()
 
 const route = useRoute()
 const router = useRouter()
@@ -32,10 +35,16 @@ const direction = computed<'asc' | 'desc'>(() =>
 
 const columns = computed<Column[]>(() => [
     { key: 'id', label: 'ID', numeric: true, sort: 'id' },
-    { key: 'name', label: 'Name', sort: 'name' },
-    { key: 'level', label: 'Level', numeric: true, sort: 'level' },
-    { key: 'hp', label: 'HP', numeric: true, sort: 'hp' },
-    { key: 'exp', label: 'Base EXP', numeric: true, secondary: true, sort: 'experience' },
+    { key: 'name', label: t('common.name'), sort: 'name' },
+    { key: 'level', label: t('common.level'), numeric: true, sort: 'level' },
+    { key: 'hp', label: t('monsters.hp'), numeric: true, sort: 'hp' },
+    {
+        key: 'exp',
+        label: t('monsters.baseExp'),
+        numeric: true,
+        secondary: true,
+        sort: 'experience',
+    },
 ])
 
 async function load(): Promise<void> {
@@ -57,8 +66,7 @@ async function load(): Promise<void> {
         total.value = response.meta.total
         lastPage.value = response.meta.last_page
     } catch (caught) {
-        error.value =
-            caught instanceof ApiError ? caught.message : 'The monster list could not be loaded.'
+        error.value = caught instanceof ApiError ? caught.message : t('monsters.error')
         monsters.value = []
         total.value = 0
     } finally {
@@ -106,24 +114,24 @@ watch(
 <template>
     <div class="py-6">
         <PageHeader
-            title="Monsters"
+            :title="t('nav.monsters')"
             description="Every monster on the server, custom ones included."
         />
 
         <form class="panel mt-4 grid gap-3 p-4 sm:grid-cols-5" @submit.prevent="applyFilters">
-            <FormField label="Name" class="sm:col-span-2">
+            <FormField :label="t('common.name')" class="sm:col-span-2">
                 <template #default="{ id }">
                     <input
                         :id="id"
                         v-model.trim="filters.name"
                         class="field-input"
                         type="search"
-                        placeholder="Poring"
+                        :placeholder="t('monsters.namePlaceholder')"
                     />
                 </template>
             </FormField>
 
-            <FormField label="Level from">
+            <FormField :label="t('monsters.levelFrom')">
                 <template #default="{ id }">
                     <input
                         :id="id"
@@ -135,7 +143,7 @@ watch(
                 </template>
             </FormField>
 
-            <FormField label="Level to">
+            <FormField :label="t('monsters.levelTo')">
                 <template #default="{ id }">
                     <input
                         :id="id"
@@ -150,9 +158,11 @@ watch(
             <div class="flex flex-col justify-end gap-2">
                 <label class="flex items-center gap-2 text-sm">
                     <input v-model="filters.mvp" type="checkbox" class="size-4 rounded" />
-                    MVPs only
+                    {{ t('monsters.mvpsOnly') }}
                 </label>
-                <AppButton type="submit" variant="primary" block>Search</AppButton>
+                <AppButton type="submit" variant="primary" block>{{
+                    t('common.search')
+                }}</AppButton>
             </div>
         </form>
 
@@ -166,7 +176,7 @@ watch(
             :sort="sort"
             :direction="direction"
             caption="Monsters on this server"
-            empty-title="No monsters match those filters"
+            empty-:title="t('monsters.empty')"
             empty-description="Try a broader search."
             @sort="sortBy"
         >
@@ -205,11 +215,11 @@ watch(
 
             <div class="flex items-center gap-2">
                 <AppButton size="sm" :disabled="page <= 1" @click="goToPage(page - 1)">
-                    Previous
+                    {{ t('common.previous') }}
                 </AppButton>
                 <span class="text-[var(--text-muted)]">Page {{ page }} of {{ lastPage }}</span>
                 <AppButton size="sm" :disabled="page >= lastPage" @click="goToPage(page + 1)">
-                    Next
+                    {{ t('common.next') }}
                 </AppButton>
             </div>
         </div>

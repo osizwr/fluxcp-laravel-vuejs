@@ -1,7 +1,11 @@
 Confirm your account
 
 An account named {{ $username }} was registered with this address.
-Open the link below to activate it.
+Enter this code to activate it:
+
+    {{ $code }}
+
+Or open the link below instead.
 
 {{--
     The URL is printed unescaped on purpose.
@@ -17,8 +21,8 @@ Open the link below to activate it.
 --}}
 {!! $actionUrl !!}
 
-The link is valid for {{ $expiresInHours }} {{ \Illuminate\Support\Str::plural('hour', $expiresInHours) }} and can be used once.
-Until you open it, the account cannot sign in.
+The code and the link are valid for {{ $expiresInHours }} {{ \Illuminate\Support\Str::plural('hour', $expiresInHours) }} and can be used once.
+Until one of them is used, the account cannot sign in.
 
 If you did not register this account, you can ignore this message. It will not
 be activated, and the name will be released for someone else to use.
