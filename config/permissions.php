@@ -55,6 +55,44 @@ return [
 
     'routes' => [
 
+        /*
+         * admin -- the dashboard.
+         *
+         * The sign-in is UNAUTH for the same reason the player one is: it is a
+         * form for somebody who is not signed in yet. Everything behind it is
+         * ADMIN, which config/permissions.php's own account_groups map above
+         * reaches only from rAthena group 99 by default.
+         */
+        'admin.login' => AccountLevel::Unauthenticated,
+        'admin.settings.downloads.view' => AccountLevel::Administrator,
+        'admin.settings.downloads.update' => AccountLevel::Administrator,
+        'admin.settings.downloads.reset' => AccountLevel::Administrator,
+        'admin.wiki.index' => AccountLevel::Administrator,
+        'admin.wiki.view' => AccountLevel::Administrator,
+        'admin.wiki.save' => AccountLevel::Administrator,
+        'admin.wiki.delete' => AccountLevel::Administrator,
+        'admin.wiki.revert' => AccountLevel::Administrator,
+        'admin.wiki.sections.index' => AccountLevel::Administrator,
+        'admin.wiki.sections.view' => AccountLevel::Administrator,
+        'admin.wiki.sections.save' => AccountLevel::Administrator,
+        'admin.wiki.sections.revert' => AccountLevel::Administrator,
+        'admin.wiki.images.store' => AccountLevel::Administrator,
+        'admin.wiki.preview' => AccountLevel::Administrator,
+        'admin.wiki.sections.image' => AccountLevel::Administrator,
+
+        /*
+         * vote -- voting for the server on a listing site.
+         *
+         * The callback is ANYONE rather than UNAUTH, as `donate.notify` is and
+         * for the same reason: UNAUTH here means "guests only", which would
+         * refuse the one caller that matters if it ever arrived holding a
+         * session. What stands in place of authentication is in
+         * config/vote.php -- a per-site secret and a single-use reference.
+         */
+        'vote.index' => AccountLevel::Player,
+        'vote.start' => AccountLevel::Player,
+        'vote.callback' => AccountLevel::Anyone,
+
         // account
         'account.cart' => AccountLevel::Player,
         'account.changemail' => AccountLevel::Player,

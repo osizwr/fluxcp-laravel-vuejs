@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useAccounts } from '@/composables/useAccounts'
 import { useShell } from '@/composables/useShell'
 import { useAuthStore } from '@/stores/auth'
 import { useTranslation } from '@/i18n'
@@ -26,6 +27,7 @@ import { useTranslation } from '@/i18n'
  * document.
  */
 const { t } = useTranslation()
+const { voteEnabled } = useAccounts()
 const auth = useAuthStore()
 const { signingOut, signOut } = useShell()
 
@@ -131,6 +133,21 @@ onBeforeUnmount(() => {
                     @click="open = false"
                 >
                     {{ t('nav.myProfile') }}
+                </RouterLink>
+
+                <!--
+                    Only when an operator has a listing site that can pay: the
+                    page behind it is a 404 otherwise, and a menu entry that
+                    leads nowhere is worse than one that is absent.
+                -->
+                <RouterLink
+                    v-if="voteEnabled"
+                    to="/vote"
+                    role="menuitem"
+                    class="sky-account__item"
+                    @click="open = false"
+                >
+                    {{ t('nav.vote') }}
                 </RouterLink>
 
                 <button

@@ -5,6 +5,11 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\AccountAdminController;
 use App\Http\Controllers\Api\AccountCreditsController;
 use App\Http\Controllers\Api\AccountHistoryController;
+use App\Http\Controllers\Api\Admin\AdminSessionController;
+use App\Http\Controllers\Api\Admin\DownloadSettingsController;
+use App\Http\Controllers\Api\Admin\WikiCategoryController;
+use App\Http\Controllers\Api\Admin\WikiImageController;
+use App\Http\Controllers\Api\Admin\WikiPageController;
 use App\Http\Controllers\Api\AdminSearchController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BroadcastMailController;
@@ -32,6 +37,8 @@ use App\Http\Controllers\Api\ServerStatusController;
 use App\Http\Controllers\Api\ServerStatusXmlController;
 use App\Http\Controllers\Api\ServiceDeskController;
 use App\Http\Controllers\Api\StaticPageController;
+use App\Http\Controllers\Api\VoteCallbackController;
+use App\Http\Controllers\Api\VoteController;
 use App\Http\Controllers\Api\WebCommandController;
 use App\Http\Controllers\Api\WikiController;
 use App\Http\Controllers\Api\WorldController;
@@ -166,8 +173,9 @@ Route::middleware('permission')->group(function (): void {
         ->name('server.info');
 
     /*
-     * Public news. Read-only -- the admin half of the legacy CMS is not built,
-     * so there is no write path rather than a stub that looks like one.
+     * Public news: the listing every visitor sees, or the operator's forum
+     * feed where one is configured. The editor's half of the CMS is the group
+     * of routes below it.
      */
     Route::get('news', [NewsController::class, 'index'])->name('news.index');
 
@@ -258,6 +266,41 @@ Route::middleware('permission')->group(function (): void {
         ->withoutMiddleware([PreventRequestForgery::class])
         ->name('donate.notify');
     Route::get('donate/history', [DonationController::class, 'history'])->name('donate.history');
+
+    /*
+     * Vote for points.
+     *
+     * A player votes for the server on a listing site, the site calls back,
+     * and the panel adds credits. config/vote.php has the whole journey and
+     * the reason a callback can be believed.
+     *
+     * `vote/{site}/callback` is the second unauthenticated write in this
+     * application, and it is here for the same reason the one above it is:
+     * the caller is somebody else's server. What establishes it is a per-site
+     * secret compared in constant time and a single-use reference minted when
+     * the player pressed the button -- not the username or the address the
+     * site reports, neither of which proves anything.
+     */
+    Route::get('vote', [VoteController::class, 'index'])->name('vote.index');
+
+    Route::post('vote/{site}', [VoteController::class, 'start'])
+        ->where('site', '[a-z0-9][a-z0-9\-]*')
+        ->name('vote.start');
+
+    /*
+     * Both verbs, because listing sites disagree about which one a postback
+     * is, and throttled because this is the one endpoint in the panel a
+     * stranger may call: the limit is per address and generous enough for a
+     * site retrying a delivery, tight enough that guessing at references is
+     * not worth starting.
+     */
+    Route::match(['get', 'post'], 'vote/{site}/callback', VoteCallbackController::class)
+        ->where('site', '[a-z0-9][a-z0-9\-]*')
+        // Exempt from CSRF: the caller is the listing site, which has no
+        // session and no token. See the note above.
+        ->withoutMiddleware([PreventRequestForgery::class])
+        ->middleware('throttle:60,1')
+        ->name('vote.callback');
 
     /*
      * The account's own trusted payer addresses, and anything still on hold.
@@ -595,5 +638,106 @@ Route::middleware('permission')->group(function (): void {
      */
     Route::get('characters/classes', [ServerStatisticsController::class, 'classes'])
         ->name('character.classes');
+
+    /*
+     * The dashboard.
+     *
+     * Its sign-in is a second door onto the same session rather than a second
+     * authentication system: guests-only like the player form, but refusing
+     * anyone the permission map does not place at Administrator, and refusing
+     * them before a session is created. See AdminSessionController.
+     */
+    Route::post('admin/session', [AdminSessionController::class, 'store'])
+        ->name('admin.login');
+
+    /*
+     * What the dashboard can change. Each of these writes an override into
+     * `panel_settings`; config/game.php remains the default underneath, which
+     * is what DELETE restores.
+     */
+    Route::get('admin/settings/downloads', [DownloadSettingsController::class, 'show'])
+        ->name('admin.settings.downloads.view');
+
+    Route::put('admin/settings/downloads', [DownloadSettingsController::class, 'update'])
+        ->name('admin.settings.downloads.update');
+
+    Route::delete('admin/settings/downloads', [DownloadSettingsController::class, 'destroy'])
+        ->name('admin.settings.downloads.reset');
+
+    /*
+     * The wiki, edited.
+     *
+     * The guide itself stays on disk -- see config/wiki.php -- and these write
+     * an overlay over it: `wiki_pages` for the pages, `wiki_categories` for
+     * what the sections are called. Reverting drops the row and the file
+     * underneath takes over again, untouched.
+     *
+     * The sections come first because `sections` is a first segment a page
+     * path could otherwise claim: `admin/wiki/sections/events` is two
+     * segments, which is exactly the shape a page path has. Ordering alone
+     * would settle it, but it would settle it silently, so the page routes
+     * also refuse that first segment in their own constraint -- the
+     * reservation is then written where somebody reading either route can see
+     * it, and a wiki section called `sections` gets a 404 here rather than
+     * somebody else's handler.
+     */
+    /*
+     * The editor's own plumbing: somewhere to put an image that was dropped
+     * into a page, and the body rendered by the renderer that will publish it
+     * so a preview cannot disagree with what readers get. Both are single
+     * extra segments under admin/wiki, which the two-segment page constraint
+     * below cannot match.
+     */
+    Route::post('admin/wiki/images', [WikiImageController::class, 'store'])
+        ->name('admin.wiki.images.store');
+
+    Route::post('admin/wiki/preview', [WikiImageController::class, 'preview'])
+        ->name('admin.wiki.preview');
+
+    /*
+     * A section's own art, which has its own rules -- one exact square, any
+     * format in, WebP out. Three segments and a POST, so it cannot be reached
+     * by anything the two-segment section routes below answer.
+     */
+    Route::post('admin/wiki/sections/image', [WikiImageController::class, 'storeSectionImage'])
+        ->name('admin.wiki.sections.image');
+
+    Route::get('admin/wiki/sections', [WikiCategoryController::class, 'index'])
+        ->name('admin.wiki.sections.index');
+
+    Route::post('admin/wiki/sections', [WikiCategoryController::class, 'store'])
+        ->name('admin.wiki.sections.save');
+
+    Route::get('admin/wiki/sections/{slug}', [WikiCategoryController::class, 'show'])
+        ->where('slug', '[a-z0-9][a-z0-9\-]*')
+        ->name('admin.wiki.sections.view');
+
+    Route::delete('admin/wiki/sections/{slug}', [WikiCategoryController::class, 'destroy'])
+        ->where('slug', '[a-z0-9][a-z0-9\-]*')
+        ->name('admin.wiki.sections.revert');
+
+    /*
+     * A page path is two segments, as it is on the public route, and the same
+     * constraint is used so a page this accepts is one that route can serve.
+     * `revert` is declared first: it is three segments, which the two-segment
+     * constraint cannot match either way, but the ordering says so plainly.
+     */
+    Route::post('admin/wiki/{path}/revert', [WikiPageController::class, 'revert'])
+        ->where('path', '(?!sections\/)[a-z0-9][a-z0-9\-]*\/[a-z0-9][a-z0-9\-]*')
+        ->name('admin.wiki.revert');
+
+    Route::get('admin/wiki', [WikiPageController::class, 'index'])
+        ->name('admin.wiki.index');
+
+    Route::post('admin/wiki', [WikiPageController::class, 'store'])
+        ->name('admin.wiki.save');
+
+    Route::get('admin/wiki/{path}', [WikiPageController::class, 'show'])
+        ->where('path', '(?!sections\/)[a-z0-9][a-z0-9\-]*\/[a-z0-9][a-z0-9\-]*')
+        ->name('admin.wiki.view');
+
+    Route::delete('admin/wiki/{path}', [WikiPageController::class, 'destroy'])
+        ->where('path', '(?!sections\/)[a-z0-9][a-z0-9\-]*\/[a-z0-9][a-z0-9\-]*')
+        ->name('admin.wiki.delete');
 
 });

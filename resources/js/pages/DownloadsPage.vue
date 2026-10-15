@@ -88,9 +88,11 @@ const InstallGuide = resolveBlock('install-guide')
 
         <!--
             The packages are not here: they are inside the masthead's card
-            above, which is the whole point of that card. These two draw their
-            own, because what is inside them is white panels -- a tab strip,
-            a numbered list -- and a white panel on a white card washes out.
+            above, which is the whole point of that card. These two draw a
+            card each of their own -- same width, same padding -- so the page
+            is a stack of white cards on the shell rather than one card and
+            then loose markup. What is inside them is inset rather than white
+            for the same reason: a white panel on a white card washes out.
         -->
         <template v-else>
             <component :is="SystemRequirements" v-if="SystemRequirements" />

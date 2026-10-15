@@ -214,6 +214,10 @@ final readonly class NewsFeed
             'title' => $title === '' ? 'Untitled' : $title,
             'excerpt' => Str::limit($description, 180),
             'author' => $this->author($entry),
+            // Tags are the panel's, kept in its own table and keyed on an
+            // article id. A feed entry has neither, so it is always untagged
+            // rather than guessed at from a category element nobody agrees on.
+            'tag' => null,
             'link' => $this->link($entry),
             'published_at' => $this->timestamp($published),
             'updated_at' => null,

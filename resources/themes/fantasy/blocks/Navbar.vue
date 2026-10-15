@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import AppButton from '@/components/ui/AppButton.vue'
+import { useAccounts } from '@/composables/useAccounts'
 import { useAppearance } from '@/composables/useAppearance'
 import { useGame } from '@/composables/useGame'
 import { useShell } from '@/composables/useShell'
 import { useAuthStore } from '@/stores/auth'
 import { useServerStore } from '@/stores/server'
+import { useTranslation } from '@/i18n'
 import GameMark from '../components/GameMark.vue'
 
 /**
@@ -28,6 +30,12 @@ const servers = useServerStore()
 const { appearance, toggleAppearance } = useAppearance()
 const { game, title } = useGame()
 const { links, isActive, menuOpen, signingOut, signOut } = useShell()
+/*
+ * This skin writes its own menu text in English. The new entry goes
+ * through the dictionary anyway, for the reason given in Yatagarasu's.
+ */
+const { t } = useTranslation()
+const { voteEnabled } = useAccounts()
 </script>
 
 <template>
@@ -112,6 +120,14 @@ const { links, isActive, menuOpen, signingOut, signOut } = useShell()
                         >
                             {{ auth.account?.username }}
                         </span>
+                        <!--
+                            No account dropdown in this shell either: the
+                            profile link is in the navigation, so voting sits
+                            with the account's own controls.
+                        -->
+                        <AppButton v-if="voteEnabled" variant="ghost" size="sm" to="/vote">
+                            {{ t('nav.vote') }}
+                        </AppButton>
                         <AppButton size="sm" :loading="signingOut" @click="signOut">
                             Sign out
                         </AppButton>
@@ -166,6 +182,16 @@ const { links, isActive, menuOpen, signingOut, signOut } = useShell()
             </RouterLink>
 
             <div class="mt-2 border-t border-[var(--border-subtle)] pt-2">
+                <AppButton
+                    v-if="auth.isAuthenticated && voteEnabled"
+                    variant="secondary"
+                    block
+                    class="mb-2"
+                    to="/vote"
+                    @click="menuOpen = false"
+                >
+                    {{ t('nav.vote') }}
+                </AppButton>
                 <AppButton v-if="auth.isAuthenticated" block :loading="signingOut" @click="signOut">
                     Sign out
                 </AppButton>

@@ -676,6 +676,7 @@ FluxCP's news CMS, read from `cp_cmsnews`, newest first.
       "title": "Season opens",
       "excerpt": "Adventurers assemble at the gates of…",
       "author": "gamemaster",
+      "tag": "Event",
       "link": null,
       "published_at": "2026-09-28T10:00:00+00:00",
       "updated_at": null
@@ -684,8 +685,18 @@ FluxCP's news CMS, read from `cp_cmsnews`, newest first.
 }
 ```
 
-**No category and no thumbnail.** The legacy `cp_cmsnews` schema has neither,
-so returning them would mean inventing them.
+**No thumbnail.** The legacy `cp_cmsnews` schema has none, so returning one
+would mean inventing it.
+
+**`tag` is not a column of `cp_cmsnews`.** That table is FluxCP's, reproduced
+exactly by `PanelSchema` so a panel and a legacy install can share one
+database, and `panel:install-schema` only creates tables that are missing — a
+column added there would reach new installs and no existing one. The tag is
+kept in the panel's own `news_article_tags`, scoped by server group and joined
+back on the way out, so an article nobody tagged returns `null` and leaves no
+row behind. It is free text as the editor typed it, at most 32 characters;
+recognising "News" or "Auction" and colouring them is the client's business,
+not the API's.
 
 The `excerpt` is derived from the body with tags stripped, because truncating
 HTML at a character count produces unbalanced markup — and because a listing

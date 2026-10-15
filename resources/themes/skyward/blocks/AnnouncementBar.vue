@@ -1,22 +1,30 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useAnnouncement, useNewsData } from '@/blocks/data'
+import { defaultNewsTag, newsTag } from '@/blocks/tags'
 import { useTranslation } from '@/i18n'
 
 const { t } = useTranslation()
 
 /**
- * Skyward — the news carousel.
+ * Skyward — the news crawl.
  *
  * A second floating card below the masthead: a standing NEWS badge, then the
- * server's own headlines taking turns in one place.
+ * server's own headlines crossing the strip, one at a time, in a loop.
  *
- * A carousel rather than a marquee, which is a reading decision more than a
- * visual one. A line of text sliding past has to be tracked to be read, and a
- * reader who glances away loses their place in it; a headline that sits still
- * for a few seconds is simply read. The cost is that only one is visible at a
- * time, which is why there is a counter and a pair of controls -- otherwise
- * nothing on screen says there are five more.
+ * A crawl rather than a carousel, now that a server runs more than two or
+ * three headlines. A carousel holds one headline still and hides the rest
+ * behind a counter, which asks a visitor to stand and wait for news they
+ * cannot see is coming; a headline that travels across and is followed by the
+ * next says there is more without anybody having to operate anything, and the
+ * strip reads as live rather than as a slideshow.
+ *
+ * One line at a time rather than all of them strung together: a single
+ * sentence crossing is a thing to read, where a continuous ribbon of every
+ * headline at once is a wall to scan, and the eye has nowhere to rest between
+ * two of them. The cost of any moving text is that reading means tracking it,
+ * which is what the hover and focus stops are for: a headline somebody has
+ * stopped on, or tabbed into, holds where it is until they are done with it.
  *
  * It takes the latest dispatches first, because a headline somebody wrote is
  * worth more than a standing notice, and falls back to the operator's
@@ -26,17 +34,31 @@ const { t } = useTranslation()
  * height, so the hero closes the gap by itself on a server with no news.
  *
  * Both sources come from composables. The block cannot fetch, which is what
- * lets the carousel be swapped for a plain bar by changing themes.
+ * lets the crawl be swapped for a plain bar by changing themes.
  */
 interface TickerItem {
     key: string
     text: string
     href: string | null
     label: string
+    /** The editor's own word for this post, or null for an untagged one. */
+    tag: string | null
 }
 
-/** How long a headline holds before the next one takes its place. */
-const DWELL = 5500
+/**
+ * How fast a headline travels, in pixels a second.
+ *
+ * Held as a speed rather than as a duration so that a long headline and a
+ * short one read at the same pace, and so that the bar reads the same on a
+ * phone as on a wide screen -- a fixed duration per crossing would make the
+ * long headline sprint, the short one dawdle, and the wide screen crawl.
+ *
+ * The number is set by how long a headline is worth looking at rather than by
+ * how fast it can be read: a word crosses a desktop strip in something like
+ * half a minute, which is slow enough to be read without being tracked, and a
+ * glance that misses one catches the next.
+ */
+const SPEED = 80
 
 const { announcement } = useAnnouncement()
 const news = useNewsData(6)
@@ -49,6 +71,7 @@ const items = computed<TickerItem[]>(() => {
             text: article.title,
             href: article.link,
             label: t('news.read'),
+            tag: article.tag,
         }))
 
     if (headlines.length > 0) {
@@ -63,39 +86,27 @@ const items = computed<TickerItem[]>(() => {
                   text: announcement.value.message,
                   href: announcement.value.url,
                   label: announcement.value.label ?? t('news.readMore'),
+                  /* An operator's standing notice is not an article and has
+                   * nowhere to carry a tag, so it wears the standing badge. */
+                  tag: null,
               },
           ]
 })
 
 /*
- * One headline is not a carousel. It is the common case on a server with no
- * news and one standing announcement, and giving it a counter reading "1 of 1"
- * and two controls that do nothing would be furniture around a single
- * sentence.
- *
- * So it drifts across the bar instead of taking turns -- the motion a news
- * strip is expected to have, obtained by moving the headline rather than by
- * changing it. That also lets it keep the announcement's own urgency: a
- * maintenance notice is an alert, and wrapping it in a carousel region would
- * bury that.
+ * A lone headline has nothing to be followed by, so it crosses on repeat and
+ * needs none of the machinery below -- no turn to take and nothing to hand
+ * the strip to. Keeping it a separate case is also what lets it hold the
+ * announcement's own urgency: a maintenance notice is an alert, and wrapping
+ * it in a news region would bury that.
  */
-const isCarousel = computed(() => items.value.length > 1)
-
-const index = ref(0)
-const direction = ref<'next' | 'prev'>('next')
-
-/** The visitor's own pause, via the control. Survives the pointer leaving. */
-const playing = ref(true)
-
-/** A pointer resting on the bar, or focus inside it. Both mean "being read". */
-const engaged = ref(false)
+const isCrawl = computed(() => items.value.length > 1)
 
 /*
- * Motion is a preference the browser already knows. Honoured in script as well
- * as in the stylesheet because the stylesheet can only stop the slide looking
- * like motion -- it cannot stop the headline being replaced under someone who
- * asked for things to hold still. Here it stops the advance itself, leaving
- * the controls to move through the news at the reader's pace.
+ * Motion is a preference the browser already knows. A reader who asked for
+ * stillness gets the headlines as a list they scroll instead of a line that
+ * travels -- same news, no movement -- so this mirror of the query decides
+ * which of the two the strip renders.
  */
 const reducedMotion = ref(false)
 let motionQuery: MediaQueryList | null = null
@@ -104,59 +115,47 @@ function onMotionChange(event: MediaQueryListEvent): void {
     reducedMotion.value = event.matches
 }
 
-/** Whether the carousel should currently be advancing by itself. */
-const rotating = computed(
-    () => isCarousel.value && playing.value && !engaged.value && !reducedMotion.value,
-)
-
+const index = ref(0)
 const active = computed<TickerItem | null>(() => items.value[index.value] ?? null)
 
-function go(delta: number): void {
-    const count = items.value.length
+/*
+ * The badge is the crossing headline's own tag -- green NEWS, violet AUCTION
+ * -- rather than one standing word for the whole strip. Which is the point of
+ * tagging posts at all: the badge says what kind of thing is coming past
+ * before the sentence has been read.
+ *
+ * An untagged post, and the operator's standing announcement, fall back to the
+ * plain News badge. That fallback is asked for by name rather than being what
+ * `newsTag` returns for an empty tag, because elsewhere -- the news list --
+ * an untagged article should carry no pill at all.
+ */
+const tag = computed(() => newsTag(active.value?.tag))
+const badge = computed(() => tag.value ?? defaultNewsTag(t('news.badge')))
 
-    if (count === 0) {
-        return
-    }
-
-    direction.value = delta >= 0 ? 'next' : 'prev'
-    index.value = (index.value + delta + count) % count
-}
-
-let timer: number | null = null
-
-function stop(): void {
-    if (timer !== null) {
-        window.clearInterval(timer)
-        timer = null
-    }
-}
-
-function start(): void {
-    stop()
-    timer = window.setInterval(() => go(1), DWELL)
-}
+const badgeStyle = computed(() => ({
+    '--sky-badge-bg': `var(--tag-${badge.value.tone}-bg)`,
+    '--sky-badge-ink': `var(--tag-${badge.value.tone}-ink)`,
+}))
 
 /**
- * Pressing a control also restarts the dwell.
+ * The next headline takes the strip.
  *
- * Without it the pending tick survives the press, so a headline chosen by hand
- * can be replaced a moment later by the timer -- which reads as the control
- * having been ignored.
+ * Driven by the animation finishing a lap rather than by a timer, which is
+ * what keeps the two in step: a timer would hand the strip to the next
+ * headline while the last one was still halfway across it, and a paused
+ * animation would go on being handed headlines it is not showing.
  */
-function step(delta: number): void {
-    go(delta)
+function advance(): void {
+    const count = items.value.length
 
-    if (rotating.value) {
-        start()
+    if (count > 0) {
+        index.value = (index.value + 1) % count
     }
 }
-
-watch(rotating, (on) => (on ? start() : stop()))
 
 /*
  * News arrives after the first paint, so the list this is indexing into can
- * grow or shrink underneath it. Clamping here rather than in `active` keeps the
- * counter and the slide telling the same story.
+ * grow or shrink underneath it.
  */
 watch(items, (next) => {
     if (index.value > next.length - 1) {
@@ -164,46 +163,188 @@ watch(items, (next) => {
     }
 })
 
+/*
+ * A crossing is the strip's width plus the headline's own -- in from just off
+ * the right edge, out past the left -- and the duration is that distance at
+ * the speed above. Both widths have to be taken from the page: the headline
+ * is whatever the operator wrote in whatever font arrived, and the strip is
+ * whatever the viewport left it. They are watched rather than read once, so a
+ * font landing late or a window dragged narrower re-times the crossing rather
+ * than leaving the pace wrong for the rest of the session.
+ */
+const viewport = useTemplateRef<HTMLElement>('viewport')
+const line = useTemplateRef<HTMLElement>('line')
+
+const viewportWidth = ref(0)
+const lineWidth = ref(0)
+
+const crawlStyle = computed(() => {
+    if (lineWidth.value === 0) {
+        return undefined
+    }
+
+    return { '--sky-crawl-duration': `${(viewportWidth.value + lineWidth.value) / SPEED}s` }
+})
+
+function measure(): void {
+    viewportWidth.value = viewport.value?.getBoundingClientRect().width ?? 0
+    lineWidth.value = line.value?.getBoundingClientRect().width ?? 0
+}
+
+let observer: ResizeObserver | null = null
+
 onMounted(() => {
     motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     reducedMotion.value = motionQuery.matches
     motionQuery.addEventListener('change', onMotionChange)
 
-    if (rotating.value) {
-        start()
+    observer = new ResizeObserver(measure)
+
+    if (viewport.value) {
+        observer.observe(viewport.value)
     }
+
+    measure()
+})
+
+/*
+ * The line only exists once there is news to put in it, which arrives after
+ * the first paint, and it is replaced outright when the reader's motion
+ * preference changes. Re-pointing the observer here rather than in `measure`
+ * keeps it watching whichever element is currently the headline.
+ */
+watch(line, (element, previous) => {
+    if (previous) {
+        observer?.unobserve(previous)
+    }
+
+    if (element) {
+        observer?.observe(element)
+    }
+
+    measure()
 })
 
 onBeforeUnmount(() => {
-    stop()
+    observer?.disconnect()
     motionQuery?.removeEventListener('change', onMotionChange)
 })
 </script>
 
 <template>
     <!--
-        A single notice keeps the announcement's own urgency and needs none of
-        the carousel's machinery -- there is nothing to take turns with. It
-        drifts instead, so the bar still reads as live rather than as switched
-        off, and keeps `role="alert"` for a maintenance notice, which a
-        carousel region would bury.
+        One notice, crossing on repeat. It keeps `role="alert"` for a
+        maintenance notice, which a news region would bury.
     -->
     <div
-        v-if="items.length === 1 && active"
+        v-if="items.length === 1 && items[0]"
         class="sky-ticker"
         :role="announcement?.tone === 'maintenance' ? 'alert' : 'status'"
     >
-        <p class="sky-ticker__label">
-            <svg class="size-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <!--
+            The mark is decoration: it repeats the word beside it rather than
+            adding to it, so it is hidden from assistive technology. A tag this
+            panel has no mark for keeps the megaphone, which is what stops the
+            badge collapsing to nothing where the word is hidden on a phone.
+        -->
+        <p
+            class="sky-ticker__label"
+            :class="tag === null ? 'sky-ticker__label--standing' : ''"
+            :style="badgeStyle"
+        >
+            <span v-if="badge.icon" class="sky-ticker__label-icon" aria-hidden="true">
+                {{ badge.icon }}
+            </span>
+
+            <svg v-else class="size-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path
                     d="M16.5 3.2a1 1 0 00-1.56-.83L8.3 6.8H5a3 3 0 00-.4 5.97l1.2 4.02a1 1 0 001.9-.08l-.9-3.9h1.5l6.64 4.43a1 1 0 001.56-.83V3.2z"
                 />
             </svg>
-            <span class="sky-ticker__label-text">{{ t('news.badge') }}</span>
+
+            <span class="sky-ticker__label-text">{{ badge.label }}</span>
         </p>
 
-        <div class="sky-ticker__window">
-            <div class="sky-ticker__drift">
+        <div ref="viewport" class="sky-ticker__window">
+            <div ref="line" class="sky-ticker__drift sky-ticker__drift--timed" :style="crawlStyle">
+                <span>{{ items[0].text }}</span>
+                <a
+                    v-if="items[0].href"
+                    :href="items[0].href"
+                    class="sky-ticker__link"
+                    rel="noreferrer noopener"
+                >
+                    {{ items[0].label }} <span aria-hidden="true">&rarr;</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div v-else-if="isCrawl" class="sky-ticker" role="region" :aria-label="t('news.badge')">
+        <!--
+            The mark is decoration: it repeats the word beside it rather than
+            adding to it, so it is hidden from assistive technology. A tag this
+            panel has no mark for keeps the megaphone, which is what stops the
+            badge collapsing to nothing where the word is hidden on a phone.
+        -->
+        <p
+            class="sky-ticker__label"
+            :class="tag === null ? 'sky-ticker__label--standing' : ''"
+            :style="badgeStyle"
+        >
+            <span v-if="badge.icon" class="sky-ticker__label-icon" aria-hidden="true">
+                {{ badge.icon }}
+            </span>
+
+            <svg v-else class="size-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path
+                    d="M16.5 3.2a1 1 0 00-1.56-.83L8.3 6.8H5a3 3 0 00-.4 5.97l1.2 4.02a1 1 0 001.9-.08l-.9-3.9h1.5l6.64 4.43a1 1 0 001.56-.83V3.2z"
+                />
+            </svg>
+
+            <span class="sky-ticker__label-text">{{ badge.label }}</span>
+        </p>
+
+        <!--
+            Focusable only where nothing moves. A reader who asked for reduced
+            motion scrolls the strip instead of waiting for it, and a scroll
+            box nobody can reach by keyboard is a scroll box half the readers
+            cannot use.
+        -->
+        <div ref="viewport" class="sky-ticker__window" :tabindex="reducedMotion ? 0 : undefined">
+            <!--
+                Stillness asked for: every headline at once, as a list to
+                scroll through. Nothing travels, so nothing would ever bring
+                the second headline into view on its own.
+            -->
+            <ul v-if="reducedMotion" class="sky-ticker__list">
+                <li v-for="item in items" :key="item.key" class="sky-ticker__item">
+                    <span>{{ item.text }}</span>
+                    <a
+                        v-if="item.href"
+                        :href="item.href"
+                        class="sky-ticker__link"
+                        rel="noreferrer noopener"
+                    >
+                        {{ item.label }} <span aria-hidden="true">&rarr;</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!--
+                Otherwise one headline has the strip to itself until it is off
+                the far side, and the next one follows it on. Keyed on the
+                item so the crossing restarts cleanly rather than picking the
+                new headline up wherever the old one had got to.
+            -->
+            <div
+                v-else-if="active"
+                :key="active.key"
+                ref="line"
+                class="sky-ticker__drift sky-ticker__drift--timed"
+                :style="crawlStyle"
+                @animationiteration="advance"
+            >
                 <span>{{ active.text }}</span>
                 <a
                     v-if="active.href"
@@ -214,113 +355,6 @@ onBeforeUnmount(() => {
                     {{ active.label }} <span aria-hidden="true">&rarr;</span>
                 </a>
             </div>
-        </div>
-    </div>
-
-    <div
-        v-else-if="isCarousel && active"
-        class="sky-ticker"
-        role="region"
-        aria-roledescription="carousel"
-        :aria-label="t('news.badge')"
-        @mouseenter="engaged = true"
-        @mouseleave="engaged = false"
-        @focusin="engaged = true"
-        @focusout="engaged = false"
-    >
-        <p class="sky-ticker__label">
-            <svg class="size-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path
-                    d="M16.5 3.2a1 1 0 00-1.56-.83L8.3 6.8H5a3 3 0 00-.4 5.97l1.2 4.02a1 1 0 001.9-.08l-.9-3.9h1.5l6.64 4.43a1 1 0 001.56-.83V3.2z"
-                />
-            </svg>
-            <span class="sky-ticker__label-text">{{ t('news.badge') }}</span>
-        </p>
-
-        <!--
-            Announced only while it is not advancing by itself. A live region
-            that keeps changing every few seconds interrupts a screen reader
-            mid-sentence, so the rotation stays silent and the headline is read
-            out once the reader has stopped it -- by pausing, hovering, or
-            tabbing in.
-        -->
-        <div class="sky-ticker__window" :aria-live="rotating ? 'off' : 'polite'">
-            <Transition :name="`sky-slide-${direction}`">
-                <p
-                    :key="active.key"
-                    class="sky-ticker__slide"
-                    role="group"
-                    aria-roledescription="slide"
-                    :aria-label="`${index + 1} of ${items.length}`"
-                >
-                    <span class="sky-ticker__text">{{ active.text }}</span>
-                    <a
-                        v-if="active.href"
-                        :href="active.href"
-                        class="sky-ticker__link"
-                        rel="noreferrer noopener"
-                    >
-                        {{ active.label }} <span aria-hidden="true">&rarr;</span>
-                    </a>
-                </p>
-            </Transition>
-        </div>
-
-        <div class="sky-ticker__controls">
-            <button
-                type="button"
-                class="sky-ticker__control sky-ticker__control--step"
-                :aria-label="t('news.previous')"
-                @click="step(-1)"
-            >
-                <svg class="size-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path
-                        fill-rule="evenodd"
-                        d="M12.79 5.23a.75.75 0 01-.02 1.06L9.31 10l3.46 3.71a.75.75 0 11-1.1 1.02l-3.95-4.25a.75.75 0 010-1.02l3.95-4.25a.75.75 0 011.06-.02z"
-                        clip-rule="evenodd"
-                    />
-                </svg>
-            </button>
-
-            <span class="sky-ticker__count"> {{ index + 1 }}/{{ items.length }} </span>
-
-            <button
-                type="button"
-                class="sky-ticker__control sky-ticker__control--step"
-                :aria-label="t('news.next')"
-                @click="step(1)"
-            >
-                <svg class="size-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path
-                        fill-rule="evenodd"
-                        d="M7.21 14.77a.75.75 0 01.02-1.06L10.69 10 7.23 6.29a.75.75 0 111.1-1.02l3.95 4.25a.75.75 0 010 1.02l-3.95 4.25a.75.75 0 01-1.06.02z"
-                        clip-rule="evenodd"
-                    />
-                </svg>
-            </button>
-
-            <!--
-                Auto-advancing content needs a stop that does not depend on
-                holding a pointer still, which a hover pause does.
-            -->
-            <button
-                type="button"
-                class="sky-ticker__control"
-                :aria-label="playing ? t('news.pause') : t('news.play')"
-                :aria-pressed="!playing"
-                @click="playing = !playing"
-            >
-                <svg class="size-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path
-                        v-if="playing"
-                        d="M6.5 4a1 1 0 00-1 1v10a1 1 0 002 0V5a1 1 0 00-1-1zm7 0a1 1 0 00-1 1v10a1 1 0 002 0V5a1 1 0 00-1-1z"
-                    />
-                    <path
-                        v-else
-                        d="M6.3 3.6a1 1 0 011.02.04l8 5a1 1 0 010 1.72l-8 5A1 1 0 015.8 14.5v-10a1 1 0 01.5-.87z"
-                    />
-                </svg>
-            </button>
         </div>
     </div>
 </template>

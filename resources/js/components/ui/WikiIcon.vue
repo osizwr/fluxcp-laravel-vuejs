@@ -1,19 +1,17 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-
+<script lang="ts">
 /**
  * The little mark beside a wiki section's name.
  *
  * A fixed set rather than an image path, for two reasons. A section's icon is
- * written in a Markdown file by whoever maintains the guide, and a filename
- * there would be a way to point the page at an arbitrary URL; and a drawn
- * icon inherits the text colour, so it follows a theme without anybody having
- * to export a second copy of it in white.
+ * written in a Markdown file by whoever maintains the guide, or picked from a
+ * list in the dashboard, and a filename in either place would be a way to
+ * point the page at an arbitrary URL; and a drawn icon inherits the text
+ * colour, so it follows a theme without anybody having to export a second
+ * copy of it in white.
  *
  * An unknown or missing name falls back to the book, which is the one icon
  * that is never wrong on a wiki.
  */
-const props = defineProps<{ name?: string | null }>()
 
 /*
  * Stroked paths on a 24x24 grid, in the vocabulary a guide actually needs:
@@ -67,6 +65,22 @@ const ICONS: Record<string, string[]> = {
         'M16 3.1a4 4 0 0 1 0 7.8',
     ],
 }
+
+/**
+ * The names a section may be given, in the order they are offered.
+ *
+ * Exported for the dashboard's section editor, which has to offer a list
+ * rather than a text box: a name that is not in here renders as the fallback
+ * book, which from the operator's side looks like the save went wrong.
+ * SaveWikiCategoryRequest holds the same list and refuses the rest.
+ */
+export const WIKI_ICON_NAMES = Object.keys(ICONS)
+</script>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+
+const props = defineProps<{ name?: string | null }>()
 
 const paths = computed(() => ICONS[props.name ?? ''] ?? ICONS.book)
 </script>

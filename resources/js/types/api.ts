@@ -345,6 +345,12 @@ export interface NewsArticle {
     title: string
     excerpt: string
     author: string
+    /**
+     * The word beside the headline, as the editor typed it, or null for an
+     * article nobody tagged. Kept in the panel's own table rather than in
+     * rAthena's `cp_cmsnews`, and joined back on the way out.
+     */
+    tag: string | null
     link: string | null
     published_at: string | null
     updated_at: string | null
@@ -484,6 +490,12 @@ export interface WikiCategory {
     description: string | null
     /** A name from the icon set, or null to let the client pick its default. */
     icon: string | null
+    /**
+     * The section's own art for its tile on the index, or null for the
+     * placeholder. Always a square this panel stored itself -- see
+     * WikiImages on the server for why it is never an arbitrary URL.
+     */
+    image: string | null
     count: number
     pages: WikiPageSummary[]
 }

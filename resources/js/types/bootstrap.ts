@@ -170,12 +170,25 @@ export interface DownloadClient {
 
 export interface RequirementRow {
     label: string
-    value: string
+    /**
+     * One figure per column of the group, in the group's column order. Null
+     * where the operator quoted nothing for that column, which is drawn as a
+     * gap rather than guessed at.
+     */
+    values: (string | null)[]
 }
 
-/** One tab of the specification table. Never empty: the server drops those. */
+/**
+ * One tab of the specification table. Never empty: the server drops those.
+ *
+ * `columns` are the sets of figures the platform is quoted side by side --
+ * minimum against recommended -- and is empty for a platform quoted one set,
+ * which is drawn as a single unheaded column. Every row is as wide as this
+ * list, or one cell wide when it is empty; the server guarantees it.
+ */
 export interface RequirementGroup {
     heading: string
+    columns: string[]
     rows: RequirementRow[]
 }
 
@@ -228,6 +241,12 @@ export interface CaptchaConfig {
  */
 export interface AccountsConfig {
     registrationEnabled: boolean
+    /**
+     * Whether the account menu offers Vote for points. False unless an
+     * operator has configured a listing site that can actually pay out --
+     * see config/vote.php.
+     */
+    voteEnabled: boolean
     passwordResetEnabled: boolean
     emailChangeRequiresConfirmation: boolean
     registrationRequiresConfirmation: boolean

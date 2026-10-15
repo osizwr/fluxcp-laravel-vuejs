@@ -6,8 +6,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Resources\NewsArticleResource;
 use App\Models\NewsArticle;
+use App\Models\NewsArticleTag;
 use App\Services\Content\NewsFeed;
 use App\Support\Http\ListQuery;
+use App\Support\Rathena\ServerRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -31,7 +33,10 @@ use Illuminate\Validation\ValidationException;
  */
 final class NewsController
 {
-    public function __construct(private readonly NewsFeed $feed) {}
+    public function __construct(
+        private readonly NewsFeed $feed,
+        private readonly ServerRegistry $servers,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection|JsonResponse
     {
@@ -58,14 +63,18 @@ final class NewsController
         }
 
         return NewsArticleResource::collection(
-            NewsArticle::query()->newestFirst()->paginate($perPage)->withQueryString(),
+            NewsArticle::query()
+                ->with('tagRow')
+                ->newestFirst()
+                ->paginate($perPage)
+                ->withQueryString(),
         )->additional(['meta' => ['source' => 'panel']]);
     }
 
     public function show(int $article): NewsArticleResource
     {
         return NewsArticleResource::make(
-            NewsArticle::query()->findOrFail($article),
+            NewsArticle::query()->with('tagRow')->findOrFail($article),
         );
     }
 
@@ -96,11 +105,19 @@ final class NewsController
             $request,
         );
 
+        /*
+         * One query for the page's tags rather than one per row: the listing
+         * is a query builder result, not models, so there is no relation to
+         * eager-load.
+         */
+        $tags = $this->tagsFor(array_map(static fn (object $row): int => (int) $row->id, $page->items()));
+
         return response()->json([
             'data' => array_map(fn (object $row): array => [
                 'id' => (int) $row->id,
                 'title' => (string) $row->title,
                 'author' => (string) $row->author,
+                'tag' => $tags[(int) $row->id] ?? null,
                 'published_at' => $this->iso($row->created),
                 'updated_at' => $this->iso($row->modified),
             ], $page->items()),
@@ -119,7 +136,7 @@ final class NewsController
      */
     public function edit(int $article): NewsArticleResource
     {
-        return NewsArticleResource::make(NewsArticle::query()->findOrFail($article));
+        return NewsArticleResource::make(NewsArticle::query()->with('tagRow')->findOrFail($article));
     }
 
     /**
@@ -130,6 +147,9 @@ final class NewsController
         $validated = $this->validateArticle($request);
 
         $article = new NewsArticle;
+
+        $tag = $validated['tag'];
+        unset($validated['tag']);
 
         $article->forceFill([
             ...$validated,
@@ -145,6 +165,8 @@ final class NewsController
             'modified' => now(),
         ])->save();
 
+        $this->writeTag($article->id, $tag);
+
         return response()->json([
             'message' => 'The article has been published.',
             'data' => ['id' => $article->id],
@@ -158,6 +180,9 @@ final class NewsController
     {
         $validated = $this->validateArticle($request);
 
+        $tag = $validated['tag'];
+        unset($validated['tag']);
+
         $article->forceFill([
             ...$validated,
             'author' => $validated['author'] !== '' ? $validated['author'] : $article->author,
@@ -166,18 +191,28 @@ final class NewsController
             'modified' => now(),
         ])->save();
 
+        $this->writeTag($article->id, $tag);
+
         return response()->json(['message' => 'The article has been saved.']);
     }
 
     public function destroy(NewsArticle $article): JsonResponse
     {
+        /*
+         * The tag goes with the article. It is in another database, so no
+         * foreign key can do this -- and leaving it would attach the word to
+         * whichever article is next given this id, which happens after a
+         * restart resets the auto-increment counter.
+         */
+        $this->writeTag($article->id, null);
+
         $article->delete();
 
         return response()->json(['message' => 'The article has been deleted.']);
     }
 
     /**
-     * @return array{title: string, body: string, link: string, author: string}
+     * @return array{title: string, body: string, link: string, author: string, tag: string|null}
      *
      * @throws ValidationException
      */
@@ -195,14 +230,63 @@ final class NewsController
              */
             'link' => ['nullable', 'string', 'max:100', 'url:http,https'],
             'author' => ['nullable', 'string', 'max:100'],
+            /*
+             * The word beside the headline. Free text, because the panel
+             * cannot know what a server calls its posts, but short: it is
+             * drawn as a badge, and a sentence in a badge is a broken layout
+             * rather than a tag.
+             */
+            'tag' => ['nullable', 'string', 'max:32'],
         ]);
+
+        $tag = trim((string) ($validated['tag'] ?? ''));
 
         return [
             'title' => $validated['title'],
             'body' => $validated['body'],
             'link' => (string) ($validated['link'] ?? ''),
             'author' => (string) ($validated['author'] ?? ''),
+            'tag' => $tag === '' ? null : $tag,
         ];
+    }
+
+    /**
+     * Set, replace or remove an article's tag.
+     *
+     * Null is "no tag", which is stored as no row rather than as an empty
+     * string: the table is an overlay on articles that have one, and an
+     * article nobody tagged should leave no trace in it.
+     */
+    private function writeTag(int $article, ?string $tag): void
+    {
+        $key = ['server_group' => $this->servers->current()->key, 'article_id' => $article];
+
+        if ($tag === null) {
+            NewsArticleTag::query()->where($key)->delete();
+
+            return;
+        }
+
+        NewsArticleTag::query()->updateOrCreate($key, ['tag' => $tag]);
+    }
+
+    /**
+     * The tags for a page of articles, keyed by article id.
+     *
+     * @param  list<int>  $articles
+     * @return array<int, string>
+     */
+    private function tagsFor(array $articles): array
+    {
+        if ($articles === []) {
+            return [];
+        }
+
+        return NewsArticleTag::query()
+            ->where('server_group', $this->servers->current()->key)
+            ->whereIn('article_id', $articles)
+            ->pluck('tag', 'article_id')
+            ->all();
     }
 
     private function iso(mixed $value): ?string

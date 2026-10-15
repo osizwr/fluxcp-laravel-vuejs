@@ -15,6 +15,7 @@ export function useAccounts(): {
     config: ComputedRef<AccountsConfig>
     registrationEnabled: ComputedRef<boolean>
     passwordResetEnabled: ComputedRef<boolean>
+    voteEnabled: ComputedRef<boolean>
     captchaOnRegistration: ComputedRef<boolean>
     captchaSelfHosted: ComputedRef<boolean>
     captchaSiteKey: ComputedRef<string | null>
@@ -26,6 +27,7 @@ export function useAccounts(): {
         config,
         registrationEnabled: computed(() => config.value.registrationEnabled),
         passwordResetEnabled: computed(() => config.value.passwordResetEnabled),
+        voteEnabled: computed(() => config.value.voteEnabled),
         captchaOnRegistration: computed(() => config.value.captcha.onRegistration),
         captchaSelfHosted: computed(() => config.value.captcha.selfHosted),
         captchaSiteKey: computed(() => config.value.captcha.siteKey),

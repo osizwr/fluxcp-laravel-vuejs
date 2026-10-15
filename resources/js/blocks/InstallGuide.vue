@@ -32,33 +32,44 @@ const descriptionText = computed(() => props.description ?? t('downloads.stepsBo
         class="mx-auto max-w-6xl px-4 py-10"
         aria-labelledby="block-install-guide"
     >
-        <h2 id="block-install-guide" class="text-lg font-semibold">{{ headingText }}</h2>
+        <!--
+            The same card the masthead and the requirements draw, which is
+            why the steps are sunken tiles rather than white panels: on a
+            white card a white tile has nothing to stand out against, so each
+            step takes the inset surface instead.
+        -->
+        <div class="panel p-5 sm:p-8">
+            <h2 id="block-install-guide" class="text-lg font-semibold">{{ headingText }}</h2>
 
-        <p v-if="descriptionText" class="mt-0.5 text-sm text-[var(--text-secondary)]">
-            {{ descriptionText }}
-        </p>
+            <p v-if="descriptionText" class="mt-0.5 text-sm text-[var(--text-secondary)]">
+                {{ descriptionText }}
+            </p>
 
-        <ol class="mt-4 grid gap-3">
-            <li
-                v-for="(step, index) in downloads.steps"
-                :key="step.title"
-                class="panel flex items-start gap-3 p-4"
-            >
-                <span
-                    class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-600)] text-[0.8125rem] font-semibold text-white"
-                    aria-hidden="true"
+            <ol class="mt-4 grid gap-3">
+                <li
+                    v-for="(step, index) in downloads.steps"
+                    :key="step.title"
+                    class="flex items-start gap-3 rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--surface-sunken)] p-4"
                 >
-                    {{ index + 1 }}
-                </span>
+                    <span
+                        class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-600)] text-[0.8125rem] font-semibold text-white"
+                        aria-hidden="true"
+                    >
+                        {{ index + 1 }}
+                    </span>
 
-                <div class="min-w-0">
-                    <h3 class="font-semibold">{{ step.title }}</h3>
+                    <div class="min-w-0">
+                        <h3 class="font-semibold">{{ step.title }}</h3>
 
-                    <p v-if="step.description" class="mt-0.5 text-sm text-[var(--text-secondary)]">
-                        {{ step.description }}
-                    </p>
-                </div>
-            </li>
-        </ol>
+                        <p
+                            v-if="step.description"
+                            class="mt-0.5 text-sm text-[var(--text-secondary)]"
+                        >
+                            {{ step.description }}
+                        </p>
+                    </div>
+                </li>
+            </ol>
+        </div>
     </section>
 </template>

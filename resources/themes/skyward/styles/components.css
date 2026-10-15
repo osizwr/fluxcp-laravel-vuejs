@@ -166,3 +166,25 @@
         transform: none;
     }
 }
+
+/*
+ * The core pills take the skin's corner too.
+ *
+ * StatusPill and NewsTag draw their chips with Tailwind's `rounded-full`,
+ * which no token reaches: they are core components shared by every skin, and
+ * editing them would square off the pills in fantasy, slate and yatagarasu as
+ * well. Scoped to the slug, this skin gets its one corner and the other three
+ * keep theirs.
+ *
+ * Unlayered on purpose. Tailwind's utilities sit in a layer, and an unlayered
+ * declaration beats a layered one whatever its specificity -- the same reason
+ * the cursor rules at the foot of app.css live outside every layer.
+ *
+ * The status dots are caught by this as well and are untouched by it: a
+ * border-radius is clamped to half the shorter side, so 12px on a 6px dot is
+ * still 3px, and still a circle. Only something larger than 24px across can
+ * actually change shape here.
+ */
+:root[data-theme-slug='skyward'] .rounded-full {
+    border-radius: var(--radius-panel);
+}

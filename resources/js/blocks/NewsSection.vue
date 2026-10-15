@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import NewsTag from '../components/ui/NewsTag.vue'
 import StateBlock from '../components/ui/StateBlock.vue'
 import { useNewsData } from './data'
 import type { NewsProps } from './contracts'
@@ -10,8 +11,10 @@ const { t } = useTranslation()
 /**
  * Recent news, from the legacy CMS table.
  *
- * Note what is absent: no category and no thumbnail. The legacy `cp_cmsnews`
- * schema has neither, so showing them would mean inventing them.
+ * Note what is absent: no thumbnail. The legacy `cp_cmsnews` schema has none,
+ * so showing one would mean inventing it. The tag is the exception, and only
+ * because the panel keeps it in a table of its own -- an article nobody
+ * tagged simply has no pill, rather than being badged with a guess.
  *
  * Only the excerpt is rendered, as text. The stored body is rich text from the
  * old editor, and interpolating it unescaped into a listing is how a news CMS
@@ -58,6 +61,11 @@ const headingText = computed(() => props.heading ?? t('news.heading'))
                 class="panel p-4"
                 :class="props.featureFirst && index === 0 ? 'md:col-span-3' : ''"
             >
+                <!-- Guarded here as well as inside, so an untagged article
+                     does not mount a component whose only job is to render
+                     nothing and then be handed a class with nowhere to go. -->
+                <NewsTag v-if="article.tag" :tag="article.tag" class="mb-1.5" />
+
                 <h3 class="font-semibold">{{ article.title }}</h3>
 
                 <p class="mt-1 text-[0.75rem] text-[var(--text-muted)]">

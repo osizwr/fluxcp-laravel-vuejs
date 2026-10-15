@@ -57,7 +57,17 @@ return [
 
     'logo' => env('GAME_LOGO'),
 
-    'favicon' => env('GAME_FAVICON'),
+    /*
+     * Defaulted rather than left empty, because the panel ships one.
+     *
+     * A path under /images rather than the /favicon.ico beside it: that name
+     * is special-cased by most web server configurations -- Herd's answers it
+     * 404 whatever is there -- and an icon that depends on winning that fight
+     * is an icon that works on some deployments and not others. The .ico is
+     * still in public/ for the request a browser makes on its own, without
+     * being told to.
+     */
+    'favicon' => env('GAME_FAVICON', '/images/favicon.png'),
 
     /*
     |--------------------------------------------------------------------------
@@ -409,28 +419,37 @@ return [
          * A starting point rather than a measurement: these are the figures a
          * stock client is usually quoted at, and a server running a modified
          * one should correct them. Remove a group and its tab goes with it.
+         *
+         * A tab is one platform, and 'columns' is how it compares sets of
+         * figures for that platform side by side -- minimum against
+         * recommended -- with 'values' giving a row one figure per column, in
+         * the same order. A platform quoted one set of figures leaves
+         * 'columns' out and writes 'value' instead; that is the Android and
+         * iOS shape below.
          */
         'requirements' => [
             [
-                'heading' => 'Minimum',
+                'heading' => 'Windows',
+                'columns' => ['Minimum', 'Recommended'],
                 'rows' => [
-                    ['label' => 'Operating system', 'value' => 'Windows 7 or newer, 64-bit'],
-                    ['label' => 'Processor', 'value' => 'Dual core, 2 GHz'],
-                    ['label' => 'Memory', 'value' => '2 GB RAM'],
-                    ['label' => 'Graphics', 'value' => 'DirectX 9.0c compatible'],
-                    ['label' => 'Storage', 'value' => '6 GB available'],
-                    ['label' => 'Network', 'value' => 'Broadband connection'],
-                ],
-            ],
-            [
-                'heading' => 'Recommended',
-                'rows' => [
-                    ['label' => 'Operating system', 'value' => 'Windows 10 or 11, 64-bit'],
-                    ['label' => 'Processor', 'value' => 'Quad core, 3 GHz'],
-                    ['label' => 'Memory', 'value' => '8 GB RAM'],
-                    ['label' => 'Graphics', 'value' => 'Dedicated card, DirectX 11'],
-                    ['label' => 'Storage', 'value' => '10 GB available, solid state'],
-                    ['label' => 'Network', 'value' => 'Broadband connection'],
+                    [
+                        'label' => 'Operating system',
+                        'values' => ['Windows 7 or newer, 64-bit', 'Windows 10 or 11, 64-bit'],
+                    ],
+                    ['label' => 'Processor', 'values' => ['Dual core, 2 GHz', 'Quad core, 3 GHz']],
+                    ['label' => 'Memory', 'values' => ['2 GB RAM', '8 GB RAM']],
+                    [
+                        'label' => 'Graphics',
+                        'values' => ['DirectX 9.0c compatible', 'Dedicated card, DirectX 11'],
+                    ],
+                    [
+                        'label' => 'Storage',
+                        'values' => ['6 GB available', '10 GB available, solid state'],
+                    ],
+                    [
+                        'label' => 'Network',
+                        'values' => ['Broadband connection', 'Broadband connection'],
+                    ],
                 ],
             ],
             [

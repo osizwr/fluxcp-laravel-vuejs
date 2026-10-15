@@ -215,7 +215,7 @@ const dialog = ref<HTMLDialogElement | null>(null)
 /* Drives the closing half of the animation; the rules are in app.css. */
 const closing = ref(false)
 
-/** How long `download-modal-out` runs. The two have to agree. */
+/** How long `app-modal-out` runs. The two have to agree. */
 const EXIT_MS = 160
 
 let exitTimer: ReturnType<typeof setTimeout> | null = null
@@ -328,7 +328,7 @@ onBeforeUnmount(() => {
         aria-labelledby="block-download-clients"
     >
         <div :class="props.framed ? 'panel p-5 sm:p-8' : ''">
-            <h2 id="block-download-clients" class="text-lg font-semibold">{{ headingText }}</h2>
+            <h2 id="block-download-clients" class="text-lg">{{ headingText }}</h2>
 
             <p v-if="props.description" class="mt-0.5 text-sm text-[var(--text-secondary)]">
                 {{ props.description }}

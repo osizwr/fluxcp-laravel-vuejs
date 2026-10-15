@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Theme;
 
 use App\Http\Middleware\SetLocale;
+use App\Services\Settings\PanelSettings;
+use App\Services\Vote\VoteService;
 use App\Support\Tokens\OneTimeCode;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 
@@ -37,6 +39,18 @@ final readonly class ClientBootstrap
     public function __construct(
         private ConfigRepository $config,
         private ThemeService $themes,
+        /*
+         * What the dashboard has overridden. Read through rather than merged
+         * into the config, so an operator's file stays the default for every
+         * key nobody has changed.
+         */
+        private PanelSettings $settings,
+        /*
+         * Asked whether voting is on, rather than the flag being read
+         * directly: a site missing its secret is a site that cannot pay
+         * anybody, and only the service knows that.
+         */
+        private VoteService $votes,
     ) {}
 
     /**
@@ -302,6 +316,17 @@ final readonly class ClientBootstrap
 
         return [
             'registrationEnabled' => $this->config->get('panel.registration.enabled') === true,
+            /*
+             * Whether the account menu offers Vote for points. Published with
+             * the other account-shaped switches rather than fetched, because
+             * the menu is drawn on the first paint and a menu item that
+             * appears a moment later reads as a glitch.
+             *
+             * Through the service rather than straight off the config flag:
+             * voting is only on when a site is actually configured, and the
+             * service is where that is decided. See config/vote.php.
+             */
+            'voteEnabled' => $this->votes->isEnabled(),
             'passwordResetEnabled' => $this->config->get('panel.password_reset.enabled') === true,
             'emailChangeRequiresConfirmation' => $this->config->get('panel.email_change.require_confirmation') === true,
             'registrationRequiresConfirmation' => $this->config->get('panel.registration.require_email_confirmation') === true,
@@ -482,12 +507,19 @@ final readonly class ClientBootstrap
      * to see the card they are about to fill rather than a blank page; the
      * client draws it as not yet available.
      *
+     * Public because the dashboard's download editor needs exactly this: the
+     * values in force, normalised, with the overrides already applied. Having
+     * it build its own view of the same data is how an editor comes to show
+     * something subtly different from the page it edits.
+     *
      * @return array<string, mixed>
      */
-    private function downloads(): array
+    public function downloads(): array
     {
         return [
-            'notice' => $this->trimmedOrNull($this->config->get('game.downloads.notice')),
+            'notice' => $this->trimmedOrNull(
+                $this->settings->resolve('downloads.notice', 'game.downloads.notice'),
+            ),
             'clients' => $this->downloadClients(),
             'requirements' => $this->downloadRequirements(),
             'steps' => $this->downloadSteps(),
@@ -508,7 +540,9 @@ final readonly class ClientBootstrap
         $platforms = ['windows', 'macos', 'linux', 'android', 'ios'];
         $clients = [];
 
-        foreach ((array) $this->config->get('game.downloads.clients', []) as $client) {
+        $configured = $this->settings->resolve('downloads.clients', 'game.downloads.clients', []);
+
+        foreach ((array) $configured as $client) {
             if (! is_array($client)) {
                 continue;
             }
@@ -569,8 +603,23 @@ final readonly class ClientBootstrap
     /**
      * The specification tables, one per tab.
      *
+     * A group is a platform, and its `columns` are the sets of figures that
+     * platform is quoted -- minimum against recommended, usually -- so a row
+     * carries one value per column rather than a single value. A group that
+     * names no columns is one set of figures, which is the shape an operator
+     * writes as a plain `value`; it is widened to a single column here so the
+     * client has one shape to draw instead of two.
+     *
+     * The columns are the authority on how wide a group is: a row that gave
+     * fewer values is padded with nulls and one that gave more is cut, which
+     * keeps every row in a group the same width as its header. A null cell is
+     * drawn as a gap, because "the operator did not say" is a different fact
+     * from a figure and inventing one would be this panel making a claim
+     * about somebody else's server.
+     *
      * A group with a heading and no rows is dropped rather than rendered as an
-     * empty tab, which is a tab somebody clicks once and learns nothing from.
+     * empty tab, which is a tab somebody clicks once and learns nothing from,
+     * and so is a row that ended up with nothing in it at all.
      *
      * @return list<array<string, mixed>>
      */
@@ -584,7 +633,17 @@ final readonly class ClientBootstrap
             }
 
             $heading = $this->trimmedOrNull($group['heading'] ?? null);
+            $columns = [];
 
+            foreach ((array) ($group['columns'] ?? []) as $column) {
+                $column = $this->trimmedOrNull($column);
+
+                if ($column !== null) {
+                    $columns[] = $column;
+                }
+            }
+
+            $width = max(1, count($columns));
             $rows = [];
 
             foreach ((array) ($group['rows'] ?? []) as $row) {
@@ -593,20 +652,35 @@ final readonly class ClientBootstrap
                 }
 
                 $label = $this->trimmedOrNull($row['label'] ?? null);
-                $value = $this->trimmedOrNull($row['value'] ?? null);
 
-                if ($label === null || $value === null) {
+                if ($label === null) {
                     continue;
                 }
 
-                $rows[] = ['label' => $label, 'value' => $value];
+                /* `value` is the one-column spelling of `values`, and a row
+                 * that gave both is taken at the longer of the two. */
+                $given = array_key_exists('values', $row)
+                    ? (array) $row['values']
+                    : [$row['value'] ?? null];
+
+                $values = [];
+
+                for ($index = 0; $index < $width; $index++) {
+                    $values[] = $this->trimmedOrNull($given[$index] ?? null);
+                }
+
+                if (array_filter($values, static fn (?string $value): bool => $value !== null) === []) {
+                    continue;
+                }
+
+                $rows[] = ['label' => $label, 'values' => $values];
             }
 
             if ($heading === null || $rows === []) {
                 continue;
             }
 
-            $groups[] = ['heading' => $heading, 'rows' => $rows];
+            $groups[] = ['heading' => $heading, 'columns' => $columns, 'rows' => $rows];
         }
 
         return $groups;

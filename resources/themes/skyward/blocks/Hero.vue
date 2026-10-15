@@ -454,7 +454,7 @@ onBeforeUnmount(() => motionQuery?.removeEventListener('change', onMotionChange)
 
             <p
                 v-if="props.showStatus && hero.playersOnline !== null"
-                class="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--surface-raised)] px-4 py-1.5 text-sm text-[var(--text-secondary)] shadow-sm"
+                class="mt-6 inline-flex items-center gap-2 rounded-[0.75rem] bg-[var(--surface-raised)] px-4 py-1.5 text-sm text-[var(--text-secondary)] shadow-sm"
             >
                 <span
                     class="size-2 rounded-full"

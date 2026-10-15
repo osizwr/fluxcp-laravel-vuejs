@@ -220,6 +220,96 @@ final class ContentManagementTest extends TestCase
     }
 
     #[Test]
+    public function a_tag_is_kept_beside_the_article_and_given_back_with_it(): void
+    {
+        /*
+         * The tag is the one thing about an article that is not in
+         * `cp_cmsnews`: that table is FluxCP's and is left exactly as it was,
+         * so the word lives on the panel's own connection and is joined back
+         * on the way out. The round trip is what this checks -- write it,
+         * read it from the listing, read it from the editor.
+         */
+        $this->asAdmin();
+
+        $this->postJson('/api/news', [
+            'title' => 'Castle auction', 'body' => 'Bidding opens Friday.', 'tag' => ' Auction ',
+        ])->assertCreated();
+
+        $id = (int) DB::connection($this->loginConnection())->table('cp_cmsnews')->value('id');
+
+        // Trimmed, and stored as typed rather than slugged: the badge draws
+        // the operator's own word.
+        $this->assertDatabaseHas('news_article_tags', ['article_id' => $id, 'tag' => 'Auction']);
+
+        $this->getJson('/api/news')->assertOk()->assertJsonPath('data.0.tag', 'Auction');
+        $this->getJson("/api/news/{$id}/edit")->assertOk()->assertJsonPath('data.tag', 'Auction');
+        $this->getJson('/api/news/manage')->assertOk()->assertJsonPath('data.0.tag', 'Auction');
+    }
+
+    #[Test]
+    public function an_untagged_article_has_no_row_and_clearing_a_tag_removes_one(): void
+    {
+        // Absence is how "no tag" is stored. An empty string in the column
+        // would be a tag that renders as an empty badge.
+        $this->asAdmin();
+
+        $article = NewsArticle::factory()->create();
+
+        $this->putJson("/api/news/{$article->id}", [
+            'title' => 'Still here', 'body' => 'Body.',
+        ])->assertOk();
+
+        $this->assertDatabaseCount('news_article_tags', 0);
+        $this->getJson("/api/news/{$article->id}/edit")->assertJsonPath('data.tag', null);
+
+        $this->putJson("/api/news/{$article->id}", [
+            'title' => 'Still here', 'body' => 'Body.', 'tag' => 'Event',
+        ])->assertOk();
+
+        $this->assertDatabaseCount('news_article_tags', 1);
+
+        $this->putJson("/api/news/{$article->id}", [
+            'title' => 'Still here', 'body' => 'Body.', 'tag' => '   ',
+        ])->assertOk();
+
+        $this->assertDatabaseCount('news_article_tags', 0);
+    }
+
+    #[Test]
+    public function a_tag_longer_than_the_badge_is_refused(): void
+    {
+        // It is drawn as a badge beside a headline. A paragraph in it is a
+        // broken strip rather than a tag.
+        $this->asAdmin();
+
+        $this->postJson('/api/news', [
+            'title' => 'x', 'body' => 'y', 'tag' => str_repeat('a', 33),
+        ])->assertStatus(422)->assertJsonValidationErrors('tag');
+    }
+
+    #[Test]
+    public function deleting_an_article_takes_its_tag_with_it(): void
+    {
+        /*
+         * No foreign key can do this: the article is in rAthena's database on
+         * another connection. A tag left behind would reappear beside
+         * whichever article is next given that id, which is what happens when
+         * a restart resets the auto-increment counter.
+         */
+        $this->asAdmin();
+
+        $article = NewsArticle::factory()->create();
+
+        $this->putJson("/api/news/{$article->id}", [
+            'title' => 'Going', 'body' => 'Body.', 'tag' => 'News',
+        ])->assertOk();
+
+        $this->deleteJson("/api/news/{$article->id}")->assertOk();
+
+        $this->assertDatabaseCount('news_article_tags', 0);
+    }
+
+    #[Test]
     public function the_management_listing_paginates_and_sorts(): void
     {
         $this->asAdmin();

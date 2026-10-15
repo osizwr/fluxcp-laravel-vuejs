@@ -76,6 +76,7 @@ const en: Messages = {
         logIn: 'Log in',
         playNow: 'Create Account',
         myProfile: 'My Profile',
+        vote: 'Vote for Points',
         language: 'Language',
         nightMode: 'Night mode',
     },
@@ -355,7 +356,7 @@ const en: Messages = {
         // description: 'The client, what it needs to run, and how to install it.', no need
         clientsHeading:
             'Download and use our latest game client for a smoother, more stable gaming experience to avoid errors and crashes',
-        requirementsHeading: 'System requirements',
+        requirementsHeading: 'System Requirements',
         requirementsBody: 'Worth checking before you start the download.',
         stepsHeading: 'Installation',
         stepsBody: 'What to do once the file has arrived.',
@@ -417,10 +418,6 @@ const en: Messages = {
         badge: 'News',
         read: 'Read',
         readMore: 'Read more',
-        previous: 'Previous headline',
-        next: 'Next headline',
-        pause: 'Pause news',
-        play: 'Play news',
         dismiss: 'Dismiss announcement',
     },
 
@@ -432,7 +429,7 @@ const en: Messages = {
      */
     wiki: {
         title: 'Wiki',
-        intro: 'Getting started, how this server works, and the answers to the questions that come up most.',
+        intro: 'Your complete guide to {game} — from starting your adventure to exploring custom features, unique items, NPCs, and exciting in-game events.',
         pageCount: { one: '{count} page', other: '{count} pages' },
         searchLabel: 'Search the wiki',
         searchPlaceholder: 'Search the wiki',
@@ -501,10 +498,18 @@ const en: Messages = {
 
     notFound: {
         title: 'Page not found',
-        back: 'Back to status',
+        body: 'The page you were looking for does not exist.',
+        countdown: {
+            one: 'Taking you back in {count} second.',
+            other: 'Taking you back in {count} seconds.',
+        },
+        stay: 'Stay on this page',
+        stayed: 'Staying on this page.',
+        back: 'Go Back',
     },
 
     routes: {
+        vote: 'Vote for points',
         home: 'Server status',
         signIn: 'Sign in',
         register: 'Create an account',
@@ -528,10 +533,266 @@ const en: Messages = {
         monsters: 'Monsters',
         monster: 'Monster',
         notFound: 'Page not found',
+        adminSignIn: 'Dashboard sign-in',
+        admin: 'Dashboard',
+        adminDownloads: 'Downloads',
+        adminNews: 'News & updates',
+        adminWiki: 'Wiki',
+        adminWikiSections: 'Wiki sections',
     },
 
     api: {
         unexpected: 'The server returned an unexpected response.',
+    },
+
+    /*
+     * The dashboard.
+     *
+     * Only English is written out. A missing key falls back to English rather
+     * than rendering blank, and this is a staff-only screen, so an untranslated
+     * dashboard is a smaller problem than a half-translated one -- these can be
+     * added to a locale as somebody who runs the panel in that language gets to
+     * them.
+     */
+    vote: {
+        title: 'Vote for points',
+        summary:
+            'Vote for the server on a listing site and the credits arrive here. Each site can be voted on once per cooldown.',
+        balance: 'Credits',
+        reward: '+{credits}',
+        ready: 'Ready now',
+        vote: 'Vote',
+        waiting: 'Waiting',
+        againInHours: 'Again in about {hours}h',
+        againInMinutes: 'Again in {minutes} min',
+        allWaiting: 'Every site has been voted on. Come back when a cooldown is up.',
+        pending: 'The site will confirm your vote in a moment, and the credits land on their own.',
+        loadFailed: 'The voting sites could not be loaded.',
+        noSites: 'Voting is not set up yet. Check back soon.',
+        noSitesOperator: 'No listing site is configured. Add one in config/vote.php.',
+    },
+    admin: {
+        title: 'Dashboard',
+        signInTitle: 'Dashboard sign-in',
+        signInSubtitle: 'For administrator accounts.',
+        signInNote: 'Lost your password? It can only be reset from the database.',
+        welcome: 'Signed in as {name}',
+        welcomeBody: 'Everything here changes what visitors see on the public site.',
+        viewSite: 'View site',
+        save: 'Save changes',
+        edit: 'Edit',
+        remove: 'Remove',
+
+        nav: {
+            label: 'Dashboard sections',
+            overview: 'Overview',
+            downloads: 'Downloads',
+            news: 'News',
+            wiki: 'Wiki',
+            wikiSections: 'Sections',
+            wikiPages: 'Pages',
+            soon: 'Soon',
+        },
+
+        downloads: {
+            title: 'Downloads',
+            summary: 'The packages and mirror links on the download page.',
+            loadFailed: 'The download settings could not be loaded.',
+            invalid: 'Some of this could not be saved. Check the fields marked below.',
+            saved: 'Saved. The download page is showing this now.',
+            sourceConfig: 'Showing the values from config/game.php. Saving will override them.',
+            sourceOverride: 'Showing values saved from this dashboard.',
+            reset: 'Reset to config file',
+            resetConfirm:
+                'Discard every change made here and go back to config/game.php? This cannot be undone.',
+            notice: 'Notice',
+            noticeHelp: 'An optional line above the packages. Leave empty for none.',
+            untitled: 'Untitled package',
+            name: 'Package name',
+            platform: 'Platform',
+            platformNone: 'No platform',
+            version: 'Version',
+            size: 'Download size',
+            updated: 'Last updated',
+            badge: 'Badge',
+            description: 'Description',
+            mirrors: 'Mirrors',
+            mirrorsHelp:
+                'Where the file can be downloaded from. A package with none is shown as not yet available.',
+            mirrorLabel: 'Mirror name',
+            mirrorUrl: 'Mirror link',
+            addMirror: 'Add a mirror',
+            removeMirror: 'Remove this mirror',
+            notes: 'Notes',
+            notesHelp: 'Caveats shown with this package only.',
+            note: 'Note',
+            addNote: 'Add a note',
+            addPackage: 'Add a package',
+            removePackage: 'Remove package',
+            moveUp: 'Move this package up',
+            moveDown: 'Move this package down',
+        },
+
+        news: {
+            title: 'News & updates',
+            summary: 'Write and edit the announcements on the front page.',
+            loadFailed: 'The news articles could not be loaded.',
+            invalid: 'This could not be saved. Check the fields marked below.',
+            empty: 'No articles yet. Write the first one.',
+            write: 'Write an article',
+            writeTitle: 'Write an article',
+            editTitle: 'Edit article',
+            articleTitle: 'Headline',
+            body: 'Body',
+            bodyIsMarkdown: 'Written in Markdown. Raw HTML is removed before anyone reads it.',
+            link: 'Read-more link',
+            linkHelp: 'Optional. Where the full story lives, if it is elsewhere.',
+            author: 'Byline',
+            authorHelp: 'Leave empty to use your own account name.',
+            tag: 'Tag',
+            tagHelp: 'Optional. A short word shown as a badge beside the headline.',
+            deleteConfirm: 'Delete "{title}"? This cannot be undone.',
+            deleted: 'The article has been deleted.',
+        },
+
+        wiki: {
+            title: 'Wiki',
+            summary: 'Edit the pages of the server guide.',
+            loadFailed: 'The wiki pages could not be loaded.',
+            loadFailedPage: 'That page could not be loaded.',
+            invalid: 'This could not be saved. Check the fields marked below.',
+            write: 'Write a page',
+            writeTitle: 'Write a wiki page',
+            editTitle: 'Edit wiki page',
+            overlayNote:
+                'Pages live as Markdown files in version control. Editing one here lays your version over the file; the file is never changed, and reverting puts it back.',
+            firstEditNote:
+                'This page is currently a file in version control. Saving it here will stop it tracking that file, and a deploy will no longer update it.',
+            section: 'Section',
+            sectionHelp:
+                'The first part of the address. Sections are added on the Sections screen.',
+            sectionChoose: 'Choose a section',
+            address: 'Page address',
+            addressHelp: 'The second part. Lower-case letters, numbers and hyphens.',
+            addressFixed: 'Fixed once created, because links point at it.',
+            pageTitle: 'Title',
+            pageSummary: 'Summary',
+            order: 'Order',
+            body: 'Body',
+            bodyHelp:
+                'Markdown. Type / for a block, and paste, drop or pick an image to add one. Raw HTML is removed before anyone reads it.',
+            editor: {
+                write: 'Write',
+                preview: 'Preview',
+                previewEmpty: 'Nothing to preview yet.',
+                previewFailed: 'The preview could not be rendered.',
+                uploading: 'Uploading…',
+                uploadFailed: 'That image could not be uploaded.',
+                dropHere: 'Drop the image to add it',
+                insert: 'Insert a block',
+                blocks: {
+                    heading: 'Heading',
+                    subheading: 'Subheading',
+                    bullets: 'Bulleted list',
+                    numbers: 'Numbered list',
+                    quote: 'Quote',
+                    code: 'Code',
+                    table: 'Table',
+                    divider: 'Divider',
+                    link: 'Link',
+                    image: 'Image',
+                    bold: 'Bold',
+                    italic: 'Italic',
+                },
+            },
+            revert: 'Revert',
+            revertConfirm:
+                'Discard what was written here and go back to the file on disk? This cannot be undone.',
+            reverted: 'The page has been reverted.',
+            removeConfirm: 'Remove "{title}" from the wiki?',
+            removed: 'The page has been removed.',
+            removedHeading: 'Removed pages',
+            removedHelp: 'Hidden from readers. Restoring puts them back.',
+            restore: 'Restore',
+            source: {
+                file: 'In version control',
+                database: 'Written here',
+                both: 'Edited here',
+            },
+            pages: {
+                title: 'Wiki pages',
+                summary: 'Write and edit the pages of the server guide.',
+                filtered: 'Showing one section, /{section}.',
+                showAll: 'Show every section',
+                none: 'The wiki has no pages yet.',
+                noneInSection: 'That section has no pages yet.',
+            },
+
+            sections: {
+                title: 'Wiki sections',
+                summary:
+                    'What each part of the guide is called, and the order the parts are read in.',
+                add: 'Add a section',
+                addTitle: 'Add a wiki section',
+                editTitle: 'Edit wiki section',
+                loadFailed: 'The wiki sections could not be loaded.',
+                loadFailedOne: 'That section could not be loaded.',
+                overlayNote:
+                    'A section is a folder of Markdown in version control, named by the _category.md inside it. Naming one here lays your version over that file; the file is never changed, and reverting puts it back.',
+                firstEditNote:
+                    'This section is currently named by a file in version control. Saving it here will stop it tracking that file, and a deploy will no longer update it.',
+                emptyNote:
+                    'Nothing is in this section yet, so readers cannot see it. It appears on the wiki once it has a page.',
+                empty: 'The wiki has no sections yet.',
+                address: 'Section address',
+                addressHelp:
+                    'The first part of every page address in it. Lower-case letters, numbers and hyphens.',
+                addressFixed:
+                    'Fixed once created, because every page in it is addressed through it.',
+                description: 'Description',
+                descriptionHelp: 'The line under the name, on the wiki front page.',
+                icon: 'Icon',
+                iconDefault: 'No icon (a book)',
+                image: 'Image',
+                imageHelp:
+                    'The picture on this section’s tile on the wiki. Exactly {size} by {size} pixels, in any format — it is saved as WebP, which is a fraction of the size.',
+                imageNone: 'No image',
+                imageAdd: 'Upload an image',
+                imageReplace: 'Replace',
+                imageWrongSize:
+                    'That image is {width} by {height}. It has to be exactly {size} by {size}.',
+                unpublished: 'No pages yet',
+                pageCount: {
+                    one: '{count} page',
+                    other: '{count} pages',
+                },
+                revertConfirm:
+                    'Discard what was written here about "{title}" and go back to the file on disk? The pages in it are not affected.',
+                forgetConfirm:
+                    'Forget the name given to "{title}"? The pages in it stay where they are, and the section is titled from its address again.',
+                reverted: 'The section has been reverted.',
+                forgotten: 'The section is no longer named here.',
+                source: {
+                    file: 'In version control',
+                    database: 'Written here',
+                    both: 'Edited here',
+                },
+                icons: {
+                    book: 'Book',
+                    play: 'Play button',
+                    globe: 'Globe',
+                    help: 'Question mark',
+                    sword: 'Sword',
+                    shield: 'Shield',
+                    coins: 'Coins',
+                    key: 'Key',
+                    calendar: 'Calendar',
+                    flame: 'Flame',
+                    map: 'Map',
+                    users: 'People',
+                },
+            },
+        },
     },
 }
 

@@ -10,11 +10,12 @@ use Tests\TestCase;
 /**
  * The wiki: a directory of Markdown served as a guide.
  *
- * Most of these work against a directory built in setUp rather than against
- * the pages that ship with the panel, because those are a starting point an
- * operator is expected to delete. The one test that does read them asserts
- * only that they parse -- it is there so a broken front-matter block in
- * shipped content fails here rather than on somebody's front page.
+ * These work against a directory built in setUp rather than against the
+ * content that ships with the panel. That content is no longer on disk:
+ * resources/wiki holds nine `_category.md` files and nothing else, and the
+ * page behind each section is a row written by WikiContentSeeder. The guard
+ * that it all parses and renders lives with it, in
+ * Tests\Feature\Wiki\WikiContentSeederTest.
  */
 final class WikiTest extends TestCase
 {
@@ -310,34 +311,6 @@ final class WikiTest extends TestCase
         $this->getJson('/api/wiki')
             ->assertOk()
             ->assertJsonPath('data.totals.pages', 0);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | The pages that ship with the panel
-    |--------------------------------------------------------------------------
-    */
-
-    #[Test]
-    public function the_starter_pages_parse_and_render(): void
-    {
-        config(['wiki.path' => 'resources/wiki']);
-
-        $index = $this->getJson('/api/wiki')->assertOk()->json('data');
-
-        $this->assertGreaterThan(0, $index['totals']['pages']);
-
-        foreach ($index['categories'] as $category) {
-            $this->assertNotSame('', trim((string) $category['title']));
-
-            foreach ($category['pages'] as $page) {
-                $article = $this->getJson('/api/wiki/'.$page['path'])
-                    ->assertOk()
-                    ->json('data');
-
-                $this->assertNotSame('', trim((string) $article['html']), $page['path']);
-            }
-        }
     }
 
     /*

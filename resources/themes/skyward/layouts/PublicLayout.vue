@@ -266,7 +266,7 @@ onBeforeUnmount(() => {
 
         <a
             href="#main"
-            class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:rounded focus:bg-[var(--surface-raised)] focus:px-3 focus:py-2 focus:text-sm"
+            class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:rounded-[0.75rem] focus:bg-[var(--surface-raised)] focus:px-3 focus:py-2 focus:text-sm"
         >
             {{ t('common.skipToContent') }}
         </a>

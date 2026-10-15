@@ -128,6 +128,103 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Images written into a page from the dashboard
+    |--------------------------------------------------------------------------
+    |
+    | The pages themselves are Markdown -- on disk or in `wiki_pages` -- and an
+    | image is a URL inside one. These are the rules for the only images this
+    | panel puts there itself: the ones an operator drops into the editor.
+    |
+    | Stored on the public disk, which means `php artisan storage:link` has to
+    | have been run or the files are written and then served as 404s. Named
+    | from a hash of their own contents, so the same screenshot pasted into
+    | four pages is one file, and so nothing an operator names can decide
+    | where a file lands.
+    |
+    | SVG is deliberately not in the list. It is an image in the way that
+    | matters to a browser and a document in the way that matters to a
+    | sanitiser -- it can carry script -- and the whole content pipeline is
+    | built on not serving operator-authored markup. See ContentRenderer.
+    |
+    */
+
+    'uploads' => [
+        'disk' => env('WIKI_IMAGE_DISK', 'public'),
+        'directory' => env('WIKI_IMAGE_DIRECTORY', 'wiki'),
+
+        // Kilobytes. A screenshot of a game client is a few hundred.
+        'max_kilobytes' => (int) env('WIKI_IMAGE_MAX_KB', 4096),
+
+        /*
+         * Checked against the extension and the detected type, both. The
+         * pairing is what keeps `payload.php.png` from being stored as PHP.
+         */
+        'extensions' => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+
+        /*
+         * A cap on the decoded size as well as the file size. A 10KB PNG can
+         * declare itself 50,000 pixels square and cost gigabytes to open,
+         * which is a denial of service the byte count does not catch.
+         */
+        'max_width' => (int) env('WIKI_IMAGE_MAX_WIDTH', 6000),
+        'max_height' => (int) env('WIKI_IMAGE_MAX_HEIGHT', 6000),
+
+        /*
+        |----------------------------------------------------------------------
+        | A section's own art
+        |----------------------------------------------------------------------
+        |
+        | The picture on a section's tile on /wiki. A different thing from an
+        | image inside a page, with different rules, because it is a different
+        | job: the tiles are a grid of equal squares and the index draws all of
+        | them at once.
+        |
+        | One exact size, and not a maximum. A tile that has to be cropped or
+        | letterboxed to fit is a decision this panel would be making about
+        | somebody's artwork without being able to see it, and the two ways out
+        | of that -- squashing it, or cropping the middle out -- are both worse
+        | than asking for the square that is going to be drawn.
+        |
+        | Anything the server can decode goes in; what comes out is always
+        | WebP. That is the panel making a call it is entitled to make: these
+        | are its own tiles, nine of them on a page that is frequently
+        | somebody's first, and WebP is a third of the PNG at a size nobody can
+        | tell apart.
+        |
+        */
+
+        'section_image' => [
+            'directory' => env('WIKI_SECTION_IMAGE_DIRECTORY', 'wiki/sections'),
+
+            /*
+             * Not settable from the environment, on purpose. The dashboard
+             * checks the same square before it uploads, so that somebody who
+             * exported at the wrong size is told in the browser instead of
+             * after sending eight megabytes -- and a number that could differ
+             * between the two halves would make that check wrong rather than
+             * merely absent. AdminWikiSectionEditPage holds the pair.
+             */
+            'width' => 1080,
+            'height' => 1080,
+
+            // Kilobytes, before conversion. What comes out is far smaller.
+            'max_kilobytes' => (int) env('WIKI_SECTION_IMAGE_MAX_KB', 8192),
+
+            /*
+             * Everything GD here is likely to have been built with, minus
+             * SVG -- which is not on the list for the reason it is not on the
+             * other one: it can carry script.
+             */
+            'extensions' => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'],
+
+            // 82 is the usual sweet spot: visually lossless on artwork, and
+            // roughly half the bytes of 95.
+            'quality' => (int) env('WIKI_SECTION_IMAGE_QUALITY', 82),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Search
     |--------------------------------------------------------------------------
     |
@@ -160,10 +257,10 @@ return [
     */
 
     'popular' => [
-        'getting-started/welcome',
-        'getting-started/creating-an-account',
-        'getting-started/downloading-the-client',
-        'help/frequently-asked-questions',
+        'getting-started/overview',
+        'game-access/overview',
+        'server-guide/overview',
+        'events/overview',
     ],
 
     /*

@@ -2,6 +2,7 @@
 import { RouterLink } from 'vue-router'
 import AppButton from '../components/ui/AppButton.vue'
 import StatusPill from '../components/ui/StatusPill.vue'
+import { useAccounts } from '../composables/useAccounts'
 import { useAppearance } from '../composables/useAppearance'
 import { useGame } from '../composables/useGame'
 import { useShell } from '../composables/useShell'
@@ -23,6 +24,7 @@ const servers = useServerStore()
 const { game, title } = useGame()
 const { appearance, toggleAppearance } = useAppearance()
 const { links, isActive, menuOpen, signingOut, signOut } = useShell()
+const { voteEnabled } = useAccounts()
 </script>
 
 <template>
@@ -89,6 +91,16 @@ const { links, isActive, menuOpen, signingOut, signOut } = useShell()
                         <span class="text-sm text-[var(--text-secondary)]">
                             {{ auth.account?.username }}
                         </span>
+                        <!--
+                            This shell has no account dropdown -- the profile
+                            link lives in the navigation itself -- so voting
+                            goes where the account's own controls are, beside
+                            sign out. Drawn only when an operator has a listing
+                            site that can pay; the page is a 404 otherwise.
+                        -->
+                        <AppButton v-if="voteEnabled" variant="ghost" size="sm" to="/vote">
+                            {{ t('nav.vote') }}
+                        </AppButton>
                         <AppButton size="sm" :loading="signingOut" @click="signOut">
                             {{ t('nav.signOut') }}
                         </AppButton>
@@ -139,6 +151,16 @@ const { links, isActive, menuOpen, signingOut, signOut } = useShell()
             </RouterLink>
 
             <div class="mt-2 border-t border-[var(--border-subtle)] pt-2">
+                <AppButton
+                    v-if="auth.isAuthenticated && voteEnabled"
+                    variant="secondary"
+                    block
+                    class="mb-2"
+                    to="/vote"
+                    @click="menuOpen = false"
+                >
+                    {{ t('nav.vote') }}
+                </AppButton>
                 <AppButton v-if="auth.isAuthenticated" block :loading="signingOut" @click="signOut">
                     {{ t('nav.signOut') }}
                 </AppButton>

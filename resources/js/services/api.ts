@@ -58,6 +58,10 @@ function readCookie(name: string): string | null {
 
 type Options = {
     method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+    /**
+     * Sent as JSON, unless it is a FormData -- which is sent as it is, for
+     * uploads. See the Content-Type note in request().
+     */
     body?: unknown
     query?: Record<string, string | number | boolean | undefined | null>
     signal?: AbortSignal
@@ -83,7 +87,15 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
         'X-Requested-With': 'XMLHttpRequest',
     }
 
-    if (body !== undefined) {
+    const isUpload = body instanceof FormData
+
+    /*
+     * Set for JSON and deliberately not set for an upload: a multipart body
+     * carries a generated boundary in its Content-Type, which only the browser
+     * knows, and naming the type here would strip it and leave the server
+     * parsing an empty form.
+     */
+    if (body !== undefined && !isUpload) {
         headers['Content-Type'] = 'application/json'
     }
 
@@ -100,7 +112,8 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
         // Without this the session cookie is not sent and every request is a
         // guest request.
         credentials: 'same-origin',
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body:
+            body === undefined || isUpload ? (body as FormData | undefined) : JSON.stringify(body),
         signal,
     })
 

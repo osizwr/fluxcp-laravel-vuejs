@@ -26,6 +26,20 @@ export const useAuthStore = defineStore('auth', () => {
     const isAuthenticated = computed(() => account.value !== null)
     const isStaff = computed(() => account.value?.group.is_staff ?? false)
 
+    /**
+     * Whether the viewer may open the dashboard.
+     *
+     * 99 is AccountLevel::Administrator, which config/permissions.php reaches
+     * from rAthena's group 99 by default. Compared against the *level* the
+     * server resolved rather than against `group.id`, so an operator who has
+     * given another group administrator rights in that file gets a dashboard
+     * link that agrees with the API instead of one that 403s.
+     *
+     * Like everything else here, this only decides what is drawn. The
+     * endpoints behind the dashboard each check again.
+     */
+    const isAdministrator = computed(() => (account.value?.group.level ?? -1) >= 99)
+
     function can(ability: string): boolean {
         return permissions.value.includes(ability)
     }
@@ -44,6 +58,20 @@ export const useAuthStore = defineStore('auth', () => {
         set(await api.post('auth/login', credentials))
         // The sign-in response does not carry permissions, so they are fetched
         // immediately afterwards.
+        await refresh()
+    }
+
+    /**
+     * Sign in at /admin/login.
+     *
+     * A different endpoint rather than a flag on the usual one: it refuses a
+     * non-administrator *before* creating a session, so posting this form with
+     * a player's credentials does not quietly sign that player in. Every
+     * failure comes back as the same message, so there is nothing here to tell
+     * one apart from another.
+     */
+    async function adminLogin(credentials: LoginCredentials): Promise<void> {
+        set(await api.post('admin/session', credentials))
         await refresh()
     }
 
@@ -84,8 +112,10 @@ export const useAuthStore = defineStore('auth', () => {
         resolved,
         isAuthenticated,
         isStaff,
+        isAdministrator,
         can,
         login,
+        adminLogin,
         logout,
         refresh,
         clear,

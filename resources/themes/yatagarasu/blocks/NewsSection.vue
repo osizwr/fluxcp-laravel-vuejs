@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NewsTag from '@/components/ui/NewsTag.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import { useNewsData } from '@/blocks/data'
 import type { NewsProps } from '@/blocks/contracts'
@@ -71,6 +72,8 @@ function dateline(iso: string | null): string {
 
         <div v-else class="yata-dispatches">
             <article v-for="article in news.articles" :key="article.id" class="yata-dispatch">
+                <NewsTag v-if="article.tag" :tag="article.tag" class="mb-2 self-start" />
+
                 <time v-if="dateline(article.published_at)" class="yata-dispatch__date">
                     {{ dateline(article.published_at) }}
                 </time>

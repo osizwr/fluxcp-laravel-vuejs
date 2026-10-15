@@ -30,6 +30,15 @@ final class NewsArticleResource extends JsonResource
             'title' => $this->title,
             'excerpt' => $this->excerpt(),
             'author' => $this->author,
+
+            /*
+             * The word beside the headline, as the editor typed it, or null
+             * for an article nobody tagged. Sent raw rather than as a slug:
+             * what is drawn is the operator's own word, and the client
+             * recognises the common ones to colour them rather than to
+             * rename them.
+             */
+            'tag' => $this->tagName(),
             'link' => $this->link !== '' ? $this->link : null,
             'published_at' => $this->created?->toIso8601String(),
             'updated_at' => $this->modified?->toIso8601String(),

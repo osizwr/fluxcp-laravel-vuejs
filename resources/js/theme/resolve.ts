@@ -149,6 +149,8 @@ const coreLayouts: Record<string, ModuleLoader> = {
     AppLayout: () => import('../layouts/AppLayout.vue'),
     PublicLayout: () => import('../layouts/PublicLayout.vue'),
     AuthLayout: () => import('../layouts/AuthLayout.vue'),
+    AdminLayout: () => import('../layouts/AdminLayout.vue'),
+    BareLayout: () => import('../layouts/BareLayout.vue'),
 }
 
 /**
@@ -161,6 +163,17 @@ const roleDefaults: Record<string, string> = {
     public: 'PublicLayout',
     app: 'AppLayout',
     auth: 'AuthLayout',
+    /*
+     * The dashboard. A theme may override the component as it may any other,
+     * but it is a role of its own rather than a variant of `app` because the
+     * two carry different navigation: one is for players, this one is not.
+     */
+    admin: 'AdminLayout',
+    /*
+     * No shell. For pages the surrounding furniture actively gets in the way
+     * of -- the error pages, which are full-bleed artwork.
+     */
+    bare: 'BareLayout',
 }
 
 /**

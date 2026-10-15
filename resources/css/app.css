@@ -89,6 +89,32 @@
     --status-warn-bg: var(--color-warn-soft);
 
     /*
+     * The tag beside a headline -- News, Update, Auction -- as a set of
+     * paired background and ink tokens.
+     *
+     * Their own palette rather than the status colours, because they are not
+     * statuses: nothing is up or down about an auction, and borrowing the
+     * "down" red for a maintenance post would put the same colour on a post
+     * about maintenance as on a server that is actually off. Only the
+     * component that draws a tag may use these.
+     *
+     * The ink is dark enough on its own background to clear 4.5:1 at the
+     * small, bold size these are set in; the pairs are not interchangeable.
+     */
+    --tag-neutral-bg: var(--color-shell-100);
+    --tag-neutral-ink: var(--color-shell-700);
+    --tag-green-bg: oklch(0.94 0.055 152);
+    --tag-green-ink: oklch(0.44 0.12 152);
+    --tag-blue-bg: oklch(0.94 0.04 250);
+    --tag-blue-ink: oklch(0.45 0.13 255);
+    --tag-violet-bg: oklch(0.94 0.045 300);
+    --tag-violet-ink: oklch(0.45 0.16 300);
+    --tag-amber-bg: oklch(0.95 0.05 80);
+    --tag-amber-ink: oklch(0.45 0.11 70);
+    --tag-red-bg: oklch(0.94 0.04 25);
+    --tag-red-ink: oklch(0.47 0.17 25);
+
+    /*
      * How much of the top of the viewport the shell is covering.
      *
      * Zero here, because the core layouts put the masthead in the flow and it
@@ -140,6 +166,20 @@
         --status-down-bg: oklch(0.3 0.08 25);
         --status-warn-bg: oklch(0.3 0.06 75);
 
+        /* Tags invert: a dim ground with the hue carried by the ink. */
+        --tag-neutral-bg: var(--color-shell-800);
+        --tag-neutral-ink: var(--color-shell-300);
+        --tag-green-bg: oklch(0.33 0.07 152);
+        --tag-green-ink: oklch(0.85 0.14 152);
+        --tag-blue-bg: oklch(0.32 0.07 255);
+        --tag-blue-ink: oklch(0.84 0.1 255);
+        --tag-violet-bg: oklch(0.33 0.08 300);
+        --tag-violet-ink: oklch(0.85 0.11 300);
+        --tag-amber-bg: oklch(0.33 0.07 75);
+        --tag-amber-ink: oklch(0.87 0.13 80);
+        --tag-red-bg: oklch(0.32 0.09 25);
+        --tag-red-ink: oklch(0.84 0.12 25);
+
         color-scheme: dark;
     }
 }
@@ -157,6 +197,20 @@
     --status-up-bg: oklch(0.28 0.06 150);
     --status-down-bg: oklch(0.3 0.08 25);
     --status-warn-bg: oklch(0.3 0.06 75);
+
+    /* Tags invert: a dim ground with the hue carried by the ink. */
+    --tag-neutral-bg: var(--color-shell-800);
+    --tag-neutral-ink: var(--color-shell-300);
+    --tag-green-bg: oklch(0.33 0.07 152);
+    --tag-green-ink: oklch(0.85 0.14 152);
+    --tag-blue-bg: oklch(0.32 0.07 255);
+    --tag-blue-ink: oklch(0.84 0.1 255);
+    --tag-violet-bg: oklch(0.33 0.08 300);
+    --tag-violet-ink: oklch(0.85 0.11 300);
+    --tag-amber-bg: oklch(0.33 0.07 75);
+    --tag-amber-ink: oklch(0.87 0.13 80);
+    --tag-red-bg: oklch(0.32 0.09 25);
+    --tag-red-ink: oklch(0.84 0.12 25);
 
     color-scheme: dark;
 }
@@ -431,6 +485,187 @@
     }
 
     /*
+     * The dashboard's section list.
+     *
+     * One rule for the link and the not-yet-built placeholder alike, so the
+     * two line up: a pending section that sat at a different height would read
+     * as a different kind of thing rather than as the same thing, later.
+     */
+    .admin-nav-link {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-radius: var(--radius-panel);
+        padding: 0.4rem 0.65rem;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        transition:
+            background-color 140ms ease,
+            color 140ms ease;
+    }
+
+    a.admin-nav-link:hover {
+        background-color: var(--surface-hover);
+        color: var(--text-primary);
+    }
+
+    /*
+     * Exact rather than prefix matching, so Overview at /admin does not stay
+     * lit while you are editing downloads at /admin/downloads.
+     */
+    a.admin-nav-link.router-link-exact-active {
+        background-color: var(--surface-raised);
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    /*
+     * The section a sub-page belongs to. Lighter than the exact-active rule,
+     * so "you are in News" and "you are on the News page" do not look like
+     * the same statement.
+     */
+    a.admin-nav-link--within {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .admin-nav-link--pending {
+        cursor: default;
+        color: var(--text-muted);
+    }
+
+    /*
+     * A section's own screens, nested under it.
+     *
+     * A row beside the parent on a narrow screen, where the whole list is a
+     * row of chips, and a column indented under it once the list becomes a
+     * sidebar -- the same shape the list itself changes into, so the submenu
+     * never reads as a different kind of thing from the list it is in.
+     */
+    .admin-nav-sublist {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.125rem;
+    }
+
+    .admin-nav-link--child {
+        font-size: 0.8125rem;
+    }
+
+    @media (min-width: 48rem) {
+        .admin-nav-sublist {
+            flex-direction: column;
+            margin-top: 0.125rem;
+            /*
+             * Indented by a rule rather than by padding, so the child items
+             * line up under each other and the line says where they belong
+             * even before anything is highlighted.
+             */
+            margin-left: 0.65rem;
+            border-left: 1px solid var(--border-subtle);
+            padding-left: 0.35rem;
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The Markdown editor
+    |--------------------------------------------------------------------------
+    |
+    | The toolbar, the slash menu and the drop target. Here rather than in the
+    | component's own <style> block for the reason the dashboard's other parts
+    | are: these are tokens a theme can redefine, and a scoped block would put
+    | them out of reach.
+    */
+
+    .md-tool {
+        display: inline-flex;
+        min-width: 2rem;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        border-radius: var(--radius-panel);
+        border: 1px solid transparent;
+        padding: 0.25rem 0.45rem;
+        font-size: 0.8125rem;
+        line-height: 1.4;
+        color: var(--text-secondary);
+        transition:
+            background-color 140ms ease,
+            color 140ms ease;
+    }
+
+    .md-tool:hover {
+        background-color: var(--surface-hover);
+        color: var(--text-primary);
+    }
+
+    .md-tool--on {
+        border-color: var(--border-subtle);
+        background-color: var(--surface-raised);
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    /*
+     * Over the textarea rather than beside it, and following the cursor only
+     * as far as the top of the box: a menu anchored to the caret would need
+     * the caret's pixel position, which a textarea does not offer without
+     * mirroring its content into a hidden element to measure.
+     */
+    .md-menu {
+        position: absolute;
+        z-index: 20;
+        top: 2.25rem;
+        left: 0.75rem;
+        min-width: 12rem;
+        overflow: hidden;
+        border-radius: var(--radius-panel);
+        border: 1px solid var(--border-subtle);
+        background-color: var(--surface-raised);
+        box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+    }
+
+    .md-menu__item {
+        display: block;
+        width: 100%;
+        padding: 0.35rem 0.7rem;
+        text-align: left;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+    }
+
+    .md-menu__item:hover,
+    .md-menu__item--on {
+        background-color: var(--surface-hover);
+        color: var(--text-primary);
+    }
+
+    .md-drop {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        border-radius: var(--radius-panel);
+        border: 2px dashed var(--border-strong);
+        /* A wash rather than a solid, so the text underneath still shows. */
+        background-color: color-mix(in srgb, var(--surface-raised) 85%, transparent);
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+
+    .admin-nav-soon {
+        margin-left: auto;
+        border-radius: 999px;
+        border: 1px solid var(--border-subtle);
+        padding: 0 0.4rem;
+        font-size: 0.6875rem;
+        line-height: 1.4;
+    }
+
+    /*
      * The download cards.
      *
      * Each one carries a picture of the thing being downloaded, and is itself
@@ -462,6 +697,11 @@
      * The card's only content. `cover` crops nothing -- a square picture in a
      * square card -- and is there for the art an operator replaces with a file
      * of some other shape.
+     *
+     * A sixth of full strength at rest, so the illustration sits back as a
+     * tint behind the platform's mark rather than competing with it, and
+     * full strength under the pointer -- the picture is still the reason the
+     * card is worth looking at, it just waits to be asked.
      */
     .download-card__art {
         position: absolute;
@@ -469,10 +709,14 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transition: transform 400ms ease;
+        opacity: 0.75;
+        transition:
+            opacity 220ms ease,
+            transform 400ms ease;
     }
 
     .download-card:hover .download-card__art {
+        opacity: 1;
         transform: scale(1.05);
     }
 
@@ -911,6 +1155,399 @@
         border: 0;
         border-top: 1px solid var(--border-subtle);
     }
+
+    /*
+     * ---------------------------------------------------------------------
+     * Wiki section cards
+     * ---------------------------------------------------------------------
+     *
+     * The same three layers the download cards are built from: a picture, a
+     * wash over it that the pointer takes away, and one mark over it. The
+     * mark here is the section's name rather than a platform's glyph, and it
+     * sits in the top-left corner rather than the middle -- a row of names
+     * all starting at the same point is scanned down in one movement, which
+     * is what an index is for.
+     */
+    .wiki-card {
+        transition:
+            transform 160ms ease,
+            box-shadow 160ms ease,
+            border-color 160ms ease;
+    }
+
+    .wiki-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--border-strong);
+        box-shadow: 0 18px 30px -22px color-mix(in oklab, var(--color-shell-950) 65%, transparent);
+    }
+
+    /*
+     * Rounded by its own radius rather than by clipping the card, because
+     * `overflow: hidden` on a grid item drops its content-based minimum to
+     * zero -- and that minimum is what lets an expanded section grow past the
+     * square instead of being cut off at it.
+     */
+    .wiki-card__art {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        object-fit: cover;
+        opacity: 0.75;
+        transition:
+            opacity 220ms ease,
+            transform 400ms ease;
+    }
+
+    .wiki-card:hover .wiki-card__art {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+
+    /*
+     * The wash, and the thing the hover takes away. Thin, because the only
+     * thing written over it carries its own background -- so the picture can
+     * be a picture rather than a backdrop for text.
+     */
+    .wiki-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        border-radius: inherit;
+        background-color: oklch(1 0 0 / 0.1);
+        transition: opacity 220ms ease;
+    }
+
+    .wiki-card:hover::before {
+        opacity: 0;
+    }
+
+    /*
+     * The section's name, in the top-left corner of the picture.
+     *
+     * On its own ground rather than set straight onto the art: these sit on
+     * illustrations that are bright in one corner and dark in the next, and
+     * text with no backing is legible on about half of them. The shadow is
+     * what keeps the pill itself from dissolving into a pale patch.
+     */
+    .wiki-card__pill {
+        position: relative;
+        z-index: 2;
+        border-radius: 999px;
+        border: 1px solid var(--border-subtle);
+        background-color: var(--surface-raised);
+        padding: 0.45rem 1.1rem;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-align: center;
+        text-wrap: balance;
+        box-shadow: 0 8px 20px -10px color-mix(in oklab, var(--color-shell-950) 60%, transparent);
+        transition: transform 220ms ease;
+    }
+
+    .wiki-card:hover .wiki-card__pill {
+        transform: scale(1.04);
+    }
+
+    /*
+     * ---------------------------------------------------------------------
+     * The section dialog
+     * ---------------------------------------------------------------------
+     *
+     * Built on the same native dialog the downloads page uses, and animated by
+     * the same keyframes, so the two feel like one site. Deliberately large,
+     * and the same large whichever section opened it: a dialog that took its
+     * size from its contents would be a different shape for every tile on the
+     * grid, and nine sizes of the same thing reads as nine different things.
+     */
+    .wiki-modal {
+        /*
+         * Restores the centring the UA stylesheet provides and Tailwind's
+         * preflight takes away -- see the note on .download-modal, which has
+         * the same problem for the same reason.
+         */
+        margin: auto;
+        padding: 0;
+        border: 0;
+        width: min(80rem, calc(100vw - 3rem));
+        max-width: none;
+        border-radius: var(--radius-panel);
+        background-color: var(--surface-raised);
+        color: var(--text-primary);
+        overflow: hidden;
+        box-shadow: 0 32px 64px -24px color-mix(in oklab, var(--color-shell-950) 70%, transparent);
+    }
+
+    .wiki-modal::backdrop {
+        background-color: color-mix(in oklab, var(--color-shell-950) 55%, transparent);
+        backdrop-filter: blur(3px);
+    }
+
+    /*
+     * A long page scrolls inside the dialog rather than past it, and a short
+     * one still fills the box -- the floor is what keeps every section's
+     * dialog the same size.
+     *
+     * The floor is taken as a `min()` against the same room the ceiling works
+     * from, because a floor that outgrew the ceiling would force the panel to
+     * scroll on a short window with nothing in it worth scrolling to.
+     */
+    .wiki-modal__panel {
+        position: relative;
+        min-height: min(46rem, calc(100dvh - 4rem));
+        max-height: calc(100dvh - 4rem);
+        overflow-y: auto;
+        padding: 2.5rem;
+    }
+
+    .wiki-modal__close {
+        position: absolute;
+        inset-block-start: 1.25rem;
+        inset-inline-end: 1.25rem;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: var(--radius-panel);
+        color: var(--text-muted);
+        transition:
+            background-color 150ms ease,
+            color 150ms ease;
+    }
+
+    .wiki-modal__close:hover {
+        background-color: var(--surface-hover);
+        color: var(--text-primary);
+    }
+
+    /*
+     * One row per page, and the page itself underneath when it is asked for.
+     *
+     * Rules between the rows rather than cards around them: a section's pages
+     * are one list, and nine boxes inside a box reads as nine unrelated
+     * things.
+     */
+    .wiki-accordion__item {
+        border-top: 1px solid var(--border-subtle);
+    }
+
+    .wiki-accordion__item:last-child {
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .wiki-accordion__trigger {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.9rem 0;
+        text-align: start;
+        font-weight: 600;
+        color: var(--text-primary);
+        transition: color 150ms ease;
+    }
+
+    .wiki-accordion__trigger:hover {
+        color: var(--color-accent-600);
+    }
+
+    .wiki-accordion__chevron {
+        margin-inline-start: auto;
+        flex-shrink: 0;
+        color: var(--text-muted);
+        transition: transform 180ms ease;
+    }
+
+    .wiki-accordion__item--open .wiki-accordion__chevron {
+        transform: rotate(90deg);
+    }
+
+    /*
+     * The open and shut of a panel, as a grid row from 0fr to 1fr.
+     *
+     * Which is the point: a panel's height is whatever the page inside it
+     * turns out to be, and `height: auto` does not animate. A one-row grid
+     * does, so nothing here has to measure anything, and no height is written
+     * down to go stale when the body finally arrives.
+     *
+     * `visibility` rather than `display`, because a shut panel has to stay in
+     * the document to animate back -- and has to stay out of the tab order
+     * and the accessibility tree while it is shut, which is what visibility
+     * gives and opacity does not. It is listed in the transition so the hide
+     * waits for the collapse instead of blanking the text halfway through.
+     */
+    .wiki-accordion__reveal {
+        display: grid;
+        grid-template-rows: 0fr;
+        visibility: hidden;
+        transition:
+            grid-template-rows 260ms cubic-bezier(0.16, 1, 0.3, 1),
+            visibility 260ms;
+    }
+
+    .wiki-accordion__item--open .wiki-accordion__reveal {
+        grid-template-rows: 1fr;
+        visibility: visible;
+    }
+
+    /*
+     * The grid item, and so the thing that gets clipped as the row closes.
+     * The small lift is there to stop the text appearing to be squeezed out
+     * of the row rather than revealed by it.
+     */
+    .wiki-accordion__panel {
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(-0.25rem);
+        transition:
+            opacity 200ms ease,
+            transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .wiki-accordion__item--open .wiki-accordion__panel {
+        opacity: 1;
+        transform: none;
+    }
+
+    /*
+     * The gap under an open panel, on the content rather than on the box that
+     * clips it. Padding on the clipped box is outside what `overflow: hidden`
+     * cuts away, so a shut row would keep its 20px and the list would sit on
+     * a set of gaps that belong to panels nobody can see.
+     *
+     * Only one of these children is ever rendered -- the body, or the line
+     * that stands in for it while it loads or after it fails.
+     */
+    .wiki-accordion__panel > * {
+        padding-bottom: 1.25rem;
+    }
+
+    /*
+     * Reduced motion gets the change without the movement. The panel still
+     * opens and shuts -- that is the content, not decoration -- it simply
+     * arrives rather than unfolds.
+     */
+    @media (prefers-reduced-motion: reduce) {
+        .wiki-accordion__chevron,
+        .wiki-accordion__trigger,
+        .wiki-accordion__reveal,
+        .wiki-accordion__panel,
+        .wiki-modal__close {
+            transition: none;
+        }
+
+        .wiki-accordion__panel {
+            transform: none;
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------------------
+     * Error screens
+     * ---------------------------------------------------------------------
+     *
+     * A dead end gets the whole window and nothing else: no navbar, no status
+     * strip, no footer. The route asks for the `bare` layout, and these rules
+     * take it the rest of the way.
+     *
+     * Fixed rather than merely tall, and above everything, because a theme's
+     * masthead may be fixed too -- Skyward's rides over the page -- and a
+     * strip of somebody else's chrome across the top undoes the whole idea.
+     */
+    .error-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        overflow: hidden;
+        background-color: var(--color-shell-950);
+    }
+
+    /*
+     * Edge to edge on every shape of screen, which means cropping rather than
+     * fitting: the drawing is 16:9 and almost nothing is, so one axis always
+     * has to overflow. Centred, so a tall screen takes the middle of the
+     * picture and a wide one the middle band of it.
+     */
+    .error-screen__art {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+    }
+
+    .error-screen__controls {
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.625rem;
+        padding: 5rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+        /*
+         * The artwork is bright in places and dark in others, so anything
+         * written over it needs its own ground rather than a colour that
+         * happens to work against one of them.
+         */
+        background-image: linear-gradient(
+            to top,
+            rgb(0 0 0 / 0.85) 0%,
+            rgb(0 0 0 / 0.72) 45%,
+            rgb(0 0 0 / 0) 100%
+        );
+        color: #ffffff;
+        text-align: center;
+    }
+
+    .error-screen__countdown {
+        margin: 0;
+        font-size: 0.8125rem;
+        text-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+    }
+
+    .error-screen__actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .error-screen__button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.3125rem 0.75rem;
+        border: 1px solid transparent;
+        border-radius: var(--radius-panel);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        transition: background-color 150ms ease;
+    }
+
+    .error-screen__button--primary {
+        background-color: var(--color-accent-600);
+        color: #ffffff;
+    }
+
+    .error-screen__button--primary:hover {
+        background-color: var(--color-accent-700);
+    }
+
+    .error-screen__button--ghost {
+        border-color: rgb(255 255 255 / 0.35);
+        color: #ffffff;
+    }
+
+    .error-screen__button--ghost:hover {
+        background-color: rgb(255 255 255 / 0.15);
+    }
 }
 
 /*
@@ -926,46 +1563,68 @@
  * way out. The global reduced-motion rule cuts both to nothing, and the script
  * skips the wait to match.
  */
-@keyframes download-modal-in {
+@keyframes app-modal-in {
     from {
         opacity: 0;
         transform: translateY(14px) scale(0.97);
     }
 }
 
-@keyframes download-modal-out {
+@keyframes app-modal-out {
     to {
         opacity: 0;
         transform: translateY(8px) scale(0.98);
     }
 }
 
-@keyframes download-backdrop-in {
+@keyframes app-backdrop-in {
     from {
         opacity: 0;
     }
 }
 
-@keyframes download-backdrop-out {
+@keyframes app-backdrop-out {
     to {
         opacity: 0;
     }
 }
 
-.download-modal[open] {
-    animation: download-modal-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+.download-modal[open],
+.wiki-modal[open] {
+    animation: app-modal-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.download-modal[open]::backdrop {
-    animation: download-backdrop-in 220ms ease-out;
+.download-modal[open]::backdrop,
+.wiki-modal[open]::backdrop {
+    animation: app-backdrop-in 220ms ease-out;
 }
 
-.download-modal--closing[open] {
-    animation: download-modal-out 160ms ease-in forwards;
+.download-modal--closing[open],
+.wiki-modal--closing[open] {
+    animation: app-modal-out 160ms ease-in forwards;
 }
 
-.download-modal--closing[open]::backdrop {
-    animation: download-backdrop-out 160ms ease-in forwards;
+.download-modal--closing[open]::backdrop,
+.wiki-modal--closing[open]::backdrop {
+    animation: app-backdrop-out 160ms ease-in forwards;
+}
+
+/*
+ * The downloads heading, left at the body weight.
+ *
+ * It is a sentence rather than a title -- the operator's pitch for the client,
+ * not a label on a section -- and a full line of it set bold reads as shouting.
+ * It stays an <h2> because the section is labelled by it and the page still
+ * wants the outline; only the weight goes.
+ *
+ * Outside every `@layer`, and by id, because three of the skins set a weight on
+ * every `h2` from an unlayered rule of their own -- `font-semibold` dropped from
+ * the markup would change nothing under any of them. An id beats
+ * `:root[data-theme-slug='...'] h2` on specificity, so this holds for the core
+ * panel and for each skin alike.
+ */
+#block-download-clients {
+    font-weight: 400;
 }
 
 /*

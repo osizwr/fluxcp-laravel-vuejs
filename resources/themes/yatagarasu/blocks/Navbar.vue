@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useAccounts } from '@/composables/useAccounts'
 import { useGame } from '@/composables/useGame'
 import { useShell, type ShellLink } from '@/composables/useShell'
 import { useAuthStore } from '@/stores/auth'
 import { useServerStore } from '@/stores/server'
+import { useTranslation } from '@/i18n'
 import CrowMark from '../components/CrowMark.vue'
 
 /**
@@ -22,6 +24,15 @@ const auth = useAuthStore()
 const servers = useServerStore()
 const { game, title } = useGame()
 const { links, isActive, menuOpen, signingOut, signOut } = useShell()
+
+/*
+ * This skin writes its own menu text in English rather than through the
+ * dictionary. The new entry goes through it anyway: a translated item beside
+ * untranslated ones is a smaller fault than one more string nobody can
+ * translate, and the rest are not this change's to rewrite.
+ */
+const { t } = useTranslation()
+const { voteEnabled } = useAccounts()
 
 /**
  * Which group each route belongs under.
@@ -250,6 +261,13 @@ const worldName = computed(() => {
                             <RouterLink to="/account" class="yata-nav__menu-link">
                                 My account
                             </RouterLink>
+                            <!--
+                                Only when an operator has a listing site that
+                                can pay: the page is a 404 otherwise.
+                            -->
+                            <RouterLink v-if="voteEnabled" to="/vote" class="yata-nav__menu-link">
+                                {{ t('nav.vote') }}
+                            </RouterLink>
                             <RouterLink to="/account/security" class="yata-nav__menu-link">
                                 Security
                             </RouterLink>
@@ -338,6 +356,14 @@ const worldName = computed(() => {
                         @click="menuOpen = false"
                     >
                         {{ auth.account?.username ?? 'Account' }}
+                    </RouterLink>
+                    <RouterLink
+                        v-if="voteEnabled"
+                        to="/vote"
+                        class="yata-btn yata-btn--secondary yata-btn--compact"
+                        @click="menuOpen = false"
+                    >
+                        {{ t('nav.vote') }}
                     </RouterLink>
                     <button
                         type="button"

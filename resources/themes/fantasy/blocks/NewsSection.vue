@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NewsTag from '@/components/ui/NewsTag.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import { useNewsData } from '@/blocks/data'
 import type { NewsProps } from '@/blocks/contracts'
@@ -64,7 +65,11 @@ function published(at: string | null): string {
                 class="panel flex flex-col p-5"
                 :class="props.featureFirst && index === 0 ? 'theme-framed md:col-span-3' : ''"
             >
-                <p class="text-[0.62rem] tracking-[0.14em] text-[var(--color-accent-300)] uppercase">
+                <NewsTag v-if="article.tag" :tag="article.tag" class="mb-2 self-start" />
+
+                <p
+                    class="text-[0.62rem] tracking-[0.14em] text-[var(--color-accent-300)] uppercase"
+                >
                     <template v-if="article.published_at">
                         {{ published(article.published_at) }}
                     </template>
@@ -78,7 +83,9 @@ function published(at: string | null): string {
                     {{ article.title }}
                 </h3>
 
-                <p class="mt-2 flex-1 text-sm text-[var(--text-secondary)]">{{ article.excerpt }}</p>
+                <p class="mt-2 flex-1 text-sm text-[var(--text-secondary)]">
+                    {{ article.excerpt }}
+                </p>
 
                 <a
                     v-if="article.link"

@@ -47,6 +47,18 @@ final readonly class WikiLibrary
         private ConfigRepository $config,
         private CacheRepository $cache,
         private ContentRenderer $renderer,
+        /*
+         * What the dashboard has written. Laid over the directory scan rather
+         * than replacing it, so a page nobody has edited in the browser is
+         * still the file in version control.
+         */
+        private WikiOverrides $overrides,
+        /*
+         * The same thing for the sections themselves: what a section is
+         * called, what it says under its name, and where it sorts. Laid over
+         * the `_category.md` on disk, which is likewise never written to.
+         */
+        private WikiCategoryOverrides $categoryOverrides,
     ) {}
 
     public function isEnabled(): bool
@@ -85,6 +97,7 @@ final readonly class WikiLibrary
                     'title' => $category['title'],
                     'description' => $category['description'],
                     'icon' => $category['icon'],
+                    'image' => $category['image'],
                     'count' => count($category['pages']),
                     'pages' => array_map($this->summarise(...), $category['pages']),
                 ],
@@ -135,20 +148,19 @@ final readonly class WikiLibrary
         $page = $pages[$position];
 
         /*
-         * The file was there when the directory was scanned and may not be now
-         * -- a deploy mid-request, or a cached scan outliving a deleted page.
-         * Treated as a page that does not exist, which is what the visitor is
-         * about to be told anyway.
+         * An edited page carries its body with it. For a page still backed by
+         * a file, the file was there when the directory was scanned and may
+         * not be now -- a deploy mid-request, or a cached scan outliving a
+         * deleted page -- which is treated as a page that does not exist,
+         * since that is what the visitor is about to be told anyway.
          */
-        $contents = @file_get_contents($page['file']);
+        $body = $this->bodyFor($page);
 
-        if ($contents === false) {
+        if ($body === null) {
             return null;
         }
 
-        $document = FrontMatter::parse($contents);
-
-        [$html, $headings] = $this->render($document->body);
+        [$html, $headings] = $this->render($body);
 
         $category = $this->categoryOf($categories, $page['category']);
 
@@ -157,7 +169,13 @@ final readonly class WikiLibrary
             'title' => $page['title'],
             'summary' => $page['summary'],
             'updated_at' => $page['updated_at'],
-            'reading_minutes' => $this->readingMinutes($document->body),
+            'reading_minutes' => $this->readingMinutes($body),
+            /*
+             * Which of the two a reader is looking at. The public page ignores
+             * it; the dashboard uses it to say whether an edit here would be
+             * laid over a file or would stand on its own.
+             */
+            'source' => $page['body'] === null ? 'file' : 'database',
             'html' => $html,
             'headings' => $headings,
             'category' => $category === null ? null : [
@@ -210,7 +228,7 @@ final readonly class WikiLibrary
         $matches = [];
 
         foreach ($this->flatten($this->scan()) as $page) {
-            $body = $this->bodyOf($page['file']);
+            $body = $this->bodyFor($page) ?? '';
 
             $score = match (true) {
                 str_contains(mb_strtolower($page['title']), $needle) => 3,
@@ -279,15 +297,106 @@ final readonly class WikiLibrary
     }
 
     /**
+     * The file behind each page that has one, keyed by path.
+     *
+     * The dashboard needs this to tell a page that is only a file from one
+     * that is only a row, and to read the Markdown a file holds. It is the
+     * scan's own answer rather than a filename built from a path, which is
+     * the rule the rest of this class is written to keep -- see the note at
+     * the top about why the lookup goes this way round.
+     *
+     * @return array<string, string>
+     */
+    public function files(): array
+    {
+        $files = [];
+
+        foreach ($this->flatten($this->scan()) as $page) {
+            if ($page['file'] !== null) {
+                $files[$page['path']] = $page['file'];
+            }
+        }
+
+        return $files;
+    }
+
+    /**
+     * The sections the wiki has, keyed by slug, with their own metadata.
+     *
+     * `files()` for sections. The dashboard lists these, so each one carries
+     * the four fields a section is -- title, description, icon, order -- as
+     * they will actually be read, overlay included, plus how many pages are in
+     * it and the directory behind it if there is one.
+     *
+     * @return array<string, array{
+     *     slug: string,
+     *     title: string,
+     *     description: string|null,
+     *     icon: string|null,
+     *     image: string|null,
+     *     order: int|null,
+     *     count: int,
+     *     directory: string|null
+     * }>
+     */
+    public function sections(): array
+    {
+        $sections = [];
+
+        foreach ($this->scan() as $category) {
+            $sections[$category['slug']] = [
+                'slug' => $category['slug'],
+                'title' => $category['title'],
+                'description' => $category['description'],
+                'icon' => $category['icon'],
+                'image' => $category['image'],
+                'order' => $category['order'],
+                'count' => count($category['pages']),
+                'directory' => $category['directory'],
+            ];
+        }
+
+        return $sections;
+    }
+
+    /**
+     * One section's metadata, or null when the wiki has no such section.
+     *
+     * @return array{
+     *     slug: string,
+     *     title: string,
+     *     description: string|null,
+     *     icon: string|null,
+     *     image: string|null,
+     *     order: int|null,
+     *     count: int,
+     *     directory: string|null
+     * }|null
+     */
+    public function section(string $slug): ?array
+    {
+        return $this->sections()[$slug] ?? null;
+    }
+
+    /**
+     * Drop the cached directory scan.
+     *
+     * Only does anything when an operator has set wiki.cache_seconds above
+     * zero, which is not the default -- but where they have, an edit saved in
+     * the dashboard that did not appear for ten minutes would read as a
+     * dashboard that does not work.
+     */
+    public function forgetIndex(): void
+    {
+        $this->cache->forget('wiki:index:'.sha1($this->root()));
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     private function read(): array
     {
         $root = $this->root();
-
-        if (! is_dir($root)) {
-            return [];
-        }
 
         $categories = [];
 
@@ -306,15 +415,167 @@ final readonly class WikiLibrary
 
             $category = $this->category($slug, $name, $directory);
 
-            // A section with nothing in it is a directory somebody made and
-            // has not written yet. Drawn as an empty card it looks like a
-            // broken page, so it is simply not a section yet.
-            if ($category['pages'] !== []) {
-                $categories[$slug] = $category;
+            $categories[$slug] = $category;
+        }
+
+        $categories = $this->applyOverrides($categories);
+
+        /*
+         * The sections last, after their pages rather than before them: a page
+         * override can bring a section into existence that no directory backs,
+         * and that section should be titled by its own row if it has one
+         * rather than by its slug.
+         */
+        $categories = $this->applyCategoryOverrides($categories);
+
+        /*
+         * Both sources are in now, so each section's pages can be put in
+         * reading order. Done here rather than in the scan because an
+         * override carries its own `order` and may be the page that belongs
+         * first.
+         */
+        foreach ($categories as $slug => $category) {
+            $categories[$slug]['pages'] = $this->ordered(array_values($category['pages']));
+        }
+
+        /*
+         * A section with nothing in it is a directory somebody made and has
+         * not written yet, or one whose every page has since been hidden.
+         * Drawn as an empty card it looks like a broken page, so it is simply
+         * not a section yet.
+         *
+         * Filtered after the overlay rather than during the scan, because a
+         * directory with no Markdown in it may still be where the dashboard
+         * put a page.
+         */
+        $categories = array_filter(
+            $categories,
+            static fn (array $category): bool => $category['pages'] !== [],
+        );
+
+        return $this->ordered(array_values($categories));
+    }
+
+    /**
+     * Merge the dashboard's pages over the ones found on disk.
+     *
+     * Three things a row can be, and the order matters only in that all three
+     * are decided per page rather than per section:
+     *
+     *   hidden      the page is removed, whether or not a file backs it
+     *   a known path  the file's title, summary, order and body are replaced
+     *   a new path    a page that exists nowhere on disk is added
+     *
+     * A page in a section that has no directory brings the section into
+     * existence, titled the way a directory without a `_category.md` is: from
+     * the slug. That is the behaviour an operator already gets from the
+     * filesystem, so it is one rule rather than two.
+     *
+     * @param  array<string, array<string, mixed>>  $categories
+     * @return array<string, array<string, mixed>>
+     */
+    private function applyOverrides(array $categories): array
+    {
+        $overrides = $this->overrides->all();
+
+        if ($overrides === []) {
+            return $categories;
+        }
+
+        foreach ($overrides as $path => $override) {
+            $slug = $override->category;
+
+            if ($override->hidden) {
+                unset($categories[$slug]['pages'][$override->slug]);
+
+                continue;
+            }
+
+            $categories[$slug] ??= [
+                'slug' => $slug,
+                'title' => Str::headline($slug),
+                'description' => null,
+                'icon' => null,
+                'image' => null,
+                'order' => null,
+                // Nothing on disk made this one. applyCategoryOverrides() may
+                // still give it a name of its own.
+                'directory' => null,
+                'pages' => [],
+            ];
+
+            $existing = $categories[$slug]['pages'][$override->slug] ?? null;
+
+            $categories[$slug]['pages'][$override->slug] = [
+                'path' => $path,
+                'slug' => $override->slug,
+                'title' => $override->title,
+                'summary' => $override->summary,
+                'order' => $override->sort_order,
+                'updated_at' => $override->updated_at?->toIso8601String(),
+                /*
+                 * Kept when there is one, so that reverting the row puts the
+                 * reader back on the file rather than on a 404, and so the
+                 * dashboard can say which pages have a file underneath them.
+                 */
+                'file' => $existing['file'] ?? null,
+                'body' => (string) $override->body,
+                'category' => $slug,
+                'category_title' => $categories[$slug]['title'],
+            ];
+        }
+
+        return $categories;
+    }
+
+    /**
+     * Merge the dashboard's sections over the ones found on disk.
+     *
+     * A row says one thing -- what a section is called, what it says under its
+     * name, which mark it carries and where it sorts -- and replaces whatever
+     * the `_category.md` said, or supplies it where there is no such file.
+     *
+     * A row for a section with no pages in it is skipped rather than added,
+     * because read() is about to drop every empty section anyway: a section
+     * nobody has written a page for is not a section yet, which is the same
+     * rule a bare directory on disk gets. The dashboard lists those rows from
+     * the table instead, so writing a section and writing its first page can
+     * be two visits.
+     *
+     * @param  array<string, array<string, mixed>>  $categories
+     * @return array<string, array<string, mixed>>
+     */
+    private function applyCategoryOverrides(array $categories): array
+    {
+        $overrides = $this->categoryOverrides->all();
+
+        if ($overrides === []) {
+            return $categories;
+        }
+
+        foreach ($overrides as $slug => $override) {
+            if (! isset($categories[$slug])) {
+                continue;
+            }
+
+            $categories[$slug]['title'] = $override->title;
+            $categories[$slug]['description'] = $override->description;
+            $categories[$slug]['icon'] = $override->icon;
+            $categories[$slug]['image'] = $override->image;
+            $categories[$slug]['order'] = $override->sort_order;
+
+            /*
+             * The pages carry their section's name with them, for the search
+             * results to group by. Re-stamped rather than left alone: a page
+             * read off disk was handed the title the `_category.md` gave,
+             * which is the title this row has just replaced.
+             */
+            foreach ($categories[$slug]['pages'] as $pageSlug => $page) {
+                $categories[$slug]['pages'][$pageSlug]['category_title'] = $override->title;
             }
         }
 
-        return $this->ordered(array_values($categories));
+        return $categories;
     }
 
     /**
@@ -358,6 +619,8 @@ final readonly class WikiLibrary
                 'order' => $front?->integer('order'),
                 'updated_at' => $this->updatedAt($front, $full),
                 'file' => $full,
+                // Null means "the body is in the file". The overlay fills it.
+                'body' => null,
                 'category' => $slug,
                 'category_title' => $title,
             ];
@@ -368,8 +631,28 @@ final readonly class WikiLibrary
             'title' => $title,
             'description' => $meta?->get('description'),
             'icon' => $meta?->get('icon'),
+            /*
+             * Not read from the file. A section's art is a picture this panel
+             * stored and can account for -- see WikiImages -- and a path in a
+             * `_category.md` would be a URL nothing had checked, pointing
+             * anywhere, on the page the most people see.
+             */
+            'image' => null,
             'order' => $meta?->integer('order'),
-            'pages' => $this->ordered(array_values($pages)),
+            /*
+             * The directory this section was read from. Null on a section the
+             * overlay brought into existence, which is how the dashboard
+             * tells a section that is a folder in version control from one
+             * that is only a row -- the scan's own answer again, rather than a
+             * path built from a slug.
+             */
+            'directory' => $directory,
+            /*
+             * Still keyed by slug, so the overlay can address one page without
+             * searching the list. read() flattens and orders them once both
+             * sources have been merged.
+             */
+            'pages' => $pages,
         ];
     }
 
@@ -699,17 +982,28 @@ final readonly class WikiLibrary
     }
 
     /**
-     * A page's body as plain text, for searching.
+     * A page's Markdown, from wherever that page keeps it.
+     *
+     * Null means the page has no body to read at all: no override, and no
+     * file -- which is a page that was on disk when the directory was scanned
+     * and is not any more. Both callers treat that as a page that no longer
+     * exists.
+     *
+     * @param  array<string, mixed>  $page
      */
-    private function bodyOf(string $file): string
+    private function bodyFor(array $page): ?string
     {
-        $contents = @file_get_contents($file);
-
-        if ($contents === false) {
-            return '';
+        if ($page['body'] !== null) {
+            return $page['body'];
         }
 
-        return FrontMatter::parse($contents)->body;
+        if ($page['file'] === null) {
+            return null;
+        }
+
+        $contents = @file_get_contents($page['file']);
+
+        return $contents === false ? null : FrontMatter::parse($contents)->body;
     }
 
     /**

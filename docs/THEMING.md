@@ -346,7 +346,7 @@ Fourteen ship, in `resources/js/blocks/`:
 | `news-section` | `NewsSection.vue` | Recent news |
 | `feature-grid` | `FeatureGrid.vue` | Operator-configured features |
 | `download-clients` | `DownloadClients.vue` | The packages on offer, and their mirrors |
-| `system-requirements` | `SystemRequirements.vue` | What a machine needs, one tab per set |
+| `system-requirements` | `SystemRequirements.vue` | What a machine needs, one tab per platform |
 | `install-guide` | `InstallGuide.vue` | The numbered steps after a download |
 | `call-to-action` | `CallToAction.vue` | A closing action |
 | `footer` | `Footer.vue` | Branding, navigation, configured links |
@@ -438,6 +438,8 @@ it.
 | `public` | `PublicLayout` | Full-bleed landing pages |
 | `app` | `AppLayout` | Utility pages, content in a column |
 | `auth` | `AuthLayout` | Sign-in and friends; no navigation |
+| `admin` | `AdminLayout` | The dashboard; staff navigation, not players' |
+| `bare` | `BareLayout` | No shell at all; the error screens, which are full-bleed artwork |
 
 A theme's `layouts` map may point a role at a differently named component. The
 announcement bar, navbar and footer live in the layouts rather than in every

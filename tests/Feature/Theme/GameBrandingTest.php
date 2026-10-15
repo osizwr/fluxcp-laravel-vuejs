@@ -289,8 +289,9 @@ final class GameBrandingTest extends TestCase
                 'notes' => ['Extract before running.'],
             ]],
             'requirements' => [[
-                'heading' => 'Minimum',
-                'rows' => [['label' => 'Memory', 'value' => '2 GB RAM']],
+                'heading' => 'Windows',
+                'columns' => ['Minimum', 'Recommended'],
+                'rows' => [['label' => 'Memory', 'values' => ['2 GB RAM', '8 GB RAM']]],
             ]],
             'steps' => [['title' => 'Download', 'description' => 'Pick a mirror.']],
         ]]);
@@ -313,7 +314,11 @@ final class GameBrandingTest extends TestCase
         $this->assertSame(['Extract before running.'], $client['notes']);
 
         $this->assertSame(
-            [['heading' => 'Minimum', 'rows' => [['label' => 'Memory', 'value' => '2 GB RAM']]]],
+            [[
+                'heading' => 'Windows',
+                'columns' => ['Minimum', 'Recommended'],
+                'rows' => [['label' => 'Memory', 'values' => ['2 GB RAM', '8 GB RAM']]],
+            ]],
             $downloads['requirements'],
         );
         $this->assertSame(
@@ -402,10 +407,57 @@ final class GameBrandingTest extends TestCase
 
         // An empty tab and a headless one are both gaps in the page.
         $this->assertSame(
-            [['heading' => 'Android', 'rows' => [['label' => 'Memory', 'value' => '3 GB']]]],
+            [[
+                'heading' => 'Android',
+                'columns' => [],
+                'rows' => [['label' => 'Memory', 'values' => ['3 GB']]],
+            ]],
             $downloads['requirements'],
         );
         $this->assertSame([['title' => 'Launch', 'description' => '']], $downloads['steps']);
+    }
+
+    #[Test]
+    public function requirement_rows_are_squared_off_against_their_columns(): void
+    {
+        /*
+         * The client draws a header row and then one cell under each header.
+         * A row that is shorter or longer than the header would slide every
+         * figure after it under the wrong column, so the width is settled
+         * here, where the columns are, rather than guessed at per row.
+         */
+        config(['game.downloads.requirements' => [
+            [
+                'heading' => 'Windows',
+                'columns' => ['Minimum', '  ', 'Recommended'],
+                'rows' => [
+                    ['label' => 'Memory', 'values' => ['2 GB RAM']],
+                    ['label' => 'Storage', 'values' => ['6 GB', '10 GB', 'irrelevant']],
+                    ['label' => 'Processor', 'value' => ' Dual core '],
+                    ['label' => 'Network', 'values' => [null, '  ']],
+                    ['label' => null, 'values' => ['Nothing to call it']],
+                ],
+            ],
+        ]]);
+
+        $this->assertSame(
+            [[
+                'heading' => 'Windows',
+                // The blank column name is not a column: it heads nothing.
+                'columns' => ['Minimum', 'Recommended'],
+                'rows' => [
+                    // Short rows are padded, and the gap stays a gap.
+                    ['label' => 'Memory', 'values' => ['2 GB RAM', null]],
+                    // Long ones are cut at the last column there is.
+                    ['label' => 'Storage', 'values' => ['6 GB', '10 GB']],
+                    // `value` is the one-column spelling, under the first.
+                    ['label' => 'Processor', 'values' => ['Dual core', null]],
+                    // Network and the nameless row are both whole rows of
+                    // nothing, which is a line of empty cells on the page.
+                ],
+            ]],
+            $this->payload()['downloads']['requirements'],
+        );
     }
 
     #[Test]

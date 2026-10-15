@@ -64,6 +64,9 @@ const FALLBACK: PanelBootstrap = {
     accounts: {
         registrationEnabled: false,
         passwordResetEnabled: false,
+        // Off with the rest: an entry offering a page the server would 404 is
+        // the menu's version of offering registration that gets refused.
+        voteEnabled: false,
         emailChangeRequiresConfirmation: true,
         registrationRequiresConfirmation: false,
         confirmationCodeLength: 6,
