@@ -27,7 +27,7 @@ pointed at an existing install without migrating data.
 > FluxCP's sign-in behaviour step for step, the account credential flows fix
 > nine defects in the legacy originals rather than carrying them over, and the
 > schema installer has been compared column by column against the legacy schema.
-> 959 tests, 3,816 assertions, across 56 files.
+> 962 tests, 3,829 assertions, across 56 files.
 
 ---
 
@@ -361,10 +361,19 @@ writes them out as a seeder so another machine can rebuild them:
 
 ```bash
 php artisan panel:dump-seed --preset=content          # the usual set
+php artisan panel:dump-seed --all                     # everything with rows in it
 php artisan panel:dump-seed --tables=cp_cmsnews,wiki_pages --class=MySeeder
 
 php artisan db:seed --class=SnapshotSeeder            # on the other machine
 ```
+
+`--all` takes every table that has rows, and says out loud what it left
+behind. Three things never travel, however they are asked for: `migrations`,
+because seeding it tells Laravel that migrations have run which have not and
+the next `migrate` then skips the tables it was meant to create; the cache,
+queue and session tables, which are this machine's working state; and
+single-use reset tokens. Empty tables earn no line — most of a database is
+empty, and ninety-five "no rows" comments bury the handful that say something.
 
 It writes rows and nothing else — no schema, no foreign keys, no ordering
 between tables — so it restores into a database that already has the shape to
@@ -387,7 +396,7 @@ npm run verify:locales   # every locale against the English source
 npm run verify:themes    # themes against the build output
 ```
 
-959 tests, 3,816 assertions, across 56 files. All of them are backend: there
+962 tests, 3,829 assertions, across 56 files. All of them are backend: there
 are **no frontend tests**, which is the project's largest gap now that the
 interface is the part still being built.
 

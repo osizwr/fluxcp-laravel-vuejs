@@ -45,6 +45,7 @@ final class DumpSeedData extends Command
     protected $signature = 'panel:dump-seed
                             {--tables= : Tables to dump, comma separated. Repeatable}
                             {--preset= : A ready-made set: content}
+                            {--all : Every table on the connection that holds rows}
                             {--class=SnapshotSeeder : Class name for the seeder}
                             {--connection= : Read from this connection instead of the default}
                             {--limit=5000 : Most rows to take from any one table}
@@ -70,10 +71,35 @@ final class DumpSeedData extends Command
     private const SECRET_COLUMNS = [
         'user_pass',
         'password',
+        'password_hash',
+        'pincode',
         'secret',
         'token',
         'remember_token',
         'web_auth_token',
+    ];
+
+    /**
+     * Tables this never writes out, however it is asked.
+     *
+     * Not a judgement about secrecy -- that is SECRET_COLUMNS -- but about
+     * meaning. A cache entry, a queued job and a session are this machine's
+     * working state and say nothing on another one. `migrations` is the
+     * dangerous one: seeding it tells Laravel that migrations have run which
+     * have not, and the next `migrate` then skips the tables it was supposed
+     * to create.
+     *
+     * @var array<string, string>
+     */
+    private const NEVER = [
+        'migrations' => 'migration state; seeding it would make `migrate` skip real work',
+        'cache' => 'cache',
+        'cache_locks' => 'cache',
+        'sessions' => 'signed-in sessions, which do not travel',
+        'jobs' => 'queue',
+        'job_batches' => 'queue',
+        'failed_jobs' => 'queue',
+        'password_reset_tokens' => 'single-use reset tokens',
     ];
 
     /**
@@ -98,16 +124,6 @@ final class DumpSeedData extends Command
 
     public function handle(ConnectionResolverInterface $resolver, Filesystem $files): int
     {
-        $tables = $this->requestedTables();
-
-        if ($tables === []) {
-            $this->components->error(
-                'Name at least one table: --tables=cp_cmsnews,wiki_pages, or --preset=content.',
-            );
-
-            return self::INVALID;
-        }
-
         $class = Str::studly((string) $this->option('class'));
 
         if (preg_match('/^[A-Za-z][A-Za-z0-9]*$/', $class) !== 1) {
@@ -137,21 +153,66 @@ final class DumpSeedData extends Command
             return self::FAILURE;
         }
 
+        /*
+         * Asking for a set is different from naming a table. A table that is
+         * named is one somebody typed, so anything wrong with it is an error
+         * they are owed; a table that arrived because they said --all is one
+         * they never mentioned, and stopping the whole run over it would mean
+         * a single awkward table in a hundred makes the command useless.
+         */
+        $bulk = (bool) $this->option('all') || $this->option('preset') !== null;
+
+        $tables = $this->requestedTables($connection);
+
+        if ($tables === []) {
+            $this->components->error(
+                'Name at least one table: --tables=cp_cmsnews,wiki_pages, --preset=content or --all.',
+            );
+
+            return self::INVALID;
+        }
+
         $limit = max(1, (int) $this->option('limit'));
         $dumped = [];
+        $refused = [];
 
         foreach ($tables as $table) {
-            $outcome = $this->readTable($connection, $table, $limit);
+            $outcome = $this->readTable($connection, $table, $limit, $bulk);
 
             if ($outcome === null) {
-                return self::FAILURE;
+                if (! $bulk) {
+                    return self::FAILURE;
+                }
+
+                $refused[] = $table;
+
+                continue;
             }
 
             [$rows, $key] = $outcome;
 
+            /*
+             * An empty table is left out of a bulk run: ninety-five "no rows"
+             * comments would bury the handful that say something. A table
+             * named explicitly keeps its line, because its absence from the
+             * file would read as the command having ignored it.
+             */
+            if ($rows === [] && $bulk) {
+                continue;
+            }
+
             $dumped[$table] = ['rows' => $rows, 'key' => $key];
 
             $this->components->twoColumnDetail($table, count($rows).' rows');
+        }
+
+        if ($refused !== []) {
+            $this->newLine();
+            $this->components->warn(
+                'Left out, because they hold credentials: '.implode(', ', $refused)
+                .'. Name one with --tables to see which column, or add '
+                .'--include-sensitive to dump them anyway.',
+            );
         }
 
         $files->ensureDirectoryExists(dirname($path));
@@ -173,7 +234,7 @@ final class DumpSeedData extends Command
      *
      * @return list<string>
      */
-    private function requestedTables(): array
+    private function requestedTables(ConnectionInterface $connection): array
     {
         $named = (string) ($this->option('tables') ?? '');
 
@@ -189,7 +250,49 @@ final class DumpSeedData extends Command
             );
         }
 
+        if ($this->option('all')) {
+            $tables = array_merge($this->everyTable($connection), $tables);
+        }
+
         return array_values(array_unique($tables));
+    }
+
+    /**
+     * Every table on the connection, minus the ones never worth writing.
+     *
+     * What is skipped is said out loud. A command that quietly left things
+     * out of "all" would be lying in the one word it was asked to honour.
+     *
+     * @return list<string>
+     */
+    private function everyTable(ConnectionInterface $connection): array
+    {
+        $tables = [];
+        $skipped = [];
+
+        foreach ($connection->getSchemaBuilder()->getTables() as $table) {
+            $name = (string) ($table['name'] ?? '');
+
+            if ($name === '') {
+                continue;
+            }
+
+            if (isset(self::NEVER[$name])) {
+                $skipped[$name] = self::NEVER[$name];
+
+                continue;
+            }
+
+            $tables[] = $name;
+        }
+
+        sort($tables);
+
+        foreach ($skipped as $name => $why) {
+            $this->components->twoColumnDetail($name, "<fg=gray>skipped — {$why}</>");
+        }
+
+        return $tables;
     }
 
     /**
@@ -202,8 +305,12 @@ final class DumpSeedData extends Command
      *
      * @return array{0: list<array<string, mixed>>, 1: string|null}|null
      */
-    private function readTable(ConnectionInterface $connection, string $table, int $limit): ?array
-    {
+    private function readTable(
+        ConnectionInterface $connection,
+        string $table,
+        int $limit,
+        bool $bulk = false,
+    ): ?array {
         if (preg_match('/^[A-Za-z0-9_]+$/', $table) !== 1) {
             $this->components->error("'{$table}' is not a table name.");
 
@@ -226,11 +333,13 @@ final class DumpSeedData extends Command
         ));
 
         if ($secrets !== [] && ! $this->option('include-sensitive')) {
-            $this->components->error(
-                "{$table} holds ".implode(' and ', $secrets)
-                .'. Refusing to write that to a file in version control. '
-                .'Pass --include-sensitive if you mean it.',
-            );
+            if (! $bulk) {
+                $this->components->error(
+                    "{$table} holds ".implode(' and ', $secrets)
+                    .'. Refusing to write that to a file in version control. '
+                    .'Pass --include-sensitive if you mean it.',
+                );
+            }
 
             return null;
         }

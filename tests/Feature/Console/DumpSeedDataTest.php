@@ -250,6 +250,94 @@ final class DumpSeedDataTest extends TestCase
 
     /*
     |--------------------------------------------------------------------------
+    | --all
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Everything with rows in it, and nothing that would do harm.
+     *
+     * `migrations` is the one that matters: seeding it tells Laravel that
+     * migrations have run which have not, and the next `migrate` then skips
+     * the tables it was supposed to create.
+     */
+    #[Test]
+    public function all_takes_every_table_but_the_ones_that_never_travel(): void
+    {
+        $this->seedFixture();
+
+        $this->artisan('panel:dump-seed', [
+            '--all' => true,
+            '--class' => 'TestSnapshotSeeder',
+            '--force' => true,
+        ])->assertSuccessful();
+
+        $written = (string) File::get($this->written);
+
+        $this->assertStringContainsString("table('dump_fixture')", $written);
+
+        foreach (['migrations', 'sessions', 'cache', 'jobs', 'failed_jobs'] as $never) {
+            $this->assertStringNotContainsString("table('{$never}')", $written);
+        }
+    }
+
+    /**
+     * A table holding credentials is left out of a bulk run rather than
+     * ending it: one awkward table in a hundred must not make --all useless.
+     */
+    #[Test]
+    public function all_skips_a_table_with_secrets_instead_of_failing(): void
+    {
+        $this->seedFixture();
+
+        Schema::create('dump_secrets', function (Blueprint $table): void {
+            $table->id();
+            $table->string('user_pass');
+        });
+
+        DB::table('dump_secrets')->insert(['user_pass' => 'hunter2']);
+
+        $this->artisan('panel:dump-seed', [
+            '--all' => true,
+            '--class' => 'TestSnapshotSeeder',
+            '--force' => true,
+        ])->assertSuccessful();
+
+        $written = (string) File::get($this->written);
+
+        $this->assertStringNotContainsString('hunter2', $written);
+        $this->assertStringNotContainsString("table('dump_secrets')", $written);
+        // ...while the rest of the run still happened.
+        $this->assertStringContainsString("table('dump_fixture')", $written);
+    }
+
+    /**
+     * An empty table earns no line in a bulk run.
+     *
+     * Most of a real database is empty, and a file of "no rows" comments
+     * buries the handful of tables that say something.
+     */
+    #[Test]
+    public function all_leaves_out_tables_with_nothing_in_them(): void
+    {
+        $this->seedFixture();
+
+        Schema::create('dump_empty', function (Blueprint $table): void {
+            $table->id();
+            $table->string('nothing')->nullable();
+        });
+
+        $this->artisan('panel:dump-seed', [
+            '--all' => true,
+            '--class' => 'TestSnapshotSeeder',
+            '--force' => true,
+        ])->assertSuccessful();
+
+        $this->assertStringNotContainsString('dump_empty', (string) File::get($this->written));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Running the file it wrote
     |--------------------------------------------------------------------------
     */
