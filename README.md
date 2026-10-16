@@ -27,7 +27,7 @@ pointed at an existing install without migrating data.
 > FluxCP's sign-in behaviour step for step, the account credential flows fix
 > nine defects in the legacy originals rather than carrying them over, and the
 > schema installer has been compared column by column against the legacy schema.
-> 950 tests, 3,786 assertions, across 55 files.
+> 959 tests, 3,816 assertions, across 56 files.
 
 ---
 
@@ -353,6 +353,30 @@ php artisan reverb:start
 | `npm run verify:locales` | Check every locale against the English source |
 | `npm run format` | Prettier |
 
+### Moving a setup between machines
+
+The news somebody has written, the wiki as it has been edited and the
+downloads page as it has been filled in are rows, not files. `panel:dump-seed`
+writes them out as a seeder so another machine can rebuild them:
+
+```bash
+php artisan panel:dump-seed --preset=content          # the usual set
+php artisan panel:dump-seed --tables=cp_cmsnews,wiki_pages --class=MySeeder
+
+php artisan db:seed --class=SnapshotSeeder            # on the other machine
+```
+
+It writes rows and nothing else — no schema, no foreign keys, no ordering
+between tables — so it restores into a database that already has the shape to
+hold it. Run `migrate` and `panel:install-schema` first. For a backup, use
+`mysqldump`; this is for "the content I set up on my laptop".
+
+**It refuses a table holding a password**, naming the column, because the file
+it writes lands in `database/seeders` and rAthena keeps `login.user_pass` in
+cleartext. `--include-sensitive` overrides that for somebody who means it.
+Personal data is not checked for at all: whether a table of e-mail addresses
+belongs in your repository is a question the command cannot answer for you.
+
 ## Testing
 
 ```bash
@@ -363,7 +387,7 @@ npm run verify:locales   # every locale against the English source
 npm run verify:themes    # themes against the build output
 ```
 
-950 tests, 3,786 assertions, across 55 files. All of them are backend: there
+959 tests, 3,816 assertions, across 56 files. All of them are backend: there
 are **no frontend tests**, which is the project's largest gap now that the
 interface is the part still being built.
 
@@ -399,7 +423,8 @@ app/
 ├── Actions/          single-purpose operations (AuthenticateAccount)
 ├── Console/Commands/ panel:install-schema, panel:create-account,
 │                     panel:broadcast-server-status, panel:prune-unconfirmed,
-│                     panel:release-held-credits, theme:list
+│                     panel:release-held-credits, panel:dump-seed,
+│                     theme:list, theme:publish
 ├── Contracts/        interfaces for substitutable collaborators
 ├── Enums/            AccountLevel, AccountState, Gender, BanType, LoginFailure
 ├── Events/           broadcast events
