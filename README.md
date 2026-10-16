@@ -12,12 +12,13 @@ pointed at an existing install without migrating data.
 > Every one of FluxCP's 139 module actions is accounted for: **119 ported with
 > passing tests** and 20 deliberately replaced, each with its reason recorded.
 >
-> That is not the same as finished. **63 of the 108 API endpoints have no page
-> in front of them** — including player-facing ones: guilds, the credit shop,
-> the support desk, donations and player shops are all built and tested but
-> cannot be used from a browser. There are also **no frontend tests**, and
-> localisation covers English only. All of it is listed in
-> [`docs/FINAL_MIGRATION_AUDIT.md`](docs/FINAL_MIGRATION_AUDIT.md) §3.
+> That is not the same as finished. **Much of the API still has no page in
+> front of it** — guilds, the credit shop, the support desk, donations and
+> player shops are all built and tested but cannot be used from a browser, and
+> most staff screens beyond the dashboard are in the same state.
+> [`docs/FINAL_MIGRATION_AUDIT.md`](docs/FINAL_MIGRATION_AUDIT.md) §3 lists
+> them area by area; its endpoint arithmetic predates the dashboard and reads
+> low. There are also **no frontend tests**, which is the largest single gap.
 >
 > [`docs/FLUXCP_MIGRATION_MATRIX.md`](docs/FLUXCP_MIGRATION_MATRIX.md) is the
 > authority on what works. Nothing in this README claims more than it shows.
@@ -26,7 +27,7 @@ pointed at an existing install without migrating data.
 > FluxCP's sign-in behaviour step for step, the account credential flows fix
 > nine defects in the legacy originals rather than carrying them over, and the
 > schema installer has been compared column by column against the legacy schema.
-> 678 tests, 2,348 assertions.
+> 950 tests, 3,786 assertions, across 55 files.
 
 ---
 
@@ -52,18 +53,56 @@ pointed at an existing install without migrating data.
 | World | Castle ownership and the siege schedule, per world and timezone — **API only** |
 | Server status | Per-process reachability, live and peak players, realtime |
 | Multi-server | Several server groups, several char/map pairs per group |
-| Authorisation | All 133 route permissions and 47 abilities, deny by default |
-| Schema install | All 25 `cp_*` tables, non-destructive |
-| Theming | Swappable skins via `APP_THEME`: tokens, blocks and page composition |
+| Authorisation | Every route permission and all 48 abilities, deny by default |
+| Schema install | All 26 `cp_*` tables, non-destructive |
+| Theming | Four swappable skins via `APP_THEME`: tokens, blocks and page composition |
 | Branding | Game name, logo and links from config, no component edits |
 | News | Public listing and article view, from the legacy CMS table |
 | Statistics | Account, character and guild counts; class distribution |
-| Wiki | A player guide at `/wiki`, written as Markdown files in version control |
+| Maps | Map detail with its spawns |
+| Downloads | Client packages, mirrors, requirements and install steps |
+| Wiki | A player guide at `/wiki` — Markdown in version control, editable from the dashboard |
+| Vote for points | Listing-site voting with callbacks, cooldowns and credits — off until a site is configured |
+| Dashboard | A staff area at `/admin`: news, the downloads page, and the wiki |
+| Localisation | Six languages: English, Tagalog, Português, ไทย, Bahasa Melayu, Bahasa Indonesia |
 
 Not built yet, among much else: the item shop and its cart, donations, the
-support desk, the admin half of the news CMS and all of the static-page CMS,
-IP bans, the account admin screens, and the control-panel and game log
-browsers.
+support desk, the static-page CMS, IP bans, the account admin screens, and the
+control-panel and game log browsers.
+
+### The dashboard
+
+`/admin`, for accounts the permission map places at Administrator. It is a
+separate shell from the player side with its own sign-in, because the person
+who came to fix a download link is not looking at the same panel a player is.
+
+| Section | Edits |
+| --- | --- |
+| Overview | Where the dashboard can take you, and what is not built yet |
+| Downloads | The packages, mirrors, requirements and steps on `/downloads` |
+| News | The legacy CMS table, with tags |
+| Wiki → Sections | What each part of the guide is called, its icon, order and tile art |
+| Wiki → Pages | The pages themselves, in a Markdown editor with a live preview |
+
+Two things about the wiki are worth knowing before using it. The guide is
+Markdown **on disk, in version control** — see `config/wiki.php` for why — and
+editing a page in the browser lays a database row over that file rather than
+writing to it, so reverting hands the file back untouched. And the editor is a
+Markdown editor, not a block editor: images paste, drop and upload, a `/` menu
+inserts blocks, and the preview is rendered by the same renderer that publishes
+the page, so it strips the HTML the published page strips.
+
+### Vote for points
+
+Players vote for the server on a listing site, the site calls the panel back,
+and the panel adds credits. Off until you register with a site and paste two
+values into `config/vote.php`; the menu entry appears as soon as voting is
+switched on, and the page says plainly when no site is configured yet.
+
+A callback is believed because of three things together: a per-site secret
+compared in constant time, a single-use reference minted when the player
+pressed the button, and the cooldown. Not the username or the address the site
+reports, neither of which proves who voted.
 
 ## Requirements
 
@@ -103,8 +142,12 @@ Then edit `.env`. Two blocks matter, and they are **different databases**:
 # The panel's own tables.
 php artisan migrate
 
-# The 25 cp_* tables, inside the rAthena database where FluxCP puts them.
+# The 26 cp_* tables, inside the rAthena database where FluxCP puts them.
 php artisan panel:install-schema
+
+# Images uploaded from the dashboard are served from here. Without the link
+# they are written and then served as 404s.
+php artisan storage:link
 
 npm run build
 php artisan serve
@@ -131,7 +174,7 @@ is one login server, the char/map pairs that share it, and up to four databases:
 
 ```
 server group
-├── login      the account table, plus 18 of the cp_* tables
+├── login      the account table, plus 19 of the cp_* tables
 ├── char_map   the character tables, plus the other 7
 ├── logs       the game logs, commonly on a separate host
 └── web        rAthena's own web database
@@ -239,7 +282,7 @@ their own; see [`docs/MIGRATION_DECISIONS.md`](docs/MIGRATION_DECISIONS.md)
 The interface is a swappable skin, separate from what the panel does.
 
 ```env
-APP_THEME=fantasy          # or slate
+APP_THEME=fantasy          # or skyward, slate, yatagarasu
 GAME_NAME="My Ragnarok Online"
 ```
 
@@ -248,9 +291,14 @@ php artisan theme:list     # installed themes, and which is active
 npm run verify:themes      # after a build
 ```
 
-Two themes ship: **fantasy** (dark and warm, the default) and **slate** (cool,
-light-first, and nothing but a palette — a worked example of how little a theme
-needs).
+Four themes ship:
+
+| Theme | |
+| --- | --- |
+| **fantasy** | Dark and warm, in the manner of an adventurer's guild ledger: parchment, iron and antique gold. The default |
+| **skyward** | A landing page in two hours of the day: an open sky or a night valley, cards floating above it, a masthead that snaps flush as you scroll |
+| **yatagarasu** | Dark fantasy in gold and blood on black: a scrolling ticker, grouped navigation, cast-gold titles |
+| **slate** | Cool and light-first, and nothing but a palette — a worked example of how little a theme needs |
 
 A theme works in three layers, and uses only as many as it needs:
 
@@ -260,10 +308,10 @@ A theme works in three layers, and uses only as many as it needs:
 | Blocks | How a page section looks and is structured | One component per section |
 | Page composition | Which sections a page has, and their order | A list in `theme.json` |
 
-Eleven core blocks ship — hero, navbar, server status, statistics, class
-showcase, rankings, news, features, CTA, announcement bar, footer — and a theme
-overrides the ones it wants. `fantasy` overrides eight and inherits three. Its
-front page is composed declaratively:
+Fourteen core blocks ship — hero, navbar, server status, statistics, class
+showcase, rankings, news, features, CTA, announcement bar, footer, and the
+three the downloads page is built from — and a theme overrides the ones it
+wants. A front page is composed declaratively:
 
 ```json
 "pages": {
@@ -302,15 +350,25 @@ php artisan reverb:start
 | `npm run typecheck` | `vue-tsc` only |
 | `npm run build` | Production bundle |
 | `npm run verify:themes` | Check themes against the build output |
+| `npm run verify:locales` | Check every locale against the English source |
 | `npm run format` | Prettier |
 
 ## Testing
 
 ```bash
-composer test
+composer test            # PHPUnit
+npm run typecheck        # vue-tsc
+npm run lint             # ESLint and vue-tsc
+npm run verify:locales   # every locale against the English source
+npm run verify:themes    # themes against the build output
 ```
 
-168 tests, 445 assertions.
+950 tests, 3,786 assertions, across 55 files. All of them are backend: there
+are **no frontend tests**, which is the project's largest gap now that the
+interface is the part still being built.
+
+The two halves run against different databases, which `phpunit.xml` sets up:
+the panel's own tables on in-memory SQLite, and rAthena's on a real one.
 
 The tests against rAthena's schema are **integration tests against a real
 MySQL/MariaDB database**, not SQLite. They exercise an 80-column
@@ -339,33 +397,47 @@ rAthena's SQL files. **Point it only at a disposable database.**
 ```
 app/
 ├── Actions/          single-purpose operations (AuthenticateAccount)
-├── Console/Commands/ panel:install-schema, panel:broadcast-server-status
+├── Console/Commands/ panel:install-schema, panel:create-account,
+│                     panel:broadcast-server-status, panel:prune-unconfirmed,
+│                     panel:release-held-credits, theme:list
 ├── Contracts/        interfaces for substitutable collaborators
 ├── Enums/            AccountLevel, AccountState, Gender, BanType, LoginFailure
 ├── Events/           broadcast events
 ├── Exceptions/
 ├── Http/
 │   ├── Controllers/Api/
-│   ├── Middleware/   permission, server group, WoE restriction
+│   │   └── Admin/    the dashboard's own endpoints
+│   ├── Middleware/   permission, server group, WoE restriction, locale
 │   ├── Requests/
 │   └── Resources/
 ├── Models/           rAthena tables + the panel's own
 │   └── Concerns/     dynamic connection traits
 ├── Providers/
-├── Services/         Auth, Server, Ranking, Rathena
+├── Services/         Auth, Captcha, Content, Donations, Logs, Mail,
+│                     Notifications, Ranking, Rathena, Server, Settings,
+│                     Shop, Support, Theme, Vote
 └── Support/
     ├── Authorization/
+    ├── Content/      front matter
     └── Rathena/      server groups, connections, WoE windows, schema
 
-resources/js/
-├── components/ui/    DataTable, StatusPill, StatTile, FormField, …
-├── composables/
-├── layouts/          the shell a theme replaces
-├── pages/
-├── router/
-├── services/         api client, broadcasting
-├── stores/           Pinia
-└── types/
+resources/
+├── css/              design tokens, then the components built on them
+├── js/
+│   ├── blocks/       the 14 composable page sections, and their data
+│   ├── components/ui/ DataTable, StatusPill, StatTile, MarkdownEditor, …
+│   ├── composables/
+│   ├── i18n/locales/ six languages, checked against each other in CI
+│   ├── layouts/      the shells a theme replaces, including the dashboard's
+│   ├── pages/
+│   │   └── admin/    the dashboard
+│   ├── router/
+│   ├── services/     api client, broadcasting
+│   ├── stores/       Pinia
+│   ├── theme/        resolution and the bootstrap payload
+│   └── types/
+├── themes/           fantasy, skyward, slate, yatagarasu
+└── wiki/             the player guide, as Markdown
 ```
 
 Three things are worth knowing before reading the code.
@@ -384,6 +456,14 @@ with no entry is refused.
 against `login` and `char`, so relocating them would turn those joins into
 cross-database joins that break the moment an operator splits the databases
 across hosts.
+
+**Dashboard edits are an overlay, not a rewrite.** The wiki is Markdown on
+disk and the downloads page is `config/game.php`; editing either in the
+browser writes a row that is read *over* the file, and reverting drops the row
+so the file takes over again untouched. Nothing the dashboard does writes to
+the filesystem — which is what keeps a wrong edit a revert rather than an
+apology for an operator who deploys from version control, without leaving the
+one whose only access is a browser unable to change anything.
 
 ## Security
 
@@ -439,12 +519,14 @@ of the emulator's schema. Enabling `UseMD5` is weak but better than cleartext.
 | [FLUXCP_FEATURE_INVENTORY.md](docs/FLUXCP_FEATURE_INVENTORY.md) | Every legacy action, its tables, permissions and view |
 | [FLUXCP_MIGRATION_MATRIX.md](docs/FLUXCP_MIGRATION_MATRIX.md) | What is done — the authority |
 | [DATABASE_ANALYSIS.md](docs/DATABASE_ANALYSIS.md) | Connections, schemas, the credential problem |
-| [MIGRATION_DECISIONS.md](docs/MIGRATION_DECISIONS.md) | D1–D14, each with its evidence |
+| [MIGRATION_DECISIONS.md](docs/MIGRATION_DECISIONS.md) | D1–D28, each with its evidence |
 | [COMPATIBILITY_REPORT.md](docs/COMPATIBILITY_REPORT.md) | Differences established by comparison |
 | [API.md](docs/API.md) | Endpoint reference |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment |
 | [THEMING.md](docs/THEMING.md) | Switching, creating and overriding themes |
 | [WIKI.md](docs/WIKI.md) | Writing the player guide served at `/wiki` |
+| `config/wiki.php` | The guide's layout, search, uploads and section art |
+| `config/vote.php` | Listing sites, cooldowns and how a callback is believed |
 | [FINAL_MIGRATION_AUDIT.md](docs/FINAL_MIGRATION_AUDIT.md) | Counts and what remains |
 
 ## Licence and attribution

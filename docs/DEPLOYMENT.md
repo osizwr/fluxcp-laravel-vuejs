@@ -85,6 +85,11 @@ php artisan migrate --force
 php artisan panel:install-schema --pretend   # inspect
 php artisan panel:install-schema
 
+# Images uploaded from the dashboard live on the public disk and are served
+# through this link. Without it they are written and then served as 404s, and
+# the deploy that forgets it breaks every wiki page carrying a screenshot.
+php artisan storage:link
+
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
